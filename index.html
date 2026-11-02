@@ -29,14 +29,15 @@ img.gem{width:22px;height:16px;object-fit:contain;vertical-align:-3px;margin-lef
 
 /* ---------- TOP NAV (Dota dashboard) ---------- */
 .topnav{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#1a2028 0%,#0f1318 100%);border-bottom:1px solid #000;box-shadow:0 1px 0 rgba(200,164,90,.25),0 8px 24px rgba(0,0,0,.6)}
-.topnav .wrap{display:flex;align-items:center;gap:14px;height:62px}
+.topnav .wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-top:8px}
+.topnav .wrap>.logo{order:1}.topnav .wrap>.userbox{order:2;margin-left:auto}.topnav .wrap>.nav{order:3;flex:0 0 100%;border-top:1px solid rgba(255,255,255,.05)}
 .logo{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
 .logo-mark{width:38px;height:38px;border-radius:6px;background:radial-gradient(circle at 35% 30%,#ff6a45,#a3200f 60%,#4a0b04);box-shadow:inset 0 0 0 2px rgba(0,0,0,.6),0 0 14px rgba(224,69,47,.55);display:grid;place-items:center;font-family:Cinzel;font-weight:900;color:#1a0602;font-size:1.25rem}
 .logo-text{font-family:Cinzel;font-weight:900;font-size:1.25rem;letter-spacing:3px;line-height:1;
   background:linear-gradient(180deg,#fff2c9,#e8c77a 45%,#a5782c);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 6px rgba(0,0,0,.8))}
 .logo-text small{display:block;font-size:.55rem;letter-spacing:5px;color:var(--muted);-webkit-text-fill-color:var(--muted);margin-top:3px}
 .nav{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}
-.nav button{background:none;border:none;color:#9aa6b2;font-family:Cinzel;font-weight:700;font-size:.76rem;letter-spacing:1px;text-transform:uppercase;padding:0 10px;height:62px;cursor:pointer;position:relative;white-space:nowrap;transition:color .15s}
+.nav button{background:none;border:none;color:#9aa6b2;font-family:Cinzel;font-weight:700;font-size:.76rem;letter-spacing:1px;text-transform:uppercase;padding:0 12px;height:42px;cursor:pointer;position:relative;white-space:nowrap;transition:color .15s}
 .nav button:hover{color:#fff}
 .nav button.active{color:var(--gold2);text-shadow:0 0 12px rgba(232,199,122,.45)}
 .nav button.active::after{content:'';position:absolute;left:10px;right:10px;bottom:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold2),transparent);box-shadow:0 0 10px var(--gold)}
@@ -520,6 +521,9 @@ kbd{background:#1a2027;border:1px solid var(--line2);border-radius:3px;padding:0
       <button data-tab="arena" onclick="switchTab('arena')">Арена</button>
       <button data-tab="invoker" onclick="switchTab('invoker')">Invoker Game</button>
       <button data-tab="quests" onclick="switchTab('quests')">Задания</button>
+      <button data-tab="chests" onclick="switchTab('chests')">Сундуки</button>
+      <button data-tab="games" onclick="switchTab('games')">Мини-игры</button>
+      <button data-tab="online" onclick="switchTab('online')">Онлайн</button>
     </nav>
     <div class="userbox">
       <div class="cur-chip" title="Самоцветы" id="gems-chip"></div>
@@ -541,7 +545,9 @@ kbd{background:#1a2027;border:1px solid var(--line2);border-radius:3px;padding:0
     <button class="btn gold sm" id="free-btn" onclick="freeGems()">+500</button>
     <div class="seg" title="Скорость анимаций"><button id="spd-slow" onclick="setSpeed('slow')">🐢 Медленно</button><button id="spd-fast" onclick="setSpeed('fast')">⚡ Быстро</button></div>
     <button class="btn ghost sm" onclick="upgradeAll()" title="Все герои +1 уровень">⬆ Улучшить всех</button>
-    <button class="btn ghost sm" onclick="refreshUI()">🔄</button>
+    <button class="btn ghost sm" onclick="refreshUI()" title="Обновить">🔄</button>
+    <button class="btn ghost sm" id="install-btn" style="display:none" onclick="installApp()" title="Установить как приложение">📱</button>
+    <button class="btn ghost sm" onclick="openSettings()" title="Настройки">⚙</button>
   </div>
 </div>
 
@@ -674,6 +680,13 @@ kbd{background:#1a2027;border:1px solid var(--line2);border-radius:3px;padding:0
     </div>
   </div>
   <div class="panel level-info" id="level-info"></div>
+  <div class="arena-extra">
+    <div class="panel"><div class="panel-h"><h3>Лавка · предметы главного героя</h3></div><div class="panel-b" id="shop-box"></div></div>
+    <div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-h"><h3>Рошан</h3></div><div class="panel-b" id="roshan-box"></div></div>
+      <div class="panel"><div class="panel-h"><h3>Синергии стака</h3></div><div class="panel-b" id="syn-box"></div></div>
+    </div>
+  </div>
   <div class="sec-title">Журнал боёв</div>
   <div class="panel panel-b log" id="arena-log" style="max-height:180px;margin:0"></div>
 </section>
@@ -683,7 +696,7 @@ kbd{background:#1a2027;border:1px solid var(--line2);border-radius:3px;padding:0
   <div class="inv-wrap">
     <div class="panel panel-b">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <div class="seg"><button id="im-tutorial" onclick="invSetMode('tutorial')">Tutorial</button><button id="im-race" onclick="invSetMode('race')">Race</button><button id="im-infinite" onclick="invSetMode('infinite')">Infinite</button></div>
+        <div class="seg"><button id="im-tutorial" onclick="invSetMode('tutorial')">Tutorial</button><button id="im-race" onclick="invSetMode('race')">Race</button><button id="im-infinite" onclick="invSetMode('infinite')">Infinite</button><button id="im-survival" onclick="invSetMode('survival')">Выживание</button></div>
         <div style="font-size:.9rem" class="muted">Время <b id="inv-timer" style="color:var(--gold2)">0.00</b>s · Верно <b id="inv-ok" style="color:var(--ok)">0</b> · Ошибки <b id="inv-miss" style="color:var(--danger)">0</b> · Рекорд <b id="inv-best" style="color:#bfe3ff">—</b></div>
       </div>
       <div class="inv-target">
@@ -709,6 +722,9 @@ kbd{background:#1a2027;border:1px solid var(--line2);border-radius:3px;padding:0
 </section>
 <!-- ============ QUESTS ============ -->
 <section class="tab" id="tab-quests"><div id="quests-host"></div></section>
+<section class="tab" id="tab-chests"><div id="chests-host"></div></section>
+<section class="tab" id="tab-games"><div id="games-host"></div></section>
+<section class="tab" id="tab-online"><div id="online-host"></div></section>
 </div>
 
 <div class="footer">
@@ -1141,6 +1157,194 @@ const EFFECT_NAME = { nuke: 'Мощный удар', aoe: 'Урон по все�
 const EFFECT_COLOR = { nuke: '#ff6a3a', aoe: '#ffb03a', stun: '#7ad3ff', heal: '#6cff7a', shield: '#c8a4ff', crit: '#ff3a3a', execute: '#ff2a6a', buff: '#ffe34a' };
 function ultOf(id) { const u = ULTS[id] || [id + '_ult', 'Ultimate', 'nuke']; return { key: u[0], name: u[1], type: u[2] }; }
 function ultIconChain(id) { const u = ultOf(id); return [spellIcon(u.key), STEAM + 'abilities/' + u.key + '.png', heroIcon(id), heroImg(id)]; }
+// ================= НАБОРЫ (wiki.cs.money/dota/sets/<hero>) =================
+// формат: название|редкость|картинка (econ/...). legendary → immortal
+const CS_SETS_RAW = {
+juggernaut: `Provocation of Ruin|immortal|sets/dota_item_provocation_of_ruin_png.png
+Balance of the Bladekeeper|legendary|loading_screens/dc_betaloadingscreenjugg_png.png
+Wandering Demon of the Plains Set|mythical|sets/dota_item_wandering_demon_of_the_plains_set_png.png
+Armor of the Unyielding Mask|mythical|loading_screens/immortal_warlord_loading_screen_png.png
+Pilgrimage of the Bladeform Aesthete|mythical|loading_screens/armor_for_the_favorite_loading_screen_png.png
+Lineage of the Stormlords|mythical|sets/dota_item_lineage_of_the_stormlords_png.png
+Jagged Honor|mythical|loading_screens/jugg_year_beast_slayer_ls_png.png
+Isle of Dragons|mythical|items/juggernaut/miyamoto_musash_weapon/miyamoto_musash_weapon_png.png
+Of Ebony and Ivory Set|rare|sets/dota_item_of_ebony_and_ivory_set_png.png
+Traveler on the High Plains Set|rare|sets/dota_item_traveler_on_the_high_plains_set_png.png
+Thousand Faces Set|rare|sets/dota_item_thousand_faces_set_png.png
+Arms of the Gwimyeon Warrior Set|rare|sets/dota_item_kogu_warrior_set_png.png
+The Exiled Ronin Set|rare|sets/dota_item_the_exiled_ronin_set_png.png
+Gifts of the Vanished Isle Set|rare|sets/dota_item_gifts_of_the_vanished_isle_set_png.png
+Bladesrunner|rare|sets/dota_item_bladesrunner_png.png
+Dashing Swordsman|rare|loading_screens/esl_dashing_bladelord_loadingscreen_png.png
+The Path of Odocoeleus|rare|sets/dota_item_frostivus2018_jugg_northern_wanderer_png.png
+Sinister Shadow|rare|sets/dota_item_sinister_shadow_png.png
+Argent Decimator|rare|loading_screens/dplus_battlemaster_set_ls_png.png
+The Boar God's Honor Set|uncommon|sets/dota_item_the_boar_gods_honor_set_png.png`,
+pudge: `The Abscesserator Bundle|immortal|sets/dota_item_the_abscesserator_bundle_png.png
+Chains of the Black Death|legendary|loading_screens/blackdeath_png.png
+Tools of the Mad Harvester Set|mythical|sets/dota_item_tools_of_the_mad_harvester_set_png.png
+Murder of Crows|mythical|sets/dota_item_murder_of_crows_png.png
+Gladiator's Revenge|mythical|sets/dota_item_gladiators_revenge_png.png
+Compendium Bindings of the Trapper|mythical|loading_screens/promo_trapper_loading_screen_png.png
+Surgical Precision|mythical|loading_screens/dotapit_s3_pudge_loadingscreen_png.png
+Doomsday Ripper|mythical|loading_screens/doomsday_ripper_loading_screen_png.png
+Scavenger of the Basilisk|mythical|loading_screens/scavenger_of_basilisk_png.png
+Writ of the Royal Butcher|mythical|loading_screens/demon_queller_demon_queller_loading_screen_png.png
+Jolly Reaver|mythical|loading_screens/pudge_deep_sea_abomination_pudge_deep_sea_abomination_loading_screen_ti_2017_png.png
+Hunt of the Odobenus One|mythical|sets/dota_item_frostivus2018_pudge_walrus_slaughterer_png.png
+Dapper Disguise|mythical|loading_screens/pudge_dapper_disguise_ls_png.png
+Mindless Slaughter|mythical|sets/dota_item_mindless_slaughter_png.png
+The Ol' Chopper's Set|rare|sets/dota_item_the_ol_choppers_set_png.png
+Chained Slayers Set|rare|sets/dota_item_chained_slayers_set_png.png
+The Butcher's Broilers Pack|rare|sets/dota_item_the_butchers_broilers_pack_png.png
+Delicacies of Butchery Set|rare|sets/dota_item_delicacies_of_butchery_set_png.png
+Bindings of the Trapper|rare|loading_screens/trapper_loading_screen_png.png`,
+phantom_assassin: `Dread of the Gleaming Seal Set|legendary|sets/dota_item_dread_of_the_gleaming_seal_set_png.png
+Creeping Shadow|mythical|loading_screens/creeping_shadow_loading_screen_png.png
+Toll of the Fearful Aria|mythical|loading_screens/toll_of_the_fearful_aria_loading_screen_png.png
+Visions of the Lifted Veil|mythical|sets/dota_item_ti8_pa_the_gloomy_veil_png.png
+Gothic Whisper|mythical|sets/dota_item_ti9_cache_pa_gothic_hunter_png.png
+Bane of the Deathstalkers|mythical|sets/dota_item_bane_of_the_deathstalkers_bundle_png.png
+Penumbral Vesture Set|rare|sets/dota_item_penumbral_vesture_set_png.png
+Nimble Edge Set|rare|sets/dota_item_nimble_edge_set_png.png
+Dark Wraith Set|rare|sets/dota_item_dark_wraith_set_png.png
+Dragonterror|rare|sets/dota_item_dragonterror_png.png
+Dame de Carreau|rare|loading_screens/carreau_png.png
+Raiments of the Sacrosanct|rare|loading_screens/raiment_of_the_sacred_blossom_loading_screen_png.png
+Ravening Wings|rare|sets/dota_item_ravening_wings_png.png
+Raiments of the Eventide|rare|loading_screens/raiments_of_the_shadow_slayer_set_loading_screen_png.png
+Bloodroot Guard|rare|loading_screens/phantom_knight_loading_screen_png.png
+Cruel Reprisal|rare|loading_screens/armor_reprisal_reprisal_loadingscreen_png.png
+Valkyrie's Shade|rare|sets/dota_item_valkyries_shade_png.png
+Capricious Fate|rare|loading_screens/dplus_capricious_fate_ls_png.png`,
+invoker: `Dark Artistry Throwback|immortal|sets/dota_item_dark_artistry_kid_png.png
+Dark Artistry|immortal|sets/dota_item_dark_artistry_png.png
+Heir of Menace|mythical|loading_screens/the_little_king_ls_png.png
+Iceforged Set|mythical|sets/dota_item_iceforged_set_png.png
+Vestige of the Arsenal Magus|mythical|sets/dota_item_vestige_of_the_arsenal_magus_png.png
+Sempiternal Revelations|mythical|sets/dota_item_sempiternal_revelations_set_png.png
+Adornings of the Quas Precor Set|mythical|sets/dota_item_adornings_of_the_quas_precor_set_png.png
+Cadenza Magic Master|mythical|sets/dota_item_cadenza_magic_master_png.png
+Sinister Lightning|mythical|loading_screens/sinisterlightning_png.png
+Volatile Majesty|mythical|loading_screens/dark_sorcerer_loading_screen_png.png
+Trials of the Blackguard Magus|mythical|loading_screens/nightlord_nightlord_loadingscreen_png.png
+Covenant of the Depths|mythical|loading_screens/covenant_of_the_depths_covenant_of_the_depths_loadingscreen_png.png
+Fate Meridian|mythical|loading_screens/ti8_invoker_prism_crystal_spellcaster_ls_png.png
+The Magus Magnus Set|rare|sets/dota_item_the_magus_magnus_set_png.png
+Cabalist of Dark Magic Set|rare|sets/dota_item_cabalist_of_dark_magic_set_png.png
+Mnemonus Arcanus Set|rare|sets/dota_item_mnemonus_arcanus_set_png.png
+Garbs of the Eastern Range Set|rare|sets/dota_item_garbs_of_the_eastern_range_set_png.png
+Relics of Glorious Inspiration|rare|bundles/esl_invoker_bundle_png.png
+Northern Blight|rare|sets/dota_item_frostivus2018_invoker_keeper_of_magic_png.png`,
+crystal_maiden: `Conduit of the Blueheart Bundle|legendary|sets/dota_item_conduit_of_the_blueheart_bundle_png.png
+Glacier Duster Set|mythical|sets/dota_item_glacial_duster_set_png.png
+Lady of the Lumini Polare|mythical|loading_screens/lumini_polare_loading_screen_png.png
+Prelate of the Wyvern Legion|mythical|sets/dota_item_dota_plus_crystal_maiden_png.png
+Glacial Gardens|mythical|loading_screens/the_winter_monarch_winter_monarch_loadingscreen_png.png
+Lineage Charge of the Tundra Warden|mythical|sets/dota_item_lineage_charge_of_the_tundra_warden_png.png
+Whitewind Battlemage|mythical|items/crystal_maiden/lady_whitewind_head/lady_whitewind_head_png.png
+Winter Snowdrop|rare|sets/dota_item_winter_snowdrop_set_png.png
+Regalia of the Crystalline Queen Set|rare|sets/dota_item_regalia_of_the_crystalline_queen_set_png.png
+Frostiron Sorceress Set|rare|sets/dota_item_frostiron_sorceress_set_png.png
+Heart of the North Set|rare|sets/dota_item_heart_of_the_north_set_png.png
+Frozen Feather Set|rare|sets/dota_item_frozen_feather_set_png.png
+Ensemble of the Crystalline Comet|rare|loading_screens/crystalline_comet_loading_screen_png.png
+Wraps of the Winterbringer|rare|loading_screens/frostbringer_loadingscreen_png.png
+Charge of the Tundra Warden|rare|loading_screens/icewrack_warden_loadingscreen2_png.png
+Blueheart Sovereign|rare|loading_screens/crystalline_empress_loadingscreen_crystalline_empress_png.png
+Icebound Floret|rare|loading_screens/esl_frozen_lotus_loading_screen_png.png
+Glacial Magnolia|rare|loading_screens/magnolia_loading_screen_png.png
+Winter's Warden|rare|sets/dota_item_frostivus_cm_frosty_valkyrie_png.png
+Royal Winterbloom|rare|loading_screens/royal_winterbloom_ls_png.png`,
+nevermore: `Diabolical Fiend|mythical|loading_screens/diabolical_fiend_loading_screen_png.png
+Eternal Harvest|mythical|loading_screens/ferrum_chiroptera_loading_screen_png.png
+Souls Tyrant|mythical|loading_screens/sf_souls_tyrant_ls_png.png
+Soul Corpulence|mythical|loading_screens/sf_immortal_flame_ls_png.png
+Spring Lineage Eternal Harvest|mythical|sets/dota_item_spring_lineage_eternal_harvest_png.png
+Fathomless Ravager|rare|sets/dota_item_ti7_cache_krakens_ravager_png.png
+Murder of Souls|rare|loading_screens/nevermores_shade_ls_png.png
+Twilight Effigy|rare|sets/dota_item_harvest_effigy_png.png`,
+axe: `Axe Unleashed|immortal|sets/dota_item_ti9_jungle_axe_set_png.png
+Armor of the Shattered Vanguard|mythical|loading_screens/armor_of_the_wrought_legion_armor_of_the_wrought_legion_png.png
+Shackles of the Enduring Conscript|mythical|loading_screens/ti8_axe_violent_prisoner_of_war_ls_png.png
+Lineage The Ram's Head Armaments|mythical|sets/dota_item_ti10_legacy_the_rams_head_armaments_png.png
+Carnage of the Endless Hunt|mythical|sets/dota_item_aghs_bp_glass_basilisk_hunter_png.png
+Days of the Demon|mythical|sets/dota_item_days_of_the_demon_bundle_png.png
+Forged in Demons' Blood Set|rare|sets/dota_item_forged_in_demons_blood_set_png.png
+The Axecutioner Set|rare|sets/dota_item_the_axecutioner_set_png.png
+Saberhorn's Armor Set|rare|sets/dota_item_saberhorns_armor_set_png.png
+The Red Conqueror Set|rare|sets/dota_item_the_red_conqueror_set_png.png
+Red Mist Reaper Set|rare|sets/dota_item_red_mist_reaper_set_png.png
+Harbinger of War|rare|sets/dota_item_harbinger_of_war_png.png
+The Ram's Head Armaments|rare|loading_screens/searing_annihilator_loading_screen_png.png
+Wrathful Annihilator|rare|loading_screens/essentials_of_the_blood_edge_loading_screen_of_the_cursed_blood_edge_png.png
+Supreme Black Orc Warboss|rare|loading_screens/oglodi_big_boss_oglodi_big_boss_loadingscreen_png.png
+Snowpack Savage|rare|sets/dota_item_frostivus_axe_glacial_terror_png.png
+Undefeated General|rare|sets/dota_item_undefeated_general_png.png
+Snowblind Survival|rare|loading_screens/barbarian_of_the_outlands_ls_png.png
+The Defiant Axe Set|uncommon|sets/dota_item_the_defiant_axe_set_png.png
+The Forgemaster's Tools Set|uncommon|sets/dota_item_the_forgemasters_tools_set_png.png`,
+lina: `Ember Crane Set|mythical|sets/dota_item_ember_crane_set_png.png
+Everlasting Heat|mythical|loading_screens/everlastingheat_png.png
+Bewitching Flare|mythical|loading_screens/bewitching_flare_loadingscreen_png.png
+Regime of the Enthaleen Dragon|mythical|loading_screens/scales_of_the_burning_dragon_loading_screen_png.png
+Fireflight Scion|mythical|loading_screens/reborn_phoenixlina_reborn_phoenixlina_loadingscreen_png.png
+Glory of the Elderflame|mythical|sets/dota_item_glory_of_the_elderflame_png.png
+Light of the Solar Divine|rare|sets/dota_item_light_of_the_solar_divine_set_png.png
+The Battle Caster Set|rare|sets/dota_item_the_battle_caster_set_png.png
+The Garments of the Charred Bloodline Set|rare|sets/dota_item_the_garments_of_the_charred_bloodline_set_png.png
+Jini the Bright Moon Set|rare|sets/dota_item_the_bright_moon_of_josean_set_png.png
+Dragonfire|rare|loading_screens/dragonfire_loadingscreen_png.png
+Smoldering Journey|rare|loading_screens/bts_migrant_blaze_loadscreen_png.png
+Divine Flame|rare|loading_screens/esl_divine_flame_ls_png.png
+Warhawk Vestiments|rare|loading_screens/warhawk_vestiments_png.png
+Vehement Plume|rare|loading_screens/feathery_soul_loading_screen_png.png
+The Scarlet Flare|rare|sets/dota_item_the_scarlet_flare_png.png
+Hellfire Insurgent|rare|sets/dota_item_heartflint_sorceress_png.png
+Fire Regent|rare|loading_screens/flame_lily_in_full_bloom_ls_png.png
+Fashion of the Scorching Princess Set|common|sets/dota_item_fashion_of_the_scorching_princess_set_png.png`,
+antimage: `The Basher Blades|immortal|bundles/basher_blades_bundle1_png.png
+Golden Basher Blades|immortal|bundles/basher_blades_gold_bundle1_png.png
+Arcs of Manta Pack|mythical|items/antimage/arc_of_manta/arc_of_manta_png.png
+Spoils from the Shifting Sorcerer Bundle|mythical|sets/dota_item_spoils_from_the_shifting_sorcerer_bundle_png.png
+Mage Abolisher|mythical|loading_screens/mage_eraser_loading_screen_png.png
+Fervent Conscript|mythical|loading_screens/distinguished_conscript_loadingscreen_png.png
+Guilt of the Survivor|mythical|loading_screens/god_eater_god_eater_loadingscreen_png.png
+Oathbound Defiant|mythical|sets/dota_item_oathbound_defiant_png.png
+Shadows of the Forgotten Plane|mythical|sets/dota_item_shadows_of_the_forgotten_plane_png.png
+Lineage Broken Scale|mythical|sets/dota_item_ti10_legacy_broken_scale_png.png
+Faceless Death|mythical|sets/dota_item_faceless_death_png.png
+Howls of the Northmarch|mythical|sets/dota_item_northern_veteran_png.png
+The Mage Slayer's Set|rare|sets/dota_item_the_mage_slayers_set_png.png
+Glaives of the Mage Slayer Pack|rare|items/antimage/antimage_slasher_weapon_png.png
+The Gifts of Yoskreth Set|rare|sets/dota_item_the_gifts_of_yoskreth_set_png.png
+The Clergy Ascetic Set|rare|sets/dota_item_the_clergy_ascetic_set_png.png
+Legacy of the Awakened Set|rare|sets/dota_item_legacy_of_the_awakened_set_png.png
+Acolyte of Vengeance|rare|sets/dota_item_acolyte_of_vengence_png.png
+The Witch Hunter|rare|sets/dota_item_witch_hunter_png.png
+The Armor of Tustakuri|rare|sets/dota_item_the_armor_of_tustakuri_png.png`,
+faceless_void: `Claszureme Incursion|mythical|sets/dota_item_fv_primordial_conservator_png.png
+Augur of Oblivion|mythical|sets/dota_item_augur_of_oblivion_png.png
+Chronite Defense Set|rare|sets/dota_item_chronite_defense_set_png.png
+Acolyte of Clasz Set|rare|sets/dota_item_acolyte_of_clasz_set_png.png
+Viridi Inanitas Set|rare|sets/dota_item_viridi_inanitas_set_png.png
+The Tentacular Timelord Set|rare|sets/dota_item_the_tentacular_timelord_set_png.png
+Ancient Cultist|rare|sets/dota_item_ancient_cultist_png.png
+Elements of the Endless Plane|rare|loading_screens/elements_of_oblivion_loading_screen_png.png
+Misgivings of the Emerald Age|rare|loading_screens/void_armor_of_the_emerald_age_loadingscreen_void_armor_of_the_emerald_age_png.png
+The Corruption of Nezzureem|rare|loading_screens/shards_of_nezzureem_loadingscreen_png.png
+Frozen Void|rare|loading_screens/frozen_void_frozen_void_ls_png.png
+Dials of Claszureme Set|common|sets/dota_item_dials_of_claszureme_set_png.png`
+};
+const CS_SETS = [];
+Object.keys(CS_SETS_RAW).forEach(hero => CS_SETS_RAW[hero].split('\n').forEach(line => {
+  const [name, r, path] = line.split('|');
+  CS_SETS.push({ name, hero, path, rarity: r === 'legendary' ? 'immortal' : r });
+}));
+function pickSet(heroId, rarity) {
+  let pool = CS_SETS.filter(s => s.hero === heroId && s.rarity === rarity);
+  return pool.length ? pick(pool) : null;
+}
 // ================= CORE: state, auth, save =================
 const MAX_LEVEL = 50;
 const START_GEMS = 2000;
@@ -1221,11 +1425,17 @@ async function authSubmit(e) {
     importLegacy(st);
     lsSet(saveKey(k), st);
     login(k, nick);
+    if (typeof cloudAfterAuth === 'function') cloudAfterAuth('register', nick, pass);
   } else {
-    const a = accs[k];
+    let a = accs[k];
+    if (!a && typeof fbOn === 'function' && fbOn()) {
+      err.style.color = 'var(--muted)'; err.textContent = 'Ищу аккаунт в облаке…';
+      try { await cloudLoginNew(nick, pass); a = lsGet(ACC_KEY, {})[k]; err.textContent = ''; err.style.color = ''; } catch (e) { err.style.color = ''; }
+    }
     if (!a) { err.textContent = 'Аккаунт не найден — зарегистрируйся'; return; }
     if (await hashPass(pass, a.salt) !== a.hash) { err.textContent = 'Неверный пароль'; return; }
     login(k, a.nick);
+    if (typeof cloudAfterAuth === 'function') cloudAfterAuth('login', a.nick, pass);
   }
 }
 function login(k, nick) {
@@ -1279,7 +1489,7 @@ function importLegacy(st) {
 
 // ---------- power ----------
 function calcPower(l) { return Math.round(10 * Math.pow(1.16, l - 1) + 5 * l); }
-function spinCost(l) { return Math.round((100 + 30 * l) * Math.pow(1.06, l - 1)); }
+function spinCost(l) { return Math.round((100 + 28 * l) * Math.pow(1.055, l - 1)); }
 const EQ_POWER = { common: 20, uncommon: 50, rare: 120, mythical: 280, immortal: 600, arcana: 1300 };
 function equipPower(id) {
   const lo = S.loadout[id]; if (!lo) return 0;
@@ -1287,7 +1497,7 @@ function equipPower(id) {
   for (const slot in lo) { const it = S.items.find(x => x.uid === lo[slot]); if (it) s += EQ_POWER[it.rarity] || 0; }
   return s;
 }
-function heroPower(id) { const h = S.heroes[id]; return calcPower(h.level) + (h.bonus || 0) + equipPower(id); }
+function heroPower(id) { const h = S.heroes[id]; return Math.round((calcPower(h.level) + (h.bonus || 0) + equipPower(id)) * (typeof setBonusMul === 'function' ? setBonusMul(id) : 1)); }
 function totalPower() { return HEROES.reduce((a, h) => a + heroPower(h.id), 0); }
 function sortedByPower() { return HEROES.slice().sort((a, b) => heroPower(b.id) - heroPower(a.id)); }
 function mainHeroId() { return S.mainHero && HERO_BY_ID[S.mainHero] ? S.mainHero : sortedByPower()[0].id; }
@@ -1322,7 +1532,8 @@ function skinName(heroId, rarity) {
 }
 function addSkin(heroId, rarity) {
   if (!HERO_BY_ID[heroId]) heroId = pick(HEROES).id;
-  const it = { uid: S.uid++, type: 'skin', heroId, rarity, name: skinName(heroId, rarity), ts: Date.now() };
+  const st = typeof pickSet === 'function' && Math.random() < 0.8 ? pickSet(heroId, rarity) : null;
+  const it = { uid: S.uid++, type: 'skin', heroId, rarity, name: st ? st.name : skinName(heroId, rarity), path: st ? st.path : undefined, ts: Date.now() };
   S.items.unshift(it); updateTop();
   return it;
 }
@@ -1360,6 +1571,7 @@ const SELL = { common: 30, uncommon: 70, rare: 180, mythical: 450, immortal: 110
 function sellPrice(it) { return Math.round(SELL[it.rarity] * (it.type === 'eq' ? 1.2 : 1)); }
 function itemImgChain(it) {
   if (it.type === 'eq') return [itemImg(it.path)];
+  if (it.path) return [itemImg(it.path)].concat(heroTallChain(it.heroId));
   return heroTallChain(it.heroId);
 }
 
@@ -1392,6 +1604,10 @@ function switchTab(t) {
   if (t === 'arena') renderArena();
   if (t === 'invoker') invRender();
   if (t === 'quests') renderQuests();
+  if (t === 'chests') renderChests();
+  if (t === 'games') renderGames();
+  if (t === 'online') renderOnline();
+  if (t !== 'games' && typeof stopGames === 'function') stopGames();
   window.scrollTo({ top: 0 });
 }
 
@@ -1426,6 +1642,8 @@ function hype(text) {
   if (text === 'БИЧ') el.classList.add('bich');
   el.classList.add('show');
   if (text === 'НИШТЯК' && typeof track === 'function') track('nishtyak');
+  if (typeof announce === 'function') { if (text === 'НИШТЯК') announce('Godlike!'); else if (text === 'БИЧ') announce('Fresh meat!', { pitch: 0.25, rate: 0.75 }); else if (text === '21') announce('Double kill!'); }
+  if (typeof sfx === 'function') sfx(text === 'БИЧ' ? 'lose' : 'win');
   clearTimeout(hypeTimer);
   hypeTimer = setTimeout(() => el.classList.remove('show'), 1750);
 }
@@ -1439,11 +1657,12 @@ function setSpeed(m) {
 
 // бесплатные самоцветы раз в 10 минут
 const FREE_CD = 10 * 60 * 1000;
+function freeAmount() { return Math.max(500, Math.round(rewardScale() * 0.5 / 50) * 50); }
 function freeGems() {
   const left = (S.freeAt || 0) - Date.now();
   if (left > 0) return;
-  addGems(500); S.freeAt = Date.now() + FREE_CD; save();
-  showModal('💎', '+500 самоцветов', 'Следующий бонус через 10 минут.', 'ok', { auto: true });
+  const fg = freeAmount(); addGems(fg); S.freeAt = Date.now() + FREE_CD; save(); sfx('coin');
+  showModal('💎', '+' + fmt(fg) + ' самоцветов', 'Следующий бонус через 10 минут.', 'ok', { auto: true });
   updateFreeBtn();
 }
 function updateFreeBtn() {
@@ -1451,7 +1670,7 @@ function updateFreeBtn() {
   const b = document.getElementById('free-btn');
   const left = (S.freeAt || 0) - Date.now();
   if (left > 0) { const s = Math.ceil(left / 1000); b.disabled = true; b.textContent = '⏳ ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
-  else { b.disabled = false; b.innerHTML = '+500 <img class="gem" src="' + GEM_IMG + '" referrerpolicy="no-referrer">'; }
+  else { b.disabled = false; b.innerHTML = '+' + fmtShort(freeAmount()) + ' <img class="gem" src="' + GEM_IMG + '" referrerpolicy="no-referrer">'; }
 }
 setInterval(updateFreeBtn, 1000);
 
@@ -1606,7 +1825,7 @@ function spinWheelTo(w, targetAngle, ms) {
   w.rot.style.transform = 'rotate(' + next + 'deg)';
   // тиканье указателя
   const ptr = host.querySelector('.wheel-pointer');
-  let t = 0; const iv = setInterval(() => { t += 90; if (ptr) { ptr.classList.remove('tick'); void ptr.offsetWidth; ptr.classList.add('tick'); } if (t > ms * 0.85) clearInterval(iv); }, 90 + Math.random() * 40);
+  let t = 0; const iv = setInterval(() => { t += 90; if (ptr) { ptr.classList.remove('tick'); void ptr.offsetWidth; ptr.classList.add('tick'); } if (typeof sfx === 'function') sfx('tick'); if (t > ms * 0.85) clearInterval(iv); }, 90 + Math.random() * 40);
   setTimeout(() => host.classList.remove('spinning'), ms);
 }
 
@@ -1642,11 +1861,13 @@ function renderHome() {
 
 function startGame() {
   setSpeed(lsGet('d2m_speed', 'slow'));
-  achSeen = null; ensureMeta();
+  achSeen = null; ensureMeta(); ensureShop(); applySettings();
   updateTop(); updateProfileChip(); updateFreeBtn(); updateQuestBadge();
   initHeroes(); initSlots(); initCollection(); initArena(); invInit();
   const h = (location.hash || '').slice(1);
-  switchTab(['home','heroes','slots','collection','upgrade','arena','invoker','quests'].includes(h) ? h : 'home');
+  switchTab(['home','heroes','slots','collection','upgrade','arena','invoker','quests','chests','games','online'].includes(h) ? h : 'home');
+  setTimeout(() => startTutorial(false), 600);
+  if (typeof cloud === 'function' && fbOn() && cloud()) setTimeout(checkGifts, 1500);
   if (S._imported) { delete S._imported; save(); showModal('📦', 'Прогресс перенесён', 'Уровни героев, золото (теперь самоцветы) и предметы из старой версии перенесены в этот аккаунт.', 'ok'); }
 }
 // ================= HEROES / ROULETTE =================
@@ -1708,6 +1929,8 @@ function renderHeroList() {
       c.appendChild(mkImg(heroImgChain(h.id), h.name));
       const t = tierOf(st.level); if (t) { const tr = document.createElement('div'); tr.className = 'tier tier-' + t; c.appendChild(tr); }
       if (h.id === main) { const m = document.createElement('div'); m.className = 'mainstar'; m.textContent = '👑'; c.appendChild(m); }
+      if (pendingTalents(h.id).length) { const tl = document.createElement('div'); tl.className = 'tal'; tl.textContent = '★'; tl.title = 'Доступен талант'; c.appendChild(tl); }
+      if (setCount(h.id) >= 6) { const sb = document.createElement('div'); sb.className = 'setb'; c.appendChild(sb); }
       const inf = document.createElement('div'); inf.className = 'hinfo';
       inf.innerHTML = '<span class="hname">' + esc(h.name) + '</span><span class="hlvl">' + st.level + '</span>';
       c.appendChild(inf);
@@ -1727,6 +1950,7 @@ function selectHero(id) {
 function renderPreview() {
   const box = document.getElementById('sel-preview');
   const btn = document.getElementById('spin-btn');
+  const ot = document.getElementById('pv-tal'); if (ot) ot.remove();
   if (!selectedHero) { box.innerHTML = '<div class="muted" style="width:100%">Выбери героя слева</div>'; btn.disabled = true; document.getElementById('spin-cost').textContent = '—'; return; }
   const h = HERO_BY_ID[selectedHero], st = S.heroes[selectedHero];
   box.innerHTML = '';
@@ -1741,6 +1965,10 @@ function renderPreview() {
   const ui = mkImg(ultIconChain(h.id), ul.name); ui.style.cssText = 'width:20px;height:20px;vertical-align:-5px;border-radius:3px;margin-right:4px';
   pu.appendChild(ui); pu.appendChild(document.createTextNode(ul.name + ' — ' + EFFECT_NAME[ul.type]));
   pu.style.color = EFFECT_COLOR[ul.type];
+  const tdiv = document.createElement('div'); tdiv.innerHTML = renderTalents(h.id); box.after ? null : null;
+  const old = document.getElementById('pv-tal'); if (old) old.remove();
+  tdiv.id = 'pv-tal'; tdiv.style.width = '100%'; box.parentNode.insertBefore(tdiv, box.nextSibling);
+  const sc = setCount(h.id); if (sc >= 3) { const sb = document.createElement('div'); sb.className = 'sub'; sb.style.color = '#ffd36a'; sb.textContent = '✦ Набор героя: ' + sc + '/6 своих предметов → +' + (sc >= 6 ? 25 : 10) + '% силы'; m.appendChild(sb); }
   const cost = spinCost(st.level);
   document.getElementById('spin-cost').innerHTML = gemHTML(cost) + (st.level < MAX_LEVEL ? ' <span class="muted">(след. ур.: ' + fmt(spinCost(st.level + 1)) + ')</span>' : '');
   btn.disabled = busy.hero || !canPay(cost);
@@ -1918,7 +2146,7 @@ function spinSlots() {
     inner.style.transition = 'transform ' + dur + 'ms cubic-bezier(.2,.75,.25,1.04)';
     // элемент с индексом stop (с учётом keep в начале) должен встать в окно
     inner.style.transform = 'translateY(' + (-(stop) * h) + 'px)';
-    setTimeout(() => { if (++done === m.reels) evalSlots(m, bet, result); }, dur + 60);
+    setTimeout(() => { sfx('tick'); if (++done === m.reels) evalSlots(m, bet, result); }, dur + 60);
   }
 }
 function evalSlots(m, bet, res) {
@@ -2216,7 +2444,7 @@ const LOCS = [
 ];
 function locOf(L) { return LOCS.find(l => L >= l.from && L <= l.to); }
 function reqPower(L) { return Math.round(55 * Math.pow(1.0755, L - 1)); }
-function lvlReward(L) { return Math.round(60 * Math.pow(1.08, L - 1)); }
+function lvlReward(L) { return Math.round(70 * Math.pow(1.085, L - 1)); }
 function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function levelDef(L) {
   const loc = locOf(L), r = seeded(L * 7919 + 13);
@@ -2240,75 +2468,100 @@ function levelDef(L) {
 // ---- чистая симуляция боя (результат считается заранее, анимация его проигрывает) ----
 // у каждого героя своя ульта (ULTS): копится 6 атак, затем срабатывает её эффект
 const ULT_EVERY = 6, ENEMY_ULT_EVERY = 5, BOSS_ULT_EVERY = 4;
-function simulateBattle(team, def, rand) {
-  rand = rand || Math.random;
+// team: [{id, p, mods}] ; mods (необязательно): atk, hp, crit, critMul, ultEvery, ultMul, stunImmune, taken, lifesteal, refresher, aegis, cheese
+// def.team (необязательно): командные модификаторы {atk, taken, stunExtra, aoe}
+function simulateBattle(team, def, rand, opts) {
+  rand = rand || Math.random; opts = opts || {};
+  const TM = Object.assign({ atk: 1, taken: 1, stunExtra: 0, aoe: 1, hp: 1 }, def.team || {});
   const form = 0.85 + rand() * 0.3;            // «форма» команды в этом матче
-  const T = team.map(t => ({ id: t.id, p: t.p, hp: t.p * 10, max: t.p * 10, atk: t.p * form, crit: HERO_BY_ID[t.id].attr === 'agi' ? 0.22 : 0.1, n: 0, alive: true, stun: 0, ult: ultOf(t.id) }));
-  const E = def.waves.map(w => ({ id: w.id, p: w.power, hp: w.power * 10, max: w.power * 10, atk: w.power * def.K, alive: true, boss: w.boss, stun: 0, n: 0, ult: ultOf(w.id), rage: 0 }));
+  const T = team.map(t => {
+    const m = Object.assign({ atk: 1, hp: 1, crit: 0, critMul: 1.9, ultEvery: ULT_EVERY, ultMul: 1, taken: 1, lifesteal: 0 }, t.mods || {});
+    const max = t.p * 10 * m.hp * TM.hp;
+    return { id: t.id, p: t.p, hp: max, max, atk: t.p * form * m.atk * TM.atk, crit: (HERO_BY_ID[t.id] && HERO_BY_ID[t.id].attr === 'agi' ? 0.22 : 0.1) + m.crit, m, n: 0, alive: true, stun: 0, ult: ultOf(t.id), aegis: !!m.aegis, cheese: !!m.cheese, refresher: !!m.refresher };
+  });
+  const E = def.waves.map(w => ({ id: w.id, name: w.name, p: w.power, hp: w.power * 10 * (w.hpMul || 1), max: w.power * 10 * (w.hpMul || 1), atk: w.power * def.K, alive: true, boss: w.boss, stun: 0, n: 0, ult: ultOf(w.id), rage: 0 }));
   const ticks = [];
   let wi = 0, guard = 0, shield = 0, buff = 0;
+  const maxTicks = opts.maxTicks || 400;
+  const used = { aegis: false, cheese: false, rapierLost: false };
   const hitE = (e, dmg) => { e.hp = Math.max(0, e.hp - dmg); };
-  while (wi < E.length && T.some(t => t.alive) && guard++ < 400) {
+  const hurt = (ti, d, ev) => {
+    const t = T[ti]; t.hp = Math.max(0, t.hp - d);
+    if (t.hp <= 0 && t.alive) {
+      if (t.aegis) { t.aegis = false; used.aegis = true; t.hp = t.max; ev.push({ k: 'aegis', to: ti }); return; }
+      t.alive = false; ev.push({ k: 'tkill', to: ti });
+      if (ti === 0 && t.m.rapier) { used.rapierLost = true; ev.push({ k: 'rapier' }); }
+    } else if (t.cheese && t.alive && t.hp < t.max * 0.25) { t.cheese = false; used.cheese = true; t.hp = t.max; ev.push({ k: 'cheese', to: ti }); }
+  };
+  while (wi < E.length && T.some(t => t.alive) && guard++ < maxTicks) {
     const ev = [];
     const e = E[wi];
     for (let i = 0; i < T.length && e.alive; i++) {
       const t = T[i]; if (!t.alive) continue;
       if (t.stun > 0) { t.stun--; ev.push({ k: 'stunned', who: i }); continue; }
       t.n++;
-      const isUlt = t.n % ULT_EVERY === 0;
+      const isUlt = t.n % t.m.ultEvery === 0;
       const atk = t.atk * (buff > 0 ? 1.3 : 1) * (0.8 + rand() * 0.4);
-      if (isUlt) {
-        const type = t.ult.type;
-        let mult = { nuke: 3.2, crit: 4, aoe: 2, stun: 1.5, heal: 1, shield: 1, buff: 1.5, execute: 2 }[type] || 2;
-        let exec = false;
-        if (type === 'execute' && e.hp / e.max < 0.35) { exec = true; mult = 0; }
-        const dmg = exec ? e.hp : atk * mult;
-        hitE(e, dmg);
-        const x = { k: 'ult', from: i, type, dmg: Math.round(dmg), exec, hp: e.hp / e.max, wave: wi };
-        if (type === 'aoe') { x.splash = []; for (let j = wi + 1; j < E.length; j++) { const sd = atk * 0.7; E[j].hp = Math.max(E[j].max * 0.05, E[j].hp - sd); x.splash.push(j); } }
-        if (type === 'stun') { e.stun = 2; }
-        if (type === 'heal') { x.heal = []; T.forEach((a, ai) => { if (a.alive) { a.hp = Math.min(a.max, a.hp + a.max * 0.2); x.heal.push([ai, a.hp / a.max]); } }); }
-        if (type === 'shield') shield = 2;
-        if (type === 'buff') buff = 3;
-        ev.push(x);
-      } else {
-        const crit = rand() < t.crit;
-        const dmg = atk * (crit ? 1.9 : 1);
-        hitE(e, dmg);
-        ev.push({ k: 'hit', from: i, dmg: Math.round(dmg), crit, hp: e.hp / e.max, wave: wi });
+      const casts = isUlt && t.refresher ? 2 : 1;
+      if (isUlt && t.refresher) t.refresher = false;
+      for (let c = 0; c < casts && e.alive; c++) {
+        let dealt = 0;
+        if (isUlt) {
+          const type = t.ult.type;
+          let mult = ({ nuke: 3.2, crit: 4, aoe: 2 * TM.aoe, stun: 1.5, heal: 1, shield: 1, buff: 1.5, execute: 2 }[type] || 2) * t.m.ultMul;
+          let exec = false;
+          if (type === 'execute' && e.hp / e.max < 0.35 && !e.noExec) { exec = true; mult = 0; }
+          const dmg = exec ? e.hp : atk * mult;
+          hitE(e, dmg); dealt = dmg;
+          const x = { k: 'ult', from: i, type, dmg: Math.round(dmg), exec, hp: e.hp / e.max, wave: wi, refresh: c > 0 };
+          if (type === 'aoe') { x.splash = []; for (let j = wi + 1; j < E.length; j++) { const sd = atk * 0.7 * TM.aoe; E[j].hp = Math.max(E[j].max * 0.05, E[j].hp - sd); x.splash.push(j); } }
+          if (type === 'stun') e.stun = 2 + TM.stunExtra;
+          if (type === 'heal') { x.heal = []; T.forEach((a, ai) => { if (a.alive) { a.hp = Math.min(a.max, a.hp + a.max * 0.2 * t.m.ultMul); x.heal.push([ai, a.hp / a.max]); } }); }
+          if (type === 'shield') shield = 2;
+          if (type === 'buff') buff = 3;
+          ev.push(x);
+        } else {
+          const crit = rand() < t.crit;
+          const dmg = atk * (crit ? t.m.critMul : 1);
+          hitE(e, dmg); dealt = dmg;
+          ev.push({ k: 'hit', from: i, dmg: Math.round(dmg), crit, hp: e.hp / e.max, wave: wi });
+        }
+        if (t.m.lifesteal && dealt) t.hp = Math.min(t.max, t.hp + dealt * t.m.lifesteal * 10 * 0.1);
+        if (e.hp <= 0) { e.alive = false; ev.push({ k: 'ekill', wave: wi }); }
       }
-      if (e.hp <= 0) { e.alive = false; ev.push({ k: 'ekill', wave: wi }); }
     }
     if (e.alive) {
       const alive = T.map((t, i) => i).filter(i => T[i].alive);
       if (e.stun > 0) { e.stun--; ev.push({ k: 'estunned' }); }
-      else {
+      else if (alive.length) {
         e.n++;
         const every = e.boss ? BOSS_ULT_EVERY : ENEMY_ULT_EVERY;
-        const dm = (shield > 0 ? 0.45 : 1) * (e.rage > 0 ? 1.4 : 1);
+        const dm = (shield > 0 ? 0.45 : 1) * (e.rage > 0 ? 1.4 : 1) * TM.taken;
+        const tk = ti => dm * T[ti].m.taken;
         if (e.n % every === 0) {
           const type = e.ult.type;
           const x = { k: 'eult', type, hits: [] };
+          ev.push(x);
+          const after = [];
           if (type === 'aoe' || (e.boss && type !== 'heal')) {
-            alive.forEach(ti => { const d = e.atk * (0.8 + rand() * 0.4) * 0.6 * dm; T[ti].hp = Math.max(0, T[ti].hp - d); x.hits.push([ti, Math.round(d), T[ti].hp / T[ti].max]); });
+            alive.forEach(ti => { const d = e.atk * (0.8 + rand() * 0.4) * 0.6 * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]); });
           } else if (type === 'stun') {
-            const ti = alive[Math.floor(rand() * alive.length)]; T[ti].stun = 2; const d = e.atk * dm; T[ti].hp = Math.max(0, T[ti].hp - d); x.hits.push([ti, Math.round(d), T[ti].hp / T[ti].max]); x.stunned = ti;
+            const ti = alive[Math.floor(rand() * alive.length)];
+            if (!T[ti].m.stunImmune) { T[ti].stun = 2; x.stunned = ti; } else x.bkb = ti;
+            const d = e.atk * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]);
           } else if (type === 'heal') {
             e.hp = Math.min(e.max, e.hp + e.max * 0.15); x.ehp = e.hp / e.max;
           } else if (type === 'buff' || type === 'shield') {
-            e.rage = 2; const ti = alive[Math.floor(rand() * alive.length)]; const d = e.atk * dm; T[ti].hp = Math.max(0, T[ti].hp - d); x.hits.push([ti, Math.round(d), T[ti].hp / T[ti].max]);
+            e.rage = 2; const ti = alive[Math.floor(rand() * alive.length)]; const d = e.atk * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]);
           } else {
-            const ti = alive[Math.floor(rand() * alive.length)]; const d = e.atk * 2.5 * dm; T[ti].hp = Math.max(0, T[ti].hp - d); x.hits.push([ti, Math.round(d), T[ti].hp / T[ti].max]);
+            const ti = alive[Math.floor(rand() * alive.length)]; const d = e.atk * 2.5 * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]);
           }
-          ev.push(x);
-          x.hits.forEach(h => { if (T[h[0]].hp <= 0 && T[h[0]].alive) { T[h[0]].alive = false; ev.push({ k: 'tkill', to: h[0] }); } });
+          after.forEach(([ti, d], hi) => { hurt(ti, d, ev); x.hits[hi][2] = T[ti].hp / T[ti].max; });
         } else {
           const ti = alive[Math.floor(rand() * alive.length)];
-          const t = T[ti];
-          const dmg = e.atk * (0.8 + rand() * 0.4) * dm;
-          t.hp = Math.max(0, t.hp - dmg);
-          ev.push({ k: 'ehit', to: ti, dmg: Math.round(dmg), hp: t.hp / t.max, wave: wi });
-          if (t.hp <= 0) { t.alive = false; ev.push({ k: 'tkill', to: ti }); }
+          const dmg = e.atk * (0.8 + rand() * 0.4) * tk(ti);
+          const x = { k: 'ehit', to: ti, dmg: Math.round(dmg), hp: 0, wave: wi };
+          ev.push(x); hurt(ti, dmg, ev); x.hp = T[ti].hp / T[ti].max;
         }
         if (e.rage > 0) e.rage--;
       }
@@ -2316,13 +2569,15 @@ function simulateBattle(team, def, rand) {
     if (shield > 0) shield--; if (buff > 0) buff--;
     ticks.push(ev);
   }
-  return { win: wi >= E.length, ticks, alive: T.filter(t => t.alive).length };
+  const dmgDealt = E.reduce((a, x) => a + (x.max - x.hp), 0);
+  return { win: wi >= E.length, ticks, alive: T.filter(t => t.alive).length, used, wavesCleared: wi, dmgDealt, enemyHp: E.map(x => x.hp / x.max) };
 }
 
 // ---------- UI ----------
 let arenaLoc = null, arenaSel = null;
 function initArena() { arenaLoc = null; arenaSel = null; }
 function setMainHero(id) { S.mainHero = id === 'auto' ? null : id; save(); renderArena(); updateTop(); }
+const REPLAY_MUL = 0.4;
 function renderArena() {
   const sel = document.getElementById('main-hero');
   sel.innerHTML = '<option value="auto">Авто (сильнейший)</option>' + sortedByPower().map(h => '<option value="' + h.id + '">' + esc(h.name) + ' · ур.' + S.heroes[h.id].level + ' · ⚔' + fmt(heroPower(h.id)) + '</option>').join('');
@@ -2337,6 +2592,7 @@ function renderArena() {
     d.appendChild(n); pr.appendChild(d);
   });
   document.getElementById('stack-power').textContent = fmt(stackPower());
+  renderShopPanel(); renderSynergyBox(); renderRoshan();
   const cur = Math.min(100, S.arena.cleared + 1);
   if (!arenaLoc) arenaLoc = locOf(cur).id;
   if (!arenaSel) arenaSel = cur;
@@ -2364,30 +2620,37 @@ function renderArena() {
 }
 function fmtShort(n) { return n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + 'k' : String(n); }
 function winChanceEstimate(def) {
-  const team = getStack().map(id => ({ id, p: heroPower(id) }));
+  const bt = buildTeam({ noCons: true });
+  const d = Object.assign({}, def, { team: bt.tm });
   let w = 0; const N = 160, r = seeded(def.L * 31 + Math.round(stackPower()));
-  for (let i = 0; i < N; i++) if (simulateBattle(team, def, r).win) w++;
+  for (let i = 0; i < N; i++) if (simulateBattle(bt.team, d, r).win) w++;
   return w / N;
 }
 function renderLevelInfo() {
-  const L = arenaSel, def = levelDef(L);
+  const L = arenaSel, def = modeDef(levelDef(L));
   const replay = L <= S.arena.cleared;
+  const modeRow = '<div class="mode-row" style="width:100%">' + Object.keys(MODES).map(m => '<button class="btn sm ' + (arenaMode === m ? 'gold' : 'ghost') + '" title="' + esc(MODES[m].d) + '" onclick="setArenaMode(\'' + m + '\')">' + MODES[m].name + '</button>').join('') + '<span class="muted" style="font-size:.75rem;align-self:center;margin-left:6px">' + esc(MODES[arenaMode].d) + '</span></div>';
+  if (arenaMode === 'survival') {
+    document.getElementById('level-info').innerHTML = modeRow + '<div style="flex:1"><div class="cinzel" style="font-size:1.2rem;color:#fff">Выживание</div><div class="muted" style="font-size:.85rem">Волны идут без конца, каждая на 13% сильнее. Награда за каждую пройденную волну.</div><div style="font-size:.85rem;margin-top:4px">Рекорд: <b style="color:var(--gold2)">' + (S.survivalBest || 0) + '</b> волн · Твой стак: <b style="color:var(--radiant)">' + fmt(stackPower()) + '</b></div></div><button class="btn green big" onclick="startBattle(0,false,survivalDef())">⚔ НАЧАТЬ</button>';
+    return;
+  }
   const ch = winChanceEstimate(def);
   const chCol = ch > 0.75 ? 'var(--ok)' : ch > 0.4 ? 'var(--gold2)' : 'var(--danger)';
   const box = document.getElementById('level-info');
-  box.innerHTML = '<div style="min-width:170px"><div class="cinzel" style="font-size:1.2rem;color:#fff;font-weight:700">Уровень ' + L + '</div><div class="muted" style="font-size:.8rem">' + def.loc.name + ' · ' + def.waves.length + ' волн подряд</div>' +
+  box.innerHTML = modeRow + '<div style="min-width:170px"><div class="cinzel" style="font-size:1.2rem;color:#fff;font-weight:700">Уровень ' + L + '</div><div class="muted" style="font-size:.8rem">' + def.loc.name + ' · ' + def.waves.length + ' волн подряд</div>' +
     '<div style="font-size:.85rem;margin-top:4px">Сила врагов: <b style="color:var(--dire)">' + fmt(def.R) + '</b> · твой стак: <b style="color:var(--radiant)">' + fmt(stackPower()) + '</b></div>' +
     '<div style="font-size:.85rem">Шанс победы ≈ <b style="color:' + chCol + '">' + Math.round(ch * 100) + '%</b></div></div>' +
     '<div class="wave-strip" id="wave-strip"></div>' +
-    '<div style="flex:1;min-width:180px;font-size:.82rem"><div>Награда: ' + gemHTML(replay ? Math.round(def.reward * 0.3) : def.reward) + (replay ? ' <span class="muted">(повтор, без предметов)</span>' : '') + '</div>' +
+    '<div style="flex:1;min-width:180px;font-size:.82rem"><div>Награда: ' + gemHTML(replay ? Math.round(def.reward * REPLAY_MUL) : def.reward) + (replay ? ' <span class="muted">(повтор, без предметов)</span>' : '') + '</div>' +
     (!replay ? '<div>' + (def.skin ? '🎨 Скин за босса' : '') + (def.skin && def.eq ? ' + ' : '') + (def.eq ? '🛡 Снаряжение' : '') + (!def.skin && !def.eq ? '<span class="muted">Скин — каждый 4-й босс, снаряжение — каждый 2-й</span>' : '') + '</div>' : '') + '</div>' +
     '<div style="display:flex;flex-direction:column;gap:6px"><button class="btn green big" onclick="startBattle(' + L + ',false)">⚔ В БОЙ</button>' +
-    (!replay && L < 100 ? '<button class="btn sm" onclick="startBattle(' + L + ',true)" title="Сражаться с уровнями подряд, пока не проиграешь">▶ Цепочка уровней</button>' : '') + '</div>';
+    (!replay && L < 100 && arenaMode === 'normal' ? '<button class="btn sm" onclick="startBattle(' + L + ',true)" title="Сражаться с уровнями подряд, пока не проиграешь">▶ Цепочка уровней</button>' : '') + '</div>';
   const ws = document.getElementById('wave-strip');
   def.waves.forEach((w, i) => {
     if (i) { const a = document.createElement('span'); a.className = 'arr'; a.textContent = '›'; ws.appendChild(a); }
-    const d = document.createElement('div'); d.className = 'w' + (w.boss ? ' boss' : '');
-    d.appendChild(mkImg(heroImgChain(w.id), w.name));
+    const d = document.createElement('div'); d.className = 'w' + (w.boss ? ' boss' : '') + (arenaMode === 'cm' ? ' cm' : '') + (arenaMode === 'cm' && cmBan === i ? ' banned' : '');
+    if (arenaMode === 'cm') d.onclick = () => { cmBan = cmBan === i ? -1 : i; renderLevelInfo(); };
+    d.appendChild(mkImg(unitImgChain(w.id), w.name));
     const s = document.createElement('span'); s.textContent = (w.boss ? '👑 ' : '') + fmtShort(w.power); d.appendChild(s);
     d.title = w.name + ' · ⚔ ' + fmt(w.power);
     ws.appendChild(d);
@@ -2401,17 +2664,20 @@ function arenaLog(cls, txt) {
 
 // ---------- BATTLE ANIMATION ----------
 let BT = null;
-function startBattle(L, chain) {
+function startBattle(L, chain, customDef) {
   if (busy.battle) return;
-  const def = levelDef(L);
-  const teamIds = getStack();
-  const team = teamIds.map(id => ({ id, p: heroPower(id) }));
-  const result = simulateBattle(team, def);
+  const def = customDef || modeDef(levelDef(L));
+  const bt = buildTeam({ noCons: !!def.roshan });
+  def.team = bt.tm;
+  const team = bt.team;
+  const result = simulateBattle(team, def, null, def.roshan ? { maxTicks: 14 } : {});
   busy.battle = true;
-  BT = { L, def, team, result, chain, tick: 0, skip: false, timer: null, charge: [0, 0, 0, 0, 0], wave: 0 };
+  BT = { L, def, team, result, chain, tick: 0, skip: false, timer: null, charge: [0, 0, 0, 0, 0], wave: 0, prevSpeed: speed };
+  if (def.turbo) speed = 'fast';
+  sfx('start');
   const stage = document.getElementById('bt-stage');
   document.getElementById('bt-ground').className = 'ground ' + def.loc.g;
-  document.getElementById('bt-title').textContent = 'Уровень ' + L + ' · ' + def.loc.name;
+  document.getElementById('bt-title').textContent = def.pvp ? 'PvP · против ' + def.pvp.nick : def.roshan ? 'Логово Рошана' : def.survival ? 'Выживание · ' + def.loc.name : 'Уровень ' + L + ' · ' + def.loc.name + (def.turbo ? ' · TURBO' : '');
   document.getElementById('bt-sub').textContent = 'Сила стака ' + fmt(stackPower()) + ' vs ' + fmt(def.R) + ' · ' + def.waves.length + ' волн';
   document.getElementById('bt-status').textContent = '⚔';
   document.getElementById('bt-status').style.color = '';
@@ -2431,12 +2697,13 @@ function startBattle(L, chain) {
   showWave(0, false);
   renderQueue(0);
   document.getElementById('battle').classList.add('show');
-  feed('Бой начинается! Против тебя ' + def.waves.length + ' противников подряд.');
+  const syn = activeSynergies(bt.ids);
+  feed(def.roshan ? 'Рошан проснулся! У тебя 14 ходов.' : def.survival ? 'Выживание: держись как можно дольше!' : 'Бой начинается! Против тебя ' + def.waves.length + ' противников подряд.' + (syn.length ? ' Синергии: ' + syn.map(x => x.name).join(', ') : ''));
   BT.timer = setTimeout(playTick, speed === 'fast' ? 300 : 700);
 }
 function unitEl(id, name, p, cls, enemy) {
   const u = document.createElement('div'); u.className = 'unit ' + (enemy ? 'enemy ' : '') + cls;
-  u.appendChild(mkImg(heroImgChain(id), name, 'uimg'));
+  u.appendChild(mkImg(unitImgChain(id), name, 'uimg'));
   const nm = document.createElement('div'); nm.className = 'uname'; nm.textContent = name + ' ⚔' + fmtShort(p); u.appendChild(nm);
   const ul = ultOf(id);
   const ic = mkImg(ultIconChain(id), ul.name, 'uult'); ic.title = ul.name + ' — ' + EFFECT_NAME[ul.type]; u.appendChild(ic);
@@ -2454,7 +2721,7 @@ function showWave(i, animate, hp) {
 }
 function renderQueue(cur) {
   const q = document.getElementById('bt-queue'); q.innerHTML = '<span>Волны:</span>';
-  BT.def.waves.forEach((w, i) => { const im = mkImg(heroImgChain(w.id), w.name); if (i < cur) im.className = 'done'; else if (i === cur) im.className = 'cur'; if (w.boss) im.style.borderColor = '#ff8a3a'; q.appendChild(im); });
+  BT.def.waves.forEach((w, i) => { const im = mkImg(unitImgChain(w.id), w.name); if (i < cur) im.className = 'done'; else if (i === cur) im.className = 'cur'; if (w.boss) im.style.borderColor = '#ff8a3a'; q.appendChild(im); });
 }
 function feed(t, col) {
   const f = document.getElementById('bt-feed');
@@ -2565,12 +2832,19 @@ function playTick() {
         if (enemyEl) { enemyEl.classList.add('casting'); setTimeout(() => enemyEl.classList.remove('casting'), 700); }
         if (e.ehp != null) { setBar(enemyEl, '.ubar div', e.ehp); if (enemyEl) stageFx('healfx', enemyEl); feed('💚 ' + w.name + ' лечится', '#ff9a8a'); }
         e.hits.forEach(([ti, d, hp]) => setTimeout(() => { const t = left[ti]; if (!t) return; t.classList.remove('hit'); void t.offsetWidth; t.classList.add('hit'); setBar(t, '.ubar div', hp); floatDmg(t, '-' + fmtShort(d), 'crit', '#ff5a3a'); }, 200));
+        if (e.bkb != null) feed('🟡 BKB: ' + HERO_BY_ID[BT.team[e.bkb].id].name + ' не оглушён', '#ffd36a');
         if (e.stunned != null) { setTimeout(() => stageFx('stunfx', left[e.stunned]), 200); feed('💫 ' + HERO_BY_ID[BT.team[e.stunned].id].name + ' оглушён', '#ff9a8a'); }
         else if (e.hits.length > 1) feed('💥 ' + ultOf(w.id).name + ' бьёт по всей команде', '#ff9a8a');
       } else if (e.k === 'ehit') {
         const t = left[e.to];
         if (enemyEl) { enemyEl.classList.remove('lunge-l'); void enemyEl.offsetWidth; enemyEl.classList.add('lunge-l'); }
         setTimeout(() => { t.classList.remove('hit'); void t.offsetWidth; t.classList.add('hit'); setBar(t, '.ubar div', e.hp); floatDmg(t, '-' + fmtShort(e.dmg), '', '#ff7a6a'); }, 150);
+      } else if (e.k === 'aegis') {
+        const t = left[e.to]; setBar(t, '.ubar div', 1); stageFx('healfx', t); floatDmg(t, 'AEGIS', 'crit', '#ffd36a'); feed('🛡 Aegis! ' + HERO_BY_ID[BT.team[e.to].id].name + ' возрождается', '#ffd36a');
+      } else if (e.k === 'cheese') {
+        const t = left[e.to]; setBar(t, '.ubar div', 1); stageFx('healfx', t); floatDmg(t, '🧀 +100%', 'crit', '#ffe34a'); feed('🧀 Cheese! Полное лечение', '#ffe34a');
+      } else if (e.k === 'rapier') {
+        feed('⚔ Divine Rapier выпала!', 'var(--danger)');
       } else if (e.k === 'ekill') {
         setTimeout(() => { if (enemyEl) enemyEl.classList.add('dead'); feed('☠ ' + BT.def.waves[e.wave].name + ' повержен!', 'var(--ok)'); }, 250);
       } else if (e.k === 'tkill') {
@@ -2592,23 +2866,29 @@ function endBattle() {
   const st = document.getElementById('bt-status');
   const replay = L <= S.arena.cleared;
   let msg;
+  speed = BT.prevSpeed;
+  consumeAfterBattle(result.used);
+  if (def.roshan || def.survival || def.pvp) { endSpecialBattle(def, result, st); return; }
   if (result.win) {
     st.textContent = '🏆 ПОБЕДА'; st.style.color = 'var(--ok)';
     const right = document.getElementById('bt-right').firstChild; if (right) right.classList.add('dead');
-    const g = replay ? Math.round(def.reward * 0.3) : def.reward;
-    addGems(g); S.arena.wins++; track('arenaWins');
+    const g = replay ? Math.round(def.reward * REPLAY_MUL) : def.reward;
+    addGems(g); S.arena.wins++; track('arenaWins'); sfx('win');
+    S.winStreak = (S.winStreak || 0) + 1;
+    if (S.arena.wins === 1) announce('First Blood!'); else if (S.winStreak === 5) announce('Rampage!'); else if (S.winStreak === 3) announce('Killing spree!');
     const got = [];
     if (!replay) {
       S.arena.cleared = L;
       const ri = Math.max(0, Math.min(5, Math.floor(L / 17) + (Math.random() < 0.3 ? 1 : 0) - (Math.random() < 0.25 ? 1 : 0)));
       if (def.eq) got.push(addEquipment(BT.team[0].id, RARITIES[ri]));
+      if (L % 10 === 0 && Math.random() < 0.5) { S.cons = S.cons || { aegis: 0, cheese: 0 }; S.cons.cheese++; got.push({ name: 'Cheese', rarity: 'immortal' }); }
       if (def.skin) got.push(addSkin(def.waves[def.waves.length - 1].id, RARITIES[Math.min(5, ri + 1)]));
     } else S.arena.replays++;
     msg = 'Уровень ' + L + ' пройден! +' + fmt(g) + ' 💎' + (got.length ? ' · ' + got.map(x => x.name + ' (' + RARITY_NAMES[x.rarity] + ')').join(', ') : '');
     arenaLog('win', '🏆 ' + msg);
     feed(msg, 'var(--ok)');
   } else {
-    st.textContent = '💀 ПОРАЖЕНИЕ'; st.style.color = 'var(--danger)';
+    st.textContent = '💀 ПОРАЖЕНИЕ'; st.style.color = 'var(--danger)'; sfx('lose'); S.winStreak = 0;
     const pity = Math.round(def.reward * 0.08);
     addGems(pity); S.arena.losses++;
     msg = 'Поражение на уровне ' + L + ' (дошёл до волны ' + (Math.min(def.waves.length, result.ticks.filter(t => t.some(e => e.k === 'wave')).length + 1)) + '/' + def.waves.length + '). Утешение +' + fmt(pity) + ' 💎';
@@ -2627,10 +2907,50 @@ function endBattle() {
     setTimeout(() => showModal('👑', def.loc.name + ' захвачен!', 'Босс повержен. ' + (L === 100 ? 'Ты прошёл всю арену — Древний пал!' : 'Открыта локация: ' + locOf(L + 1).name), 'ok'), 600);
   }
 }
+function endSpecialBattle(def, result, st) {
+  let msg;
+  if (def.pvp) {
+    msg = pvpResult(def, result);
+    st.textContent = result.win ? '🏆 ПОБЕДА' : '💀 ПОРАЖЕНИЕ'; st.style.color = result.win ? 'var(--ok)' : 'var(--danger)'; sfx(result.win ? 'win' : 'lose');
+  } else if (def.roshan) {
+    const r = roshanState();
+    r.dealt += result.dmgDealt;
+    const killed = result.win || r.dealt >= r.pool;
+    if (killed) {
+      r.killed = true;
+      S.cons = S.cons || { aegis: 0, cheese: 0 }; S.cons.aegis++; S.cons.cheese++;
+      const g = Math.round(rewardScale() * 4); addGems(g);
+      const it = addEquipment(mainHeroId(), 'immortal');
+      st.textContent = '🏆 РОШАН ПОВЕРЖЕН'; st.style.color = 'var(--ok)'; sfx('win'); announce('Roshan has fallen to the Radiant!');
+      msg = 'Рошан повержен! Aegis + Cheese + ' + fmt(g) + ' 💎 + ' + it.name; track('roshanKills');
+    } else {
+      st.textContent = '⏳ РОШАН ЖИВ'; st.style.color = 'var(--gold2)';
+      msg = 'Нанесено ' + fmt(result.dmgDealt) + ' урона. У Рошана осталось ' + Math.round((1 - r.dealt / r.pool) * 100) + '% здоровья. Попыток: ' + r.tries;
+    }
+  } else {
+    const n = result.wavesCleared;
+    const g = Math.round(def.waves.slice(0, n).reduce((a, w) => a + w.power, 0) * 0.25);
+    addGems(g);
+    const rec = n > (S.survivalBest || 0); if (rec) S.survivalBest = n;
+    st.textContent = '🌊 ВОЛН: ' + n; st.style.color = 'var(--gold2)'; sfx(n ? 'win' : 'lose');
+    msg = 'Выживание: пройдено ' + n + ' волн' + (rec ? ' — НОВЫЙ РЕКОРД!' : '') + ' · +' + fmt(g) + ' 💎';
+    if (rec && n >= 10) hype('НИШТЯК');
+    track('survivalRuns');
+  }
+  arenaLog('gold', msg); feed(msg, 'var(--gold2)');
+  save(); updateTop();
+  const btn = document.getElementById('bt-skip'); btn.textContent = 'Закрыть'; btn.onclick = () => closeBattle();
+}
+function unitImgChain(id) {
+  if (id === 'roshan') return [spellIcon('roshan_slam'), ITEM_ICON('aegis')];
+  if (id === 'creeps') return [ITEM_ICON('tango')];
+  return heroImgChain(id);
+}
 function closeBattle(keep) {
   document.getElementById('battle').classList.remove('show');
+  if (BT && BT.prevSpeed) speed = BT.prevSpeed;
   busy.battle = false; BT = null;
-  if (!keep) { const c = Math.min(100, S.arena.cleared + 1); arenaSel = c; arenaLoc = locOf(c).id; renderArena(); }
+  if (!keep) { const c = Math.min(100, S.arena.cleared + 1); arenaSel = c; arenaLoc = locOf(c).id; cmBan = -1; renderArena(); }
 }
 // ================= QUESTS / ACHIEVEMENTS / DAILY LOGIN / SAVE TRANSFER =================
 function todayStr() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -2721,7 +3041,7 @@ function questBadgeCount() {
 function updateQuestBadge() {
   const b = document.querySelector('#nav button[data-tab=quests]'); if (!b) return;
   const c = questBadgeCount();
-  b.innerHTML = 'Задания' + (c ? ' <span class="nbadge">' + c + '</span>' : '');
+  b.innerHTML = (typeof SETTINGS !== 'undefined' && SETTINGS.lang === 'en' ? 'Quests' : 'Задания') + (c ? ' <span class="nbadge">' + c + '</span>' : '');
 }
 function toast(title, text) {
   let box = document.getElementById('toasts');
@@ -2830,6 +3150,928 @@ function applyImport(txt) {
     showModal('💾', 'Импорт выполнен', 'Прогресс загружен' + (data.nick ? ' (сохранение игрока ' + data.nick + ')' : '') + '.', 'ok');
   } catch (e) { err.style.color = ''; err.textContent = 'Не похоже на сохранение Dota 2 Master.'; }
 }
+// ================= ЛАВКА, ТАЛАНТЫ, СИНЕРГИИ, НАБОРЫ, РОШАН, РЕЖИМЫ =================
+const ITEM_ICON = n => STEAM + 'items/' + n + '.png';
+const SHOP = [
+  { id: 'black_king_bar', name: 'Black King Bar', cost: 6000, d: 'Главный герой не может быть оглушён', mods: { stunImmune: true } },
+  { id: 'heart', name: 'Heart of Tarrasque', cost: 8000, d: '+60% здоровья главному герою', mods: { hp: 1.6 } },
+  { id: 'butterfly', name: 'Butterfly', cost: 9000, d: 'Уклонение: главный герой получает на 30% меньше урона', mods: { taken: 0.7 } },
+  { id: 'greater_crit', name: 'Daedalus', cost: 9000, d: '+20% шанс крита, крит ×2.6', mods: { crit: 0.2, critMul: 2.6 } },
+  { id: 'satanic', name: 'Satanic', cost: 10000, d: 'Вампиризм 15% от нанесённого урона', mods: { lifesteal: 0.15 } },
+  { id: 'assault', name: 'Assault Cuirass', cost: 11000, d: 'Аура: вся команда +8% атаки', team: { atk: 1.08 } },
+  { id: 'pipe', name: 'Pipe of Insight', cost: 8000, d: 'Аура: команда получает на 10% меньше урона', team: { taken: 0.9 } },
+  { id: 'ultimate_scepter', name: "Aghanim's Scepter", cost: 12000, d: 'Ульта главного героя ×1.5', mods: { ultMul: 1.5 } },
+  { id: 'refresher', name: 'Refresher Orb', cost: 14000, d: 'Первая ульта в бою срабатывает дважды', mods: { refresher: true } },
+  { id: 'rapier', name: 'Divine Rapier', cost: 25000, d: 'Атака главного героя ×1.8. Если он погибнет — рапира выпадет и пропадёт!', mods: { atk: 1.8, rapier: true } }
+];
+const CONSUMABLES = {
+  aegis: { name: 'Aegis of the Immortal', icon: 'aegis', d: 'В следующем бою главный герой один раз воскреснет' },
+  cheese: { name: 'Cheese', icon: 'cheese', d: 'Когда здоровье главного героя падает ниже 25% — полностью восстанавливает его' }
+};
+function ensureShop() { S.shop = S.shop || { owned: [], slots: [] }; S.cons = S.cons || { aegis: 0, cheese: 0 }; S.useCons = S.useCons || { aegis: true, cheese: true }; }
+
+// ---------- таланты ----------
+const TALENT_LEVELS = [10, 15, 20, 25];
+const TALENTS = {
+  10: [{ t: '+12% атаки', m: { atk: 1.12 } }, { t: '+15% здоровья', m: { hp: 1.15 } }],
+  15: [{ t: '+12% шанс крита', m: { crit: 0.12 } }, { t: 'Ульта каждые 5 атак', m: { ultEvery: 5 } }],
+  20: [{ t: '+25% атаки', m: { atk: 1.25 } }, { t: '−20% входящего урона', m: { taken: 0.8 } }],
+  25: [{ t: 'Ульта ×1.5', m: { ultMul: 1.5 } }, { t: '+35% здоровья и +10% атаки', m: { hp: 1.35, atk: 1.1 } }]
+};
+function mergeMods(a, b) {
+  const r = Object.assign({}, a);
+  for (const k in b) {
+    if (['atk', 'hp', 'taken', 'ultMul'].includes(k)) r[k] = (r[k] || 1) * b[k];
+    else if (k === 'crit' || k === 'lifesteal') r[k] = (r[k] || 0) + b[k];
+    else if (k === 'ultEvery') r[k] = Math.min(r[k] || 6, b[k]);
+    else if (k === 'critMul') r[k] = Math.max(r[k] || 1.9, b[k]);
+    else r[k] = b[k];
+  }
+  return r;
+}
+function talentMods(id) {
+  const h = S.heroes[id]; let m = {};
+  TALENT_LEVELS.forEach(L => { const c = h.talents && h.talents[L]; if (c != null && h.level >= L) m = mergeMods(m, TALENTS[L][c].m); });
+  return m;
+}
+function pendingTalents(id) { const h = S.heroes[id]; return TALENT_LEVELS.filter(L => h.level >= L && !(h.talents && h.talents[L] != null)); }
+function pickTalent(id, L, c) { const h = S.heroes[id]; h.talents = h.talents || {}; if (h.level < L || h.talents[L] != null) return; h.talents[L] = c; save(); renderPreview(); }
+function renderTalents(id) {
+  const h = S.heroes[id];
+  let html = '<div class="talent-tree"><div class="tt-title">Таланты</div>';
+  TALENT_LEVELS.slice().reverse().forEach(L => {
+    const ch = h.talents && h.talents[L];
+    const open = h.level >= L;
+    html += '<div class="tt-row">' + [0, 1].map(c => '<button class="tt-opt' + (ch === c ? ' on' : '') + (ch != null && ch !== c ? ' off' : '') + '" ' + (!open || ch != null ? 'disabled' : '') + ' onclick="pickTalent(\'' + id + '\',' + L + ',' + c + ')">' + TALENTS[L][c].t + '</button>').join('<span class="tt-lvl' + (open ? ' open' : '') + '">' + L + '</span>') + '</div>';
+  });
+  return html + '</div>';
+}
+
+// ---------- синергии ----------
+const SYNERGIES = [
+  { ids: ['magnataur', 'ember_spirit'], name: 'Reverse Polarity + Sleight of Fist', d: '+12% атаки команды', team: { atk: 1.12 } },
+  { ids: ['wisp', 'gyrocopter'], name: 'Io + Gyro', d: '+15% здоровья команды', team: { hp: 1.15 } },
+  { ids: ['wisp', 'tiny'], name: 'Io + Tiny', d: '+12% атаки команды', team: { atk: 1.12 } },
+  { ids: ['earthshaker', 'enigma'], name: 'Black Hole + Echo Slam', d: 'Урон по волнам ×1.4', team: { aoe: 1.4 } },
+  { ids: ['faceless_void', 'crystal_maiden'], name: 'Chronosphere + Freezing Field', d: 'Урон по волнам ×1.3', team: { aoe: 1.3 } },
+  { ids: ['dark_seer', 'magnataur'], name: 'Vacuum + Reverse Polarity', d: 'Оглушения длятся на 1 ход дольше', team: { stunExtra: 1 } },
+  { ids: ['lion', 'shadow_shaman'], name: 'Двойной контроль', d: 'Оглушения длятся на 1 ход дольше', team: { stunExtra: 1 } },
+  { ids: ['dazzle', 'huskar'], name: 'Shallow Grave + Huskar', d: 'Команда получает на 12% меньше урона', team: { taken: 0.88 } },
+  { ids: ['omniknight', 'ursa'], name: 'Guardian Angel + Enrage', d: '+10% атаки и −8% урона', team: { atk: 1.1, taken: 0.92 } },
+  { ids: ['vengefulspirit', 'drow_ranger'], name: 'Аура ловкачей', d: '+12% атаки команды', team: { atk: 1.12 } }
+];
+const ATTR_SYNERGY = {
+  str: { name: 'Стена силы', d: '5 героев силы: +20% здоровья', team: { hp: 1.2 } },
+  agi: { name: 'Стая ловкачей', d: '5 героев ловкости: +10% атаки и +крит', team: { atk: 1.1 } },
+  int: { name: 'Совет магов', d: '5 магов: урон по волнам ×1.3', team: { aoe: 1.3 } },
+  uni: { name: 'Универсалы', d: '5 универсальных: +8% атаки, −8% урона', team: { atk: 1.08, taken: 0.92 } }
+};
+function activeSynergies(ids) {
+  const set = new Set(ids);
+  const res = SYNERGIES.filter(s => s.ids.every(i => set.has(i)));
+  const at = ids.map(i => HERO_BY_ID[i].attr);
+  if (at.every(a => a === at[0])) res.push(Object.assign({ ids: ids.slice() }, ATTR_SYNERGY[at[0]]));
+  return res;
+}
+function teamMods(ids) {
+  let tm = {};
+  const mergeT = b => { for (const k in b) { if (k === 'stunExtra') tm[k] = (tm[k] || 0) + b[k]; else tm[k] = (tm[k] || 1) * b[k]; } };
+  activeSynergies(ids).forEach(s => mergeT(s.team));
+  ensureShop();
+  S.shop.slots.forEach(sid => { const it = SHOP.find(x => x.id === sid); if (it && it.team) mergeT(it.team); });
+  return tm;
+}
+
+// ---------- бонус набора: предметы героя-владельца на самом герое ----------
+function setCount(id) { const lo = S.loadout[id]; if (!lo) return 0; let n = 0; for (const sl in lo) { const it = S.items.find(x => x.uid === lo[sl]); if (it && it.heroId === id) n++; } return n; }
+function setBonusMul(id) { const n = setCount(id); return n >= 6 ? 1.25 : n >= 3 ? 1.1 : 1; }
+
+// ---------- сборка команды для боя ----------
+function buildTeam(opts) {
+  opts = opts || {};
+  ensureShop();
+  const ids = getStack();
+  const team = ids.map((id, i) => {
+    let m = talentMods(id);
+    if (i === 0) {
+      S.shop.slots.forEach(sid => { const it = SHOP.find(x => x.id === sid); if (it && it.mods) m = mergeMods(m, it.mods); });
+      if (!opts.noCons) {
+        if (S.cons.aegis > 0 && S.useCons.aegis) m.aegis = true;
+        if (S.cons.cheese > 0 && S.useCons.cheese) m.cheese = true;
+      }
+    }
+    return { id, p: heroPower(id), mods: m };
+  });
+  return { team, tm: teamMods(ids), ids };
+}
+function consumeAfterBattle(used) {
+  if (used.aegis && S.cons.aegis > 0) { S.cons.aegis--; arenaLog('gold', '🛡 Aegis использован'); }
+  if (used.cheese && S.cons.cheese > 0) { S.cons.cheese--; arenaLog('gold', '🧀 Cheese съеден'); }
+  if (used.rapierLost) {
+    S.shop.slots = S.shop.slots.filter(x => x !== 'rapier'); S.shop.owned = S.shop.owned.filter(x => x !== 'rapier');
+    arenaLog('lose', '⚔ Divine Rapier выпала! Главный герой погиб — рапира потеряна.');
+  }
+}
+
+// ---------- UI лавки (в арене) ----------
+function renderShopPanel() {
+  ensureShop();
+  const box = document.getElementById('shop-box'); if (!box) return;
+  const main = mainHeroId();
+  let html = '<div class="shop-inv"><div class="muted" style="font-size:.75rem;margin-bottom:4px">Инвентарь главного героя (' + esc(HERO_BY_ID[main].name) + ') — 6 слотов</div><div class="inv6">';
+  for (let i = 0; i < 6; i++) {
+    const sid = S.shop.slots[i], it = SHOP.find(x => x.id === sid);
+    html += '<div class="islot" ' + (it ? 'title="' + esc(it.name + ' — ' + it.d) + '" onclick="shopUnequip(\'' + sid + '\')"' : '') + '>' + (it ? '<img src="' + ITEM_ICON(it.id) + '" referrerpolicy="no-referrer">' : '') + '</div>';
+  }
+  html += '</div><div class="cons-row">';
+  ['aegis', 'cheese'].forEach(k => {
+    html += '<label class="cons" title="' + esc(CONSUMABLES[k].d) + '"><img src="' + ITEM_ICON(CONSUMABLES[k].icon) + '" referrerpolicy="no-referrer"><b>×' + S.cons[k] + '</b><input type="checkbox" ' + (S.useCons[k] ? 'checked' : '') + ' onchange="S.useCons.' + k + '=this.checked;save()"> исп.</label>';
+  });
+  html += '</div></div><div class="shop-grid">';
+  SHOP.forEach(it => {
+    const owned = S.shop.owned.includes(it.id), on = S.shop.slots.includes(it.id);
+    html += '<div class="shop-item' + (on ? ' on' : '') + '"><img src="' + ITEM_ICON(it.id) + '" referrerpolicy="no-referrer"><div class="si-t"><b>' + esc(it.name) + '</b><div class="muted">' + esc(it.d) + '</div></div>' +
+      (on ? '<button class="btn sm" onclick="shopUnequip(\'' + it.id + '\')">Снять</button>' : owned ? '<button class="btn sm green" onclick="shopEquip(\'' + it.id + '\')">Надеть</button>' : '<button class="btn sm gold" ' + (canPay(it.cost) ? '' : 'disabled') + ' onclick="shopBuy(\'' + it.id + '\')">' + fmt(it.cost) + ' 💎</button>') + '</div>';
+  });
+  box.innerHTML = html + '</div>';
+}
+function shopBuy(id) {
+  const it = SHOP.find(x => x.id === id); if (!it || S.shop.owned.includes(id)) return;
+  if (!canPay(it.cost)) return;
+  addGems(-it.cost); S.shop.owned.push(id); track('shopBuys');
+  if (S.shop.slots.length < 6) S.shop.slots.push(id);
+  save(); renderShopPanel(); renderLevelInfo(); sfx('coin');
+}
+function shopEquip(id) { if (S.shop.slots.length >= 6) return showModal('🎒', 'Инвентарь полон', 'Сначала сними предмет — у героя 6 слотов.', ''); S.shop.slots.push(id); save(); renderShopPanel(); renderLevelInfo(); }
+function shopUnequip(id) { S.shop.slots = S.shop.slots.filter(x => x !== id); save(); renderShopPanel(); renderLevelInfo(); }
+
+// ---------- синергии UI ----------
+function renderSynergyBox() {
+  const box = document.getElementById('syn-box'); if (!box) return;
+  const ids = getStack();
+  const act = activeSynergies(ids);
+  let html = act.length ? act.map(s => '<div class="syn on">✦ <b>' + esc(s.name) + '</b> — ' + esc(s.d) + '</div>').join('') : '<div class="muted" style="font-size:.8rem">Нет активных связок. Поставь главным героем одного из пары, чтобы собрать синергию.</div>';
+  html += '<details style="margin-top:6px"><summary class="muted" style="cursor:pointer;font-size:.78rem">Все связки</summary>' + SYNERGIES.map(s => '<div class="syn' + (act.includes(s) ? ' on' : '') + '">' + s.ids.map(i => '<img src="' + heroIcon(i) + '" referrerpolicy="no-referrer" title="' + HERO_BY_ID[i].name + '">').join('') + ' <b>' + esc(s.name) + '</b> — ' + esc(s.d) + '</div>').join('') + Object.keys(ATTR_SYNERGY).map(a => '<div class="syn"><img src="' + ATTR_ICON[a] + '" referrerpolicy="no-referrer"> <b>' + ATTR_SYNERGY[a].name + '</b> — ' + ATTR_SYNERGY[a].d + '</div>').join('') + '</details>';
+  box.innerHTML = html;
+}
+
+// ---------- режимы арены ----------
+let arenaMode = 'normal', cmBan = -1;
+const MODES = {
+  normal: { name: 'Обычный', d: 'Награды полностью, предметы за боссов' },
+  turbo: { name: 'Turbo', d: 'Враги слабее на 15%, бой быстрее, награда ×0.5, без предметов' },
+  cm: { name: 'Captains Mode', d: 'Забань одного врага (кликни по волне) — его заменят крипы. Награда ×0.85' },
+  survival: { name: 'Выживание', d: 'Бесконечные волны с ростом силы. Награда за каждую волну, рекорд сохраняется' }
+};
+function setArenaMode(m) { arenaMode = m; cmBan = -1; renderLevelInfo(); }
+function modeDef(def) {
+  const d = JSON.parse(JSON.stringify({ L: def.L, waves: def.waves, R: def.R, K: def.K, reward: def.reward, skin: def.skin, eq: def.eq }));
+  d.loc = def.loc;
+  if (arenaMode === 'turbo') { d.waves.forEach(w => w.power = Math.round(w.power * 0.85)); d.reward = Math.round(d.reward * 0.5); d.skin = d.eq = false; d.turbo = true; }
+  if (arenaMode === 'cm' && cmBan >= 0 && d.waves[cmBan]) { const w = d.waves[cmBan]; w.power = Math.round(w.power * 0.4); w.name = 'Крипы (бан: ' + w.name + ')'; w.id = 'creeps'; w.boss = false; d.reward = Math.round(d.reward * 0.85); }
+  return d;
+}
+function survivalDef() {
+  const base = reqPower(Math.max(1, S.arena.cleared)) * 0.5;
+  const loc = locOf(Math.min(100, S.arena.cleared + 1));
+  const waves = [];
+  for (let i = 0; i < 60; i++) { const id = loc.pool[i % loc.pool.length]; if (!HERO_BY_ID[id]) continue; waves.push({ id, power: Math.round(base * Math.pow(1.13, i)), boss: (i + 1) % 10 === 0, name: HERO_BY_ID[id].name + ' · волна ' + (waves.length + 1) }); }
+  return { L: 0, loc, waves, R: base, K: 1.5 * 2.2, reward: 0, survival: true };
+}
+
+// ---------- РОШАН ----------
+function roshanState() {
+  const today = todayStr();
+  if (!S.roshan || S.roshan.day !== today) {
+    const pw = Math.max(400, Math.round(stackPower() * 1.1));
+    S.roshan = { day: today, power: pw, pool: pw * 10 * 3.2, dealt: 0, tries: 3, killed: false };
+  }
+  return S.roshan;
+}
+function renderRoshan() {
+  const box = document.getElementById('roshan-box'); if (!box) return;
+  const r = roshanState();
+  const left = Math.max(0, 1 - r.dealt / r.pool);
+  box.innerHTML = '<div class="rosh"><img class="rosh-img" src="' + spellIcon('roshan_slam') + '" referrerpolicy="no-referrer"><div style="flex:1"><div class="cinzel" style="font-size:1.1rem;color:#fff">Рошан <span class="muted" style="font-size:.75rem;font-family:Roboto Condensed">рейд-босс дня</span></div>' +
+    '<div class="rosh-bar"><div style="width:' + (left * 100) + '%"></div><span>' + Math.round(left * 100) + '%</span></div>' +
+    '<div class="muted" style="font-size:.78rem">' + (r.killed ? '✓ Повержен сегодня — приходи завтра' : 'Попыток: <b style="color:#fff">' + r.tries + '/3</b> · бой длится 14 ходов, урон копится') + '</div>' +
+    '<div style="font-size:.78rem;margin-top:2px">Награда: <img src="' + ITEM_ICON('aegis') + '" class="mini-ic"> Aegis + <img src="' + ITEM_ICON('cheese') + '" class="mini-ic"> Cheese + ' + gemHTML(Math.round(rewardScale() * 4)) + ' + Immortal</div></div>' +
+    '<button class="btn red" ' + (r.killed || r.tries <= 0 || busy.battle ? 'disabled' : '') + ' onclick="fightRoshan()">Атаковать</button></div>';
+}
+function fightRoshan() {
+  const r = roshanState(); if (r.killed || r.tries <= 0 || busy.battle) return;
+  r.tries--;
+  const hpFrac = 1 - r.dealt / r.pool;
+  const def = { L: 0, loc: LOCS[2], waves: [{ id: 'roshan', name: 'Roshan', power: r.power, boss: true, hpMul: 3.2 * hpFrac }], R: r.power, K: 1.6, reward: 0, roshan: true };
+  def.waves[0].hpMul = Math.max(0.05, 3.2 * hpFrac);
+  startBattle(0, false, def);
+}
+
+// ---------- CSS ----------
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `
+.talent-tree{margin-top:8px;padding:8px;background:#05070a;border:1px solid var(--line);border-radius:3px}
+.tt-title{font-family:Cinzel;color:var(--gold2);font-size:.75rem;letter-spacing:2px;text-align:center;margin-bottom:4px}
+.tt-row{display:grid;grid-template-columns:1fr 30px 1fr;gap:4px;margin:3px 0;align-items:center}
+.tt-opt{font-size:.66rem;padding:5px 3px;border:1px solid #2a333d;background:#11161c;color:var(--muted);border-radius:2px;cursor:pointer;font-family:inherit;line-height:1.1}
+.tt-opt:not(:disabled):hover{border-color:var(--gold);color:#fff}
+.tt-opt.on{background:linear-gradient(180deg,#4a3a18,#2a200c);color:var(--gold2);border-color:var(--gold)}
+.tt-opt.off{opacity:.35}.tt-opt:disabled{cursor:default}
+.tt-lvl{text-align:center;font-family:Cinzel;font-weight:700;font-size:.8rem;color:#555;border:1px solid #333;border-radius:50%;width:28px;height:28px;line-height:26px}
+.tt-lvl.open{color:var(--gold2);border-color:var(--gold3)}
+.arena-extra{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:980px){.arena-extra{grid-template-columns:1fr}}
+.inv6{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.islot{aspect-ratio:88/64;background:#05070a;border:1px solid #2a333d;cursor:pointer}
+.islot img{width:100%;height:100%;display:block}
+.cons-row{display:flex;gap:10px;margin:8px 0}
+.cons{display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--muted)}
+.cons img{width:38px;height:28px}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px;margin-top:8px}
+.shop-item{display:flex;align-items:center;gap:8px;padding:6px;background:#0b0e12;border:1px solid var(--line);border-radius:3px;font-size:.75rem}
+.shop-item.on{border-color:var(--green2);box-shadow:0 0 10px rgba(108,197,63,.25)}
+.shop-item img{width:52px;height:38px;flex-shrink:0}
+.si-t{flex:1}.si-t b{color:#fff}
+.syn{font-size:.8rem;padding:4px 0;color:var(--muted)}.syn.on{color:var(--ok)}
+.syn img{width:22px;height:22px;vertical-align:-6px;margin-right:2px}
+.mode-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.rosh{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.rosh-img{width:72px;height:72px;border:2px solid #ff8a3a;border-radius:4px;box-shadow:0 0 18px rgba(255,138,58,.4)}
+.rosh-bar{position:relative;height:16px;background:#200;border:1px solid #000;margin:4px 0}
+.rosh-bar>div{height:100%;background:linear-gradient(90deg,#8a1d14,#e0452f)}
+.rosh-bar span{position:absolute;inset:0;text-align:center;font-size:.7rem;line-height:16px;font-weight:700}
+.mini-ic{width:26px;height:19px;vertical-align:-5px}
+.wave-strip .w.banned img{filter:grayscale(1);opacity:.4}
+.wave-strip .w.cm{cursor:pointer}
+.wave-strip .w.cm:hover img{outline:2px solid #fff}
+.hcard .tal{position:absolute;top:2px;right:3px;font-size:.7rem;color:var(--gold2);text-shadow:0 0 4px #000}
+.hcard .setb{position:absolute;inset:0;border:2px solid #ffd36a;box-shadow:inset 0 0 14px rgba(255,211,106,.5);pointer-events:none}
+`;
+  document.head.appendChild(st);
+})();
+// ================= СУНДУКИ, КРАФТ, ЗВУК, НАСТРОЙКИ, ЯЗЫК, ОБУЧЕНИЕ, PWA =================
+// ---------- настройки (общие для устройства) ----------
+const SET_KEY = 'd2m_settings';
+let SETTINGS = Object.assign({ vol: 0.6, sfx: true, voice: true, noanim: false, lang: 'ru' }, lsGet(SET_KEY, {}));
+function saveSettings() { lsSet(SET_KEY, SETTINGS); applySettings(); }
+function applySettings() { document.body.classList.toggle('noanim', !!SETTINGS.noanim); applyLang(); }
+
+// ---------- звук (WebAudio) ----------
+let AC = null, lastTick = 0;
+function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } } if (AC && AC.state === 'suspended') AC.resume().catch(() => {}); return AC; }
+function tone(freq, dur, type, vol, when, slide) {
+  const a = ac(); if (!a) return;
+  const t0 = a.currentTime + (when || 0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0);
+  if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, (vol || 0.2) * SETTINGS.vol), t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function sfx(n) {
+  if (!SETTINGS.sfx || SETTINGS.vol <= 0) return;
+  try {
+    if (n === 'tick') { const now = performance.now(); if (now - lastTick < 60) return; lastTick = now; tone(1800, 0.03, 'square', 0.05); }
+    else if (n === 'win') { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'triangle', 0.18, i * 0.09)); }
+    else if (n === 'lose') { tone(220, 0.35, 'sawtooth', 0.12, 0, 90); }
+    else if (n === 'coin') { tone(988, 0.08, 'square', 0.1); tone(1319, 0.2, 'square', 0.1, 0.08); }
+    else if (n === 'start') { tone(110, 0.4, 'sawtooth', 0.12, 0, 220); tone(165, 0.4, 'triangle', 0.1, 0.05); }
+    else if (n === 'open') { [392, 494, 587, 784, 988].forEach((f, i) => tone(f, 0.25, 'sine', 0.15, i * 0.07)); }
+    else if (n === 'hit') { tone(140, 0.08, 'square', 0.08, 0, 60); }
+    else if (n === 'click') { tone(660, 0.04, 'sine', 0.06); }
+  } catch (e) {}
+}
+function announce(text, opts) {
+  if (!SETTINGS.voice || SETTINGS.vol <= 0 || !window.speechSynthesis) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    const v = speechSynthesis.getVoices().find(x => /^en/i.test(x.lang)); if (v) u.voice = v;
+    u.lang = 'en-US'; u.pitch = (opts && opts.pitch) || 0.55; u.rate = (opts && opts.rate) || 0.9; u.volume = SETTINGS.vol;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+// ---------- СУНДУКИ ----------
+const CHESTS = [
+  { id: 'ancient', name: 'Treasure of the Ancients', cost: 3000, color: '#5e98d9', w: { common: 38, uncommon: 30, rare: 20, mythical: 9, immortal: 3 } },
+  { id: 'immortal', name: 'Immortal Treasure', cost: 20000, color: '#e4ae39', w: { rare: 42, mythical: 36, immortal: 19, arcana: 3 } },
+  { id: 'arcana', name: 'Arcana Treasure', cost: 80000, color: '#ade55c', w: { mythical: 40, immortal: 45, arcana: 15 } }
+];
+function chestPool(rarity) {
+  return CS_ITEMS.filter(x => x.rarity === rarity).map(x => ({ kind: 'eq', c: x }))
+    .concat(CS_SETS.filter(x => x.rarity === rarity).map(x => ({ kind: 'set', c: x })));
+}
+function chestRoll(ch) { const r = weightedRarity(ch.w); const pool = chestPool(r); return pool.length ? pick(pool) : { kind: 'eq', c: pickCatalog(r) }; }
+function giveChestItem(x) {
+  if (x.kind === 'eq') { const it = eqFromCatalog(x.c, S.uid++); S.items.unshift(it); autoEquip(it, it.heroId); return it; }
+  const it = { uid: S.uid++, type: 'skin', heroId: x.c.hero, rarity: x.c.rarity, name: x.c.name, path: x.c.path, ts: Date.now() };
+  S.items.unshift(it); return it;
+}
+function renderChests() {
+  const host = document.getElementById('chests-host');
+  host.innerHTML = '<div class="chest-row">' + CHESTS.map(ch =>
+    '<div class="chest panel" style="--cc:' + ch.color + '"><div class="chest-ic"><div class="lid"></div><div class="box"></div></div><h3>' + esc(ch.name) + '</h3>' +
+    '<div class="odds">' + Object.keys(ch.w).reverse().map(r => '<span style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + ' ' + ch.w[r] + '%</span>').join(' · ') + '</div>' +
+    '<div style="display:flex;gap:6px;justify-content:center;margin-top:8px"><button class="btn green" ' + (canPay(ch.cost) ? '' : 'disabled') + ' onclick="openChest(\'' + ch.id + '\')">Открыть · ' + fmt(ch.cost) + ' 💎</button><button class="btn ghost sm" onclick="previewChest(\'' + ch.id + '\')">Содержимое</button></div></div>').join('') + '</div>' +
+    '<div id="chest-stage"></div><div class="sec-title">Крафт · 10 → 1</div><div class="panel panel-b" id="craft-box"></div>';
+  renderCraft();
+}
+function previewChest(id) {
+  const ch = CHESTS.find(x => x.id === id);
+  const parts = Object.keys(ch.w).reverse().map(r => {
+    const pool = chestPool(r);
+    return '<div style="margin:6px 0"><b style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + ' — ' + ch.w[r] + '%</b> <span class="muted">(' + pool.length + ' предм.)</span><div class="prev-row">' +
+      pool.slice(0, 14).map(x => '<img title="' + esc(x.c.name) + '" src="' + itemImg(x.c.path) + '" referrerpolicy="no-referrer" style="border-color:' + RARITY_COLOR[r] + '">').join('') + '</div></div>';
+  }).join('');
+  showModal('🎁', ch.name, '<div style="text-align:left;max-height:60vh;overflow:auto">' + parts + '</div>', '', { html: true, buttons: [{ t: 'Закрыть', c: 'ghost', f: closeModal }] });
+}
+let chestBusy = false;
+function openChest(id) {
+  const ch = CHESTS.find(x => x.id === id);
+  if (chestBusy || !canPay(ch.cost)) return;
+  chestBusy = true; addGems(-ch.cost); track('chests');
+  const win = chestRoll(ch);
+  const stage = document.getElementById('chest-stage');
+  const N = 46, WIN = 40;
+  const cards = [];
+  for (let i = 0; i < N; i++) cards.push(i === WIN ? win : chestRoll(ch));
+  stage.innerHTML = '<div class="case-wrap panel"><div class="case-line"></div><div class="case-strip" id="case-strip">' +
+    cards.map(x => '<div class="case-card" style="--rc:' + RARITY_COLOR[x.c.rarity] + '"><img src="' + itemImg(x.c.path) + '" referrerpolicy="no-referrer"><span>' + esc(x.c.name) + '</span></div>').join('') + '</div></div>';
+  const strip = document.getElementById('case-strip');
+  const cw = 132;
+  const wrapW = strip.parentNode.clientWidth;
+  const target = WIN * cw - wrapW / 2 + cw / 2 + rnd(-40, 40);
+  const ms = speed === 'fast' || SETTINGS.noanim ? 1500 : 5200;
+  strip.style.transition = 'none'; strip.style.transform = 'translateX(0)'; void strip.offsetWidth;
+  strip.style.transition = 'transform ' + ms + 'ms cubic-bezier(.08,.6,.12,1)';
+  strip.style.transform = 'translateX(' + (-target) + 'px)';
+  let t = 0; const iv = setInterval(() => { t += 110; sfx('tick'); if (t > ms * 0.8) clearInterval(iv); }, 110);
+  setTimeout(() => {
+    const it = giveChestItem(win); save(); updateTop(); sfx('open');
+    if (it.rarity === 'arcana') hype('НИШТЯК'); else if (rarityIdx(it.rarity) >= 4) announce('Godlike!');
+    strip.children[WIN].classList.add('won');
+    showModal('🎁', RARITY_NAMES[it.rarity] + '!', it.name + ' (' + (HERO_BY_ID[it.heroId] ? HERO_BY_ID[it.heroId].name : '') + ')', 'ok', { auto: true });
+    chestBusy = false; renderChestsButtons();
+  }, ms + 80);
+}
+function renderChestsButtons() { document.querySelectorAll('.chest .btn.green').forEach((b, i) => b.disabled = !canPay(CHESTS[i].cost)); }
+
+// ---------- КРАФТ ----------
+let craftR = 'common';
+function craftable(r) { return S.items.filter(x => x.rarity === r && !equippedOn(x.uid) && x.uid !== ugMain && !ugFuel.includes(x.uid)).sort((a, b) => a.ts - b.ts); }
+function renderCraft() {
+  const box = document.getElementById('craft-box'); if (!box) return;
+  const list = craftable(craftR);
+  const nx = RARITIES[rarityIdx(craftR) + 1];
+  box.innerHTML = '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="muted">Сжечь 10 предметов редкости</span><select id="craft-r" onchange="craftR=this.value;renderCraft()">' +
+    RARITIES.slice(0, 5).map(r => '<option value="' + r + '"' + (r === craftR ? ' selected' : '') + '>' + RARITY_NAMES[r] + '</option>').join('') + '</select>' +
+    '<span>→ 1 предмет <b style="color:' + RARITY_COLOR[nx] + '">' + RARITY_NAMES[nx] + '</b></span><span class="muted">(есть ' + list.length + '/10, надетые не трогаем, сжигаются самые старые)</span>' +
+    '<button class="btn gold" ' + (list.length >= 10 ? '' : 'disabled') + ' onclick="doCraft()">⚒ Скрафтить</button></div>' +
+    '<div class="prev-row" style="margin-top:8px">' + list.slice(0, 10).map(x => '<img title="' + esc(x.name) + '" src="' + itemImgChain(x)[0] + '" referrerpolicy="no-referrer" style="border-color:' + RARITY_COLOR[x.rarity] + '">').join('') + '</div>';
+}
+function doCraft() {
+  const list = craftable(craftR).slice(0, 10); if (list.length < 10) return;
+  const nx = RARITIES[rarityIdx(craftR) + 1];
+  const hero = pick(list).heroId;
+  list.forEach(x => removeItem(x.uid));
+  const it = Math.random() < 0.5 ? addEquipment(HERO_BY_ID[hero] ? hero : pick(HEROES).id, nx) : addSkin(HERO_BY_ID[hero] ? hero : pick(HEROES).id, nx);
+  track('crafts'); save(); sfx('open'); renderCraft(); updateTop();
+  if (nx === 'arcana') hype('НИШТЯК');
+  showModal('⚒', 'Крафт: ' + RARITY_NAMES[nx], it.name, 'ok', { auto: true });
+}
+
+// ---------- НАСТРОЙКИ ----------
+function openSettings() {
+  showModal('⚙', 'Настройки', '<div style="text-align:left;font-size:.9rem;display:grid;gap:10px">' +
+    '<label>Громкость <input type="range" min="0" max="1" step="0.05" value="' + SETTINGS.vol + '" oninput="SETTINGS.vol=+this.value;saveSettings()" style="width:100%"></label>' +
+    '<label><input type="checkbox" ' + (SETTINGS.sfx ? 'checked' : '') + ' onchange="SETTINGS.sfx=this.checked;saveSettings();sfx(\'click\')"> Звуковые эффекты</label>' +
+    '<label><input type="checkbox" ' + (SETTINGS.voice ? 'checked' : '') + ' onchange="SETTINGS.voice=this.checked;saveSettings();announce(\'First Blood!\')"> Голос диктора (First Blood, Rampage…)</label>' +
+    '<label><input type="checkbox" ' + (SETTINGS.noanim ? 'checked' : '') + ' onchange="SETTINGS.noanim=this.checked;saveSettings()"> Отключить анимации (для слабых устройств)</label>' +
+    '<label>Язык / Language <select onchange="SETTINGS.lang=this.value;saveSettings()"><option value="ru"' + (SETTINGS.lang === 'ru' ? ' selected' : '') + '>Русский</option><option value="en"' + (SETTINGS.lang === 'en' ? ' selected' : '') + '>English</option></select></label>' +
+    '<button class="btn" onclick="closeModal();startTutorial(true)">Пройти обучение заново</button></div>', '', { html: true, buttons: [{ t: 'Готово', c: 'green', f: closeModal }] });
+}
+
+// ---------- ЯЗЫК (интерфейс) ----------
+const I18N = {
+  en: {
+    'nav:home': 'Home', 'nav:heroes': 'Heroes', 'nav:slots': 'Slots', 'nav:collection': 'Collection', 'nav:upgrade': 'Upgrader', 'nav:arena': 'Arena', 'nav:invoker': 'Invoker Game', 'nav:quests': 'Quests', 'nav:chests': 'Treasures', 'nav:games': 'Mini-games', 'nav:online': 'Online',
+    'st:stack': '⚔ Stack power', 'st:power': 'Σ Total power', 'st:items': '🎨 Items', 'st:spins': '🎰 Spins', 'st:arena': '🏟 Arena',
+    'spd:slow': '🐢 Slow', 'spd:fast': '⚡ Fast', 'btn:upall': '⬆ Upgrade all', 'spin': 'SPIN', 'fight': '⚔ FIGHT'
+  }
+};
+const I18N_RU = {};
+function applyLang() {
+  const L = SETTINGS.lang === 'en' ? I18N.en : null;
+  document.documentElement.lang = SETTINGS.lang;
+  document.querySelectorAll('#nav button').forEach(b => {
+    const k = 'nav:' + b.dataset.tab;
+    if (!I18N_RU[k]) I18N_RU[k] = b.childNodes[0] ? b.childNodes[0].textContent : b.textContent;
+    const badge = b.querySelector('.nbadge');
+    b.textContent = L && L[k] ? L[k] : I18N_RU[k];
+    if (badge) b.appendChild(badge);
+  });
+  const stats = document.querySelectorAll('.subbar .stat');
+  ['st:stack', 'st:power', 'st:items', 'st:spins', 'st:arena'].forEach((k, i) => {
+    const el = stats[i]; if (!el) return;
+    const tn = el.childNodes[0];
+    if (!I18N_RU[k]) I18N_RU[k] = tn.textContent;
+    tn.textContent = (L && L[k] ? L[k] : I18N_RU[k].trim()) + ' ';
+  });
+  [['spd-slow', 'spd:slow'], ['spd-fast', 'spd:fast']].forEach(([id, k]) => { const el = document.getElementById(id); if (!I18N_RU[k]) I18N_RU[k] = el.textContent; el.textContent = L ? L[k] : I18N_RU[k]; });
+  const sb = document.getElementById('spin-btn'); if (sb) { if (!I18N_RU.spin) I18N_RU.spin = sb.textContent; sb.textContent = L ? L.spin : I18N_RU.spin; }
+}
+
+// ---------- ОБУЧЕНИЕ ----------
+const TUTORIAL = [
+  { sel: '#gems-chip', t: 'Это самоцветы — валюта игры. Они нужны для круток, слотов, лавки и сундуков.' },
+  { sel: '[data-tab=heroes]', t: 'Во вкладке «Герои» прокачивай героев на рулетке. С 10 уровня открываются таланты.' },
+  { sel: '[data-tab=arena]', t: 'Арена: главный герой + 4 сильнейших сражаются с волнами врагов. 100 уровней, Рошан, лавка и режимы.' },
+  { sel: '[data-tab=slots]', t: 'Слоты и сундуки дают скины и снаряжение. Снаряжение повышает силу героя.' },
+  { sel: '[data-tab=quests]', t: 'Каждый день — награда за вход и три задания. Забирай награды здесь.' },
+  { sel: '#free-btn', t: 'Бесплатные самоцветы раз в 10 минут. Удачи, и пусть будет НИШТЯК!' }
+];
+let tutStep = -1;
+function startTutorial(force) {
+  if (!force && S.tutDone) return;
+  tutStep = 0; showTutStep();
+}
+function showTutStep() {
+  let ov = document.getElementById('tut');
+  if (!ov) { ov = document.createElement('div'); ov.id = 'tut'; document.body.appendChild(ov); }
+  if (tutStep < 0 || tutStep >= TUTORIAL.length) { ov.remove(); S.tutDone = true; save(); return; }
+  const st = TUTORIAL[tutStep];
+  const el = document.querySelector(st.sel);
+  const r = el ? el.getBoundingClientRect() : { left: innerWidth / 2, top: 120, width: 0, height: 0 };
+  ov.innerHTML = '<div class="tut-hole" style="left:' + (r.left - 6) + 'px;top:' + (r.top - 6) + 'px;width:' + (r.width + 12) + 'px;height:' + (r.height + 12) + 'px"></div>' +
+    '<div class="tut-box panel" style="left:' + Math.min(innerWidth - 330, Math.max(10, r.left)) + 'px;top:' + (r.top + r.height + 16) + 'px"><div style="margin-bottom:10px">' + esc(st.t) + '</div><div style="display:flex;gap:6px;justify-content:space-between"><span class="muted">' + (tutStep + 1) + '/' + TUTORIAL.length + '</span><span><button class="btn ghost sm" onclick="tutStep=-1;showTutStep()">Пропустить</button> <button class="btn green sm" onclick="tutStep++;showTutStep()">' + (tutStep === TUTORIAL.length - 1 ? 'Начать игру' : 'Далее') + '</button></span></div></div>';
+}
+
+// ---------- PWA ----------
+(function pwa() {
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+  const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.json'; document.head.appendChild(l);
+  const a = document.createElement('link'); a.rel = 'apple-touch-icon'; a.href = 'icon-192.png'; document.head.appendChild(a);
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+})();
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; const b = document.getElementById('install-btn'); if (b) b.style.display = ''; });
+function installApp() { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; document.getElementById('install-btn').style.display = 'none'; } else showModal('📱', 'Установка', 'На телефоне: открой меню браузера → «Добавить на главный экран». На ПК: значок установки в адресной строке.', ''); }
+
+// ---------- CSS ----------
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `
+body.noanim *,body.noanim *::before,body.noanim *::after{animation:none!important;transition:none!important}
+.chest-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.chest{text-align:center;padding:16px;border-top:3px solid var(--cc)!important}
+.chest h3{color:var(--cc);letter-spacing:2px;font-size:1rem;margin:8px 0 4px}
+.chest .odds{font-size:.72rem}
+.chest-ic{width:110px;height:80px;margin:0 auto;position:relative}
+.chest-ic .box{position:absolute;bottom:0;left:5px;right:5px;height:48px;background:linear-gradient(180deg,#6b4a1e,#3a260c);border:3px solid var(--cc);border-radius:4px;box-shadow:0 0 22px var(--cc)}
+.chest-ic .lid{position:absolute;top:6px;left:0;right:0;height:30px;background:linear-gradient(180deg,#8a6228,#5a3c14);border:3px solid var(--cc);border-radius:14px 14px 3px 3px;animation:lid 2.4s ease-in-out infinite}
+@keyframes lid{50%{transform:translateY(-4px) rotate(-3deg)}}
+.case-wrap{position:relative;overflow:hidden;margin:16px 0;padding:10px 0;background:#05070a}
+.case-line{position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--gold2);box-shadow:0 0 12px var(--gold2);z-index:3;transform:translateX(-50%)}
+.case-strip{display:flex;gap:0;will-change:transform}
+.case-card{flex:0 0 128px;margin:0 2px;height:120px;background:linear-gradient(180deg,#1a2028,#0d1116);border-bottom:4px solid var(--rc);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;text-align:center}
+.case-card img{max-width:110px;max-height:76px;object-fit:contain}
+.case-card span{font-size:.62rem;color:#c3ccd5;margin-top:4px;line-height:1.1;max-height:2.2em;overflow:hidden}
+.case-card.won{box-shadow:0 0 0 2px var(--rc),0 0 30px var(--rc);transform:scale(1.05)}
+.prev-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.prev-row img{width:54px;height:40px;object-fit:contain;background:#0b0e12;border:1px solid;border-radius:2px}
+#tut{position:fixed;inset:0;z-index:600}
+.tut-hole{position:fixed;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.72),0 0 0 3px var(--gold2),0 0 24px var(--gold2);pointer-events:none;transition:all .3s}
+.tut-box{position:fixed;width:320px;padding:14px;font-size:.9rem;line-height:1.4}
+`;
+  document.head.appendChild(st);
+})();
+// ================= МИНИ-ИГРЫ =================
+const GAME_DAILY_CAP = 15;   // сколько наградных раундов в день на каждую игру
+function gameRewardOk(g) {
+  ensureMeta(); S.gameDay = S.gameDay || {};
+  if (S.gameDay.day !== S.daily.day) S.gameDay = { day: S.daily.day };
+  return (S.gameDay[g] || 0) < GAME_DAILY_CAP;
+}
+function gamePay(g, amount) {
+  if (!gameRewardOk(g)) return 0;
+  S.gameDay[g] = (S.gameDay[g] || 0) + 1;
+  const v = Math.round(amount); addGems(v); save(); return v;
+}
+let curGame = null;
+function renderGames() {
+  const host = document.getElementById('games-host');
+  const games = [
+    ['lasthit', '🗡', 'Ластхит', 'Добей крипа последним ударом. 10 крипов за раунд.'],
+    ['hook', '🪝', 'Pudge Hook', 'Попади хуком по бегущему герою. 10 хуков.'],
+    ['guess', '❓', 'Угадай героя', 'По силуэту или иконке ульты. 10 вопросов.'],
+    ['invoker', '🔮', 'Invoker: выживание', 'Таймер всё короче. Ошибся или не успел — конец.']
+  ];
+  host.innerHTML = '<div class="home-grid" style="margin-top:0">' + games.map(([id, ic, n, d]) => '<div class="panel home-card' + (curGame === id ? ' sel' : '') + '" onclick="startGame_(\'' + id + '\')"><div class="ic">' + ic + '</div><h3>' + n + '</h3><p>' + d + '</p><p class="muted" style="font-size:.72rem;margin-top:4px">Наградных раундов сегодня: ' + Math.max(0, GAME_DAILY_CAP - ((S.gameDay && S.gameDay.day === todayStr() && S.gameDay[id]) || 0)) + '/' + GAME_DAILY_CAP + (S.gameBest && S.gameBest[id] != null ? ' · рекорд ' + S.gameBest[id] : '') + '</p></div>').join('') + '</div><div id="game-stage" class="panel panel-b" style="margin-top:14px;min-height:120px"><div class="muted" style="text-align:center;padding:30px">Выбери мини-игру</div></div>';
+}
+function setBest(g, v, higherBetter) {
+  S.gameBest = S.gameBest || {};
+  const cur = S.gameBest[g];
+  if (cur == null || (higherBetter ? v > cur : v < cur)) { S.gameBest[g] = v; save(); return true; }
+  return false;
+}
+function startGame_(id) {
+  stopGames(); curGame = id;
+  if (id === 'invoker') { switchTab('invoker'); invSetMode('survival'); invStart(); return; }
+  renderGames();
+  ({ lasthit: lhStart, hook: hookStart, guess: guessStart })[id]();
+}
+let gTimers = [];
+function stopGames() { gTimers.forEach(t => { clearInterval(t); clearTimeout(t); cancelAnimationFrame(t); }); gTimers = []; document.onkeydown_game = null; }
+
+// ---------- ЛАСТХИТ ----------
+let LH = null;
+function lhStart() {
+  LH = { n: 0, hits: 0, denies: 0, miss: 0 };
+  const st = document.getElementById('game-stage');
+  st.innerHTML = '<div class="lh"><div class="lh-info"><b id="lh-score">0/10</b> · ластхитов: <b id="lh-hits" style="color:var(--ok)">0</b> · промахов: <b id="lh-miss" style="color:var(--danger)">0</b></div>' +
+    '<div class="lh-field"><div class="lh-creep" id="lh-creep"><div class="lh-hp"><div id="lh-hpbar"></div></div><div class="lh-body">👹</div><div class="lh-num" id="lh-num"></div></div></div>' +
+    '<div class="muted" style="text-align:center;font-size:.8rem">Твой удар: <b id="lh-dmg" style="color:var(--gold2)"></b> урона, бьёт через 0.35 с после клика. Союзные крипы тоже бьют — успей ударить, когда HP ≤ урона!</div>' +
+    '<div style="text-align:center;margin-top:10px"><button class="btn red big" id="lh-btn" onclick="lhAttack()">⚔ УДАР <kbd>A</kbd></button></div></div>';
+  lhNext();
+}
+function lhNext() {
+  if (LH.n >= 10) return lhEnd();
+  LH.n++; LH.hp = 550; LH.max = 550; LH.dmg = 48 + Math.floor(Math.random() * 12); LH.busy = false; LH.dead = false;
+  document.getElementById('lh-dmg').textContent = LH.dmg;
+  document.getElementById('lh-score').textContent = LH.n + '/10';
+  const c = document.getElementById('lh-creep'); c.className = 'lh-creep';
+  lhDraw();
+  const iv = setInterval(() => {
+    if (LH.dead) return;
+    LH.hp -= 18 + Math.random() * 34;
+    if (LH.hp <= 0) { LH.hp = 0; LH.dead = true; clearInterval(iv); LH.miss++; floatGame('Крип добит союзниками', 'var(--danger)'); sfx('lose'); setTimeout(lhNext, 700); }
+    lhDraw();
+  }, 260 + Math.random() * 120);
+  gTimers.push(iv); LH.iv = iv;
+}
+function lhDraw() {
+  document.getElementById('lh-hpbar').style.width = (LH.hp / LH.max * 100) + '%';
+  document.getElementById('lh-num').textContent = Math.ceil(LH.hp);
+  document.getElementById('lh-hits').textContent = LH.hits; document.getElementById('lh-miss').textContent = LH.miss;
+}
+function lhAttack() {
+  if (!LH || LH.busy || LH.dead) return;
+  LH.busy = true; sfx('hit');
+  const c = document.getElementById('lh-creep'); c.classList.add('swing');
+  const t = setTimeout(() => {
+    c.classList.remove('swing');
+    if (LH.dead) return;
+    LH.hp -= LH.dmg;
+    if (LH.hp <= 0) { LH.hp = 0; LH.dead = true; clearInterval(LH.iv); LH.hits++; c.classList.add('lasthit'); floatGame('+ ЛАСТХИТ', 'var(--gold2)'); sfx('coin'); setTimeout(lhNext, 700); }
+    else { floatGame('-' + LH.dmg, '#fff'); }
+    LH.busy = false; lhDraw();
+  }, 350);
+  gTimers.push(t);
+}
+function lhEnd() {
+  const g = gamePay('lasthit', LH.hits * rewardScale() * 0.06);
+  const rec = setBest('lasthit', LH.hits, true);
+  document.getElementById('game-stage').innerHTML = gameResult('Ластхит', LH.hits + '/10 ластхитов', g, rec, 'lasthit');
+  if (LH.hits === 10) hype('НИШТЯК');
+}
+function floatGame(t, col) {
+  const st = document.getElementById('game-stage'); if (!st) return;
+  const d = document.createElement('div'); d.className = 'dmg'; d.style.cssText = 'position:absolute;left:50%;top:40%;color:' + col; d.textContent = t;
+  st.style.position = 'relative'; st.appendChild(d); setTimeout(() => d.remove(), 900);
+}
+function gameResult(name, line, g, rec, id) {
+  return '<div style="text-align:center;padding:16px"><div class="cinzel" style="font-size:1.4rem;color:var(--gold2)">' + name + '</div><div style="font-size:1.1rem;margin:8px 0">' + line + (rec ? ' · <b style="color:var(--ok)">НОВЫЙ РЕКОРД</b>' : '') + '</div><div>' + (g ? '+' + gemHTML(g) : '<span class="muted">Лимит наград на сегодня исчерпан</span>') + '</div><button class="btn green" style="margin-top:12px" onclick="startGame_(\'' + id + '\')">Ещё раз</button></div>';
+}
+
+// ---------- PUDGE HOOK ----------
+let HK = null;
+function hookStart() {
+  const st = document.getElementById('game-stage');
+  st.innerHTML = '<div class="muted" style="text-align:center;margin-bottom:6px">Кликни по полю — Pudge бросит хук в эту точку. Цель бежит! Хуков: <b id="hk-left" style="color:#fff">10</b> · попаданий: <b id="hk-hit" style="color:var(--ok)">0</b></div><canvas id="hk-cv" width="760" height="360" style="width:100%;max-width:760px;display:block;margin:0 auto;border:1px solid #000;border-radius:4px;cursor:crosshair"></canvas>';
+  const cv = document.getElementById('hk-cv'), ctx = cv.getContext('2d');
+  const pudge = new Image(); pudge.referrerPolicy = 'no-referrer'; pudge.src = heroImg('pudge');
+  const tgtId = pick(['antimage', 'phantom_assassin', 'juggernaut', 'storm_spirit', 'slark', 'invoker', 'lina', 'riki']);
+  const tgt = new Image(); tgt.referrerPolicy = 'no-referrer'; tgt.src = heroImg(tgtId);
+  HK = { left: 10, hit: 0, hook: null, t: { x: 100, y: 120, vx: 3.2, vy: 1.4 }, ctx, cv, pudge, tgt, msg: '', msgT: 0 };
+  cv.onclick = e => {
+    if (!HK || HK.hook || HK.left <= 0) return;
+    const r = cv.getBoundingClientRect(); const x = (e.clientX - r.left) * cv.width / r.width, y = (e.clientY - r.top) * cv.height / r.height;
+    const ox = 380, oy = 330; const d = Math.hypot(x - ox, y - oy) || 1;
+    HK.hook = { x: ox, y: oy, dx: (x - ox) / d, dy: (y - oy) / d, dist: 0, max: 420, back: false };
+    HK.left--; document.getElementById('hk-left').textContent = HK.left; sfx('hit');
+  };
+  const loop = () => {
+    if (!HK) return;
+    const { ctx, t } = HK;
+    // движение цели со сменой направления
+    t.x += t.vx; t.y += t.vy;
+    if (Math.random() < 0.02) { t.vx = (Math.random() < 0.5 ? -1 : 1) * (2.5 + Math.random() * 2.5); t.vy = (Math.random() - 0.5) * 3; }
+    if (t.x < 40 || t.x > 720) t.vx *= -1; if (t.y < 30 || t.y > 220) t.vy *= -1;
+    t.x = Math.max(40, Math.min(720, t.x)); t.y = Math.max(30, Math.min(220, t.y));
+    ctx.fillStyle = '#1d2c16'; ctx.fillRect(0, 0, 760, 360);
+    ctx.fillStyle = '#5e4f33'; ctx.fillRect(0, 150, 760, 60);
+    ctx.fillStyle = '#1d4a66'; ctx.fillRect(330, 0, 100, 360);
+    try { ctx.drawImage(HK.tgt, t.x - 40, t.y - 22, 80, 45); } catch (e) { }
+    ctx.strokeStyle = '#d0402e'; ctx.lineWidth = 2; ctx.strokeRect(t.x - 40, t.y - 22, 80, 45);
+    try { ctx.drawImage(HK.pudge, 340, 310, 80, 45); } catch (e) { }
+    const h = HK.hook;
+    if (h) {
+      const sp = 11;
+      if (!h.back) { h.dist += sp; h.x += h.dx * sp; h.y += h.dy * sp; if (Math.abs(h.x - t.x) < 40 && Math.abs(h.y - t.y) < 24) { h.back = true; h.caught = true; HK.hit++; document.getElementById('hk-hit').textContent = HK.hit; HK.msg = 'GET OVER HERE!'; HK.msgT = 50; sfx('coin'); } else if (h.dist > h.max) h.back = true; }
+      else { h.dist -= sp; h.x -= h.dx * sp; h.y -= h.dy * sp; if (h.caught) { t.x = h.x; t.y = h.y; } if (h.dist <= 0) { HK.hook = null; if (h.caught) { t.x = 100 + Math.random() * 560; t.y = 60 + Math.random() * 120; } if (HK.left <= 0) return hookEnd(); } }
+      ctx.strokeStyle = '#aaa'; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(380, 330); ctx.lineTo(h.x, h.y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#ddd'; ctx.beginPath(); ctx.arc(h.x, h.y, 7, 0, 7); ctx.fill();
+    } else if (HK.left <= 0) return hookEnd();
+    if (HK.msgT > 0) { HK.msgT--; ctx.fillStyle = '#ffd36a'; ctx.font = 'bold 30px Cinzel, serif'; ctx.textAlign = 'center'; ctx.fillText(HK.msg, 380, 60); }
+    HK.raf = requestAnimationFrame(loop); gTimers.push(HK.raf);
+  };
+  loop();
+}
+function hookEnd() {
+  const hits = HK.hit; HK = null;
+  const g = gamePay('hook', hits * rewardScale() * 0.07);
+  const rec = setBest('hook', hits, true);
+  document.getElementById('game-stage').innerHTML = gameResult('Pudge Hook', hits + '/10 попаданий', g, rec, 'hook');
+  if (hits >= 8) { hype('НИШТЯК'); announce('Fresh meat!', { pitch: 0.3, rate: 0.8 }); }
+}
+
+// ---------- УГАДАЙ ГЕРОЯ ----------
+let GS = null;
+function guessStart() { GS = { n: 0, ok: 0 }; guessNext(); }
+function guessNext() {
+  if (GS.n >= 10) return guessEnd();
+  GS.n++;
+  const ans = pick(HEROES);
+  const opts = [ans]; while (opts.length < 4) { const h = pick(HEROES); if (!opts.includes(h)) opts.push(h); }
+  opts.sort(() => Math.random() - 0.5);
+  const mode = Math.random() < 0.5 ? 'silhouette' : 'ult';
+  const st = document.getElementById('game-stage');
+  st.innerHTML = '<div style="text-align:center"><div class="muted">Вопрос ' + GS.n + '/10 · верно ' + GS.ok + ' · ' + (mode === 'ult' ? 'Чья это ульта?' : 'Чей это силуэт?') + '</div><div id="gs-pic" class="gs-pic ' + mode + '"></div><div class="gs-opts">' +
+    opts.map(h => '<button class="btn" onclick="guessPick(\'' + h.id + '\',\'' + ans.id + '\')">' + esc(h.name) + '</button>').join('') + '</div></div>';
+  const pic = document.getElementById('gs-pic');
+  pic.appendChild(mkImg(mode === 'ult' ? ultIconChain(ans.id) : heroTallChain(ans.id), '?'));
+}
+function guessPick(id, ans) {
+  const ok = id === ans; if (ok) { GS.ok++; sfx('coin'); } else sfx('lose');
+  const pic = document.getElementById('gs-pic'); pic.classList.remove('silhouette');
+  pic.insertAdjacentHTML('beforeend', '<div style="margin-top:6px;font-weight:700;color:' + (ok ? 'var(--ok)' : 'var(--danger)') + '">' + (ok ? '✓ ' : '✗ ') + HERO_BY_ID[ans].name + ' — ' + ultOf(ans).name + '</div>');
+  document.querySelectorAll('.gs-opts button').forEach(b => b.disabled = true);
+  gTimers.push(setTimeout(guessNext, 1100));
+}
+function guessEnd() {
+  const g = gamePay('guess', GS.ok * rewardScale() * 0.05);
+  const rec = setBest('guess', GS.ok, true);
+  document.getElementById('game-stage').innerHTML = gameResult('Угадай героя', GS.ok + '/10 верно', g, rec, 'guess');
+  if (GS.ok === 10) hype('НИШТЯК');
+}
+document.addEventListener('keydown', e => { if (currentTab === 'games' && curGame === 'lasthit' && (e.code === 'KeyA' || e.code === 'Space')) { e.preventDefault(); lhAttack(); } });
+
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `
+.home-card.sel{box-shadow:0 0 0 2px var(--gold2)}
+.lh-field{height:200px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#1d2c16,#2a3a1c);border-radius:4px;margin:10px 0;position:relative}
+.lh-creep{text-align:center;transition:transform .1s}
+.lh-creep.swing{transform:translateX(-8px) rotate(-6deg)}
+.lh-creep.lasthit .lh-body{filter:grayscale(1);opacity:.4}
+.lh-body{font-size:5rem;line-height:1}
+.lh-hp{width:160px;height:12px;background:#300;border:1px solid #000;margin:0 auto 6px}
+.lh-hp>div{height:100%;background:linear-gradient(90deg,#8a1d14,#e0452f);transition:width .15s}
+.lh-num{font-family:Cinzel;font-weight:900;font-size:1.2rem}
+.gs-pic{margin:14px auto;width:142px;min-height:120px}
+.gs-pic img{width:142px;height:188px;object-fit:cover;border-radius:4px;border:2px solid var(--gold3)}
+.gs-pic.ult img{width:128px;height:128px}
+.gs-pic.silhouette img{filter:brightness(0) drop-shadow(0 0 8px rgba(232,199,122,.6))}
+.gs-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:460px;margin:0 auto}
+`;
+  document.head.appendChild(st);
+})();
+// ================= ОНЛАЙН (Firebase Auth + Realtime Database через REST) =================
+// Сервер задаётся в FB_DEFAULT или во вкладке «Онлайн» (сохраняется в браузере).
+const FB_DEFAULT = { apiKey: '', dbUrl: '' };
+let FB = Object.assign({}, FB_DEFAULT, lsGet('d2m_fb', {}));
+function fbOn() { return !!(FB.apiKey && FB.dbUrl); }
+const CLOUD_KEY = 'd2m_cloud';           // { [nickKey]: { uid, refresh, id, exp } }
+function nickEmail(nick) {
+  // ник → безопасный e-mail для Firebase Auth (кириллица кодируется)
+  const k = nickKey(nick); let hex = '';
+  for (const ch of unescape(encodeURIComponent(k))) hex += ch.charCodeAt(0).toString(16).padStart(2, '0');
+  return 'p' + hex + '@dota2master.game';
+}
+async function fbAuth(kind, email, pass) {
+  const url = 'https://identitytoolkit.googleapis.com/v1/accounts:' + kind + '?key=' + FB.apiKey;
+  const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: pass, returnSecureToken: true }) });
+  const j = await r.json();
+  if (!r.ok) throw new Error((j.error && j.error.message) || 'auth');
+  return { uid: j.localId, id: j.idToken, refresh: j.refreshToken, exp: Date.now() + (+j.expiresIn - 60) * 1000 };
+}
+async function fbToken() {
+  const c = lsGet(CLOUD_KEY, {})[USER.key]; if (!c) return null;
+  if (c.exp > Date.now()) return c;
+  const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FB.apiKey, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(c.refresh) });
+  const j = await r.json(); if (!r.ok) return null;
+  Object.assign(c, { id: j.id_token, refresh: j.refresh_token, exp: Date.now() + (+j.expires_in - 60) * 1000 });
+  const all = lsGet(CLOUD_KEY, {}); all[USER.key] = c; lsSet(CLOUD_KEY, all);
+  return c;
+}
+async function db(method, path, body, noAuth) {
+  const base = FB.dbUrl.replace(/\/$/, '');
+  let q = '';
+  if (!noAuth) { const t = await fbToken(); if (!t) throw new Error('no-cloud'); q = '?auth=' + t.id; }
+  const r = await fetch(base + '/' + path + '.json' + q, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+  if (!r.ok) throw new Error('db ' + r.status);
+  return r.json();
+}
+function cloud() { return USER && lsGet(CLOUD_KEY, {})[USER.key]; }
+function storeCloud(k, c) { const all = lsGet(CLOUD_KEY, {}); all[k] = c; lsSet(CLOUD_KEY, all); }
+
+// вызывается из authSubmit: при регистрации — создаёт облачный аккаунт, при входе — входит
+async function cloudAfterAuth(mode, nick, pass) {
+  if (!fbOn() || pass.length < 6) return;
+  const k = nickKey(nick), email = nickEmail(nick);
+  try {
+    let c;
+    try { c = await fbAuth('signInWithPassword', email, pass); }
+    catch (e) { if (mode === 'register' || /EMAIL_NOT_FOUND|INVALID_LOGIN/.test(e.message)) c = await fbAuth('signUp', email, pass); else throw e; }
+    storeCloud(k, c);
+    const owner = await db('GET', 'nicks/' + encodeURIComponent(k));
+    if (!owner) await db('PUT', 'nicks/' + encodeURIComponent(k), c.uid);
+    await cloudPull(true);
+    await cloudPush();
+    toast('☁ Облако', 'Аккаунт синхронизирован');
+  } catch (e) { console.warn('cloud', e); toast('☁ Облако', 'Не удалось войти в облако: ' + e.message); }
+}
+// вход на новом устройстве: локального аккаунта нет, но есть облачный
+async function cloudLoginNew(nick, pass) {
+  if (!fbOn()) return false;
+  const c = await fbAuth('signInWithPassword', nickEmail(nick), pass);
+  const k = nickKey(nick);
+  const accs = lsGet(ACC_KEY, {});
+  const salt = newSalt();
+  accs[k] = { nick, salt, hash: await hashPass(pass, salt), created: Date.now() };
+  lsSet(ACC_KEY, accs); storeCloud(k, c);
+  const st = freshState(); lsSet(saveKey(k), st);
+  return true;
+}
+async function cloudPull(prefer) {
+  const c = cloud(); if (!c) return;
+  const remote = await db('GET', 'saves/' + c.uid);
+  if (remote && remote.state && (remote.at || 0) > (S.savedAt || 0)) {
+    S = remote.state; migrate(S); S.savedAt = remote.at; lsSet(saveKey(USER.key), S); startGame();
+    toast('☁ Облако', 'Загружено сохранение из облака');
+  }
+}
+let cloudDirty = false, cloudBusy = false;
+async function cloudPush() {
+  const c = cloud(); if (!c || cloudBusy) return;
+  cloudBusy = true;
+  try {
+    S.savedAt = Date.now();
+    await db('PUT', 'saves/' + c.uid, { at: S.savedAt, nick: USER.nick, state: S });
+    await db('PUT', 'board/' + c.uid, { nick: USER.nick, arena: S.arena.cleared, stack: stackPower(), inv: S.invBest || null, mmr: (S.pvp && S.pvp.mmr) || 1000, items: S.items.length, at: Date.now() });
+    const bt = buildTeam({ noCons: true });
+    await db('PUT', 'stacks/' + c.uid, { nick: USER.nick, mmr: (S.pvp && S.pvp.mmr) || 1000, team: bt.team.map(t => ({ id: t.id, p: t.p, mods: t.mods })), tm: bt.tm, at: Date.now() });
+    cloudDirty = false;
+  } catch (e) { console.warn('push', e); }
+  cloudBusy = false;
+}
+setInterval(() => { if (USER && cloud()) cloudPush(); }, 90000);
+
+// ---------- PvP ----------
+const RANKS = [['Herald', 0, '#8a7a5a'], ['Guardian', 900, '#7a8a9a'], ['Crusader', 1100, '#4a9a6a'], ['Archon', 1300, '#3a8aca'], ['Legend', 1500, '#9a6aca'], ['Ancient', 1700, '#ca9a3a'], ['Divine', 1900, '#e8c77a'], ['Immortal', 2100, '#e0452f']];
+function rankOf(mmr) { let r = RANKS[0]; RANKS.forEach(x => { if (mmr >= x[1]) r = x; }); return r; }
+function ensurePvp() { S.pvp = S.pvp || { mmr: 1000, w: 0, l: 0, day: '', fights: 0 }; if (S.pvp.day !== todayStr()) { S.pvp.day = todayStr(); S.pvp.fights = 0; } }
+async function pvpFight() {
+  ensurePvp();
+  const c = cloud(); if (!c) return;
+  const all = await db('GET', 'stacks') || {};
+  const opps = Object.entries(all).filter(([uid, v]) => uid !== c.uid && v && v.team && v.team.length);
+  if (!opps.length) return showModal('⚔', 'Нет соперников', 'Пока никто кроме тебя не играет онлайн. Позови друга!', '');
+  opps.sort((a, b) => Math.abs(a[1].mmr - S.pvp.mmr) - Math.abs(b[1].mmr - S.pvp.mmr));
+  const [ouid, opp] = pick(opps.slice(0, 5));
+  const sum = opp.team.reduce((a, t) => a + t.p, 0);
+  const def = { L: 0, loc: pick(LOCS), waves: opp.team.map((t, i) => ({ id: t.id, power: Math.round(t.p * (opp.tm && opp.tm.atk || 1)), boss: i === 0, name: (i === 0 ? '👑 ' : '') + HERO_BY_ID[t.id].name + ' (' + opp.nick + ')' })), R: sum, reward: 0, pvp: { uid: ouid, nick: opp.nick, mmr: opp.mmr } };
+  def.K = 1.5 / opp.team.reduce((a, t) => a + Math.pow(t.p / sum, 2), 0);
+  switchTab('arena');
+  startBattle(0, false, def);
+}
+function pvpResult(def, result) {
+  ensurePvp();
+  const exp = 1 / (1 + Math.pow(10, ((def.pvp.mmr || 1000) - S.pvp.mmr) / 400));
+  const delta = Math.round(50 * ((result.win ? 1 : 0) - exp));
+  S.pvp.mmr = Math.max(0, S.pvp.mmr + delta); S.pvp.fights++;
+  if (result.win) S.pvp.w++; else S.pvp.l++;
+  let g = 0;
+  if (S.pvp.fights <= 5) { g = Math.round(rewardScale() * (result.win ? 1.2 : 0.3)); addGems(g); }
+  track('pvp');
+  save(); cloudPush();
+  return 'PvP против ' + def.pvp.nick + ': ' + (result.win ? 'ПОБЕДА' : 'поражение') + ' · MMR ' + (delta >= 0 ? '+' : '') + delta + ' → ' + S.pvp.mmr + ' (' + rankOf(S.pvp.mmr)[0] + ')' + (g ? ' · +' + fmt(g) + ' 💎' : '');
+}
+
+// ---------- подарки ----------
+async function sendGift() {
+  const nick = document.getElementById('gift-nick').value.trim();
+  const kind = document.getElementById('gift-kind').value;
+  const err = document.getElementById('gift-err'); err.style.color = ''; err.textContent = '';
+  try {
+    const uid = await db('GET', 'nicks/' + encodeURIComponent(nickKey(nick)));
+    if (!uid) { err.textContent = 'Игрок не найден (он должен войти онлайн хотя бы раз)'; return; }
+    if (uid === cloud().uid) { err.textContent = 'Себе дарить нельзя'; return; }
+    let gift;
+    if (kind === 'gems') {
+      const n = Math.floor(+document.getElementById('gift-amount').value || 0);
+      if (n < 100 || !canPay(n)) { err.textContent = 'Минимум 100 и не больше, чем у тебя'; return; }
+      addGems(-n); gift = { from: USER.nick, kind, amount: n, at: Date.now() };
+    } else {
+      const uidItem = +document.getElementById('gift-item').value;
+      const it = S.items.find(x => x.uid === uidItem); if (!it) { err.textContent = 'Выбери предмет'; return; }
+      removeItem(it.uid); const copy = Object.assign({}, it); delete copy.uid;
+      gift = { from: USER.nick, kind, item: copy, at: Date.now() };
+    }
+    await db('POST', 'gifts/' + uid, gift);
+    save(); cloudPush(); updateTop();
+    track('gifts');
+    await renderOnline(true);
+    toast('🎁 Подарок отправлен', 'Игрок ' + nick + ' получит его при следующем входе');
+  } catch (e) { err.textContent = 'Ошибка: ' + e.message; }
+}
+async function checkGifts() {
+  const c = cloud(); if (!c) return;
+  try {
+    const gifts = await db('GET', 'gifts/' + c.uid); if (!gifts) return;
+    for (const [gid, g] of Object.entries(gifts)) {
+      if (g.kind === 'gems') addGems(g.amount);
+      else if (g.item) { const it = Object.assign({}, g.item, { uid: S.uid++, ts: Date.now() }); S.items.unshift(it); }
+      await db('DELETE', 'gifts/' + c.uid + '/' + gid);
+      toast('🎁 Подарок от ' + g.from, g.kind === 'gems' ? fmt(g.amount) + ' самоцветов' : g.item.name);
+    }
+    save(); updateTop();
+  } catch (e) { }
+}
+setInterval(() => { if (USER && cloud()) checkGifts(); }, 120000);
+
+// ---------- UI вкладки ----------
+let boardCache = null, boardSort = 'arena';
+async function renderOnline(force) {
+  const host = document.getElementById('online-host');
+  if (!fbOn()) {
+    host.innerHTML = '<div class="panel panel-b"><h3 class="cinzel" style="color:var(--gold2);letter-spacing:2px">Онлайн-сервер не подключён</h3><p class="muted" style="margin:8px 0">Облачные аккаунты, таблица лидеров, PvP и подарки работают через бесплатный сервер Firebase. Вставь данные проекта:</p>' +
+      '<div class="field"><label>Web API Key</label><input type="text" id="fb-key" placeholder="AIza..."></div><div class="field"><label>Realtime Database URL</label><input type="text" id="fb-db" placeholder="https://xxx-default-rtdb.europe-west1.firebasedatabase.app"></div>' +
+      '<button class="btn green" onclick="saveFb()">Подключить</button></div>';
+    return;
+  }
+  const c = cloud();
+  if (!c) {
+    host.innerHTML = '<div class="panel panel-b"><h3 class="cinzel" style="color:var(--gold2)">Войди в облако</h3><p class="muted" style="margin:8px 0">Подтверди пароль аккаунта <b>' + esc(USER.nick) + '</b> (минимум 6 символов), чтобы включить облачные сохранения, рейтинг, PvP и подарки.</p><div class="field"><label>Пароль</label><input type="password" id="cl-pass"></div><div class="auth-err" id="cl-err"></div><button class="btn green" onclick="cloudConnect()">Включить онлайн</button></div>';
+    return;
+  }
+  ensurePvp();
+  const rk = rankOf(S.pvp.mmr);
+  host.innerHTML = '<div class="online-grid"><div class="panel panel-b"><div class="cinzel" style="color:' + rk[2] + ';font-size:1.4rem;letter-spacing:2px">' + rk[0] + '</div><div>MMR <b>' + S.pvp.mmr + '</b> · побед ' + S.pvp.w + ' · поражений ' + S.pvp.l + '</div><div class="muted" style="font-size:.8rem">Наградных PvP-боёв сегодня: ' + Math.max(0, 5 - S.pvp.fights) + '/5</div><button class="btn red big" style="margin-top:10px" onclick="pvpFight()">⚔ НАЙТИ СОПЕРНИКА</button><div class="muted" style="font-size:.75rem;margin-top:6px">Твой стак сражается с сохранённым стаком другого игрока.</div></div>' +
+    '<div class="panel panel-b"><h3 class="cinzel" style="color:var(--gold2)">Подарок другу</h3><div class="field"><label>Ник</label><input type="text" id="gift-nick"></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select id="gift-kind" onchange="document.getElementById(\'gift-g\').style.display=this.value===\'gems\'?\'\':\'none\';document.getElementById(\'gift-i\').style.display=this.value===\'gems\'?\'none\':\'\'"><option value="gems">Самоцветы</option><option value="item">Предмет</option></select><input type="number" id="gift-amount" placeholder="сколько" style="width:110px" id2="gift-g"><span id="gift-g"></span><select id="gift-item" style="display:none;max-width:220px"><option value="">— выбери предмет —</option>' +
+    S.items.filter(x => !equippedOn(x.uid)).slice(0, 200).map(x => '<option value="' + x.uid + '">' + esc(x.name) + ' (' + RARITY_NAMES[x.rarity] + ')</option>').join('') + '</select><span id="gift-i"></span><button class="btn gold" onclick="sendGift()">Отправить</button></div><div class="auth-err" id="gift-err"></div></div></div>' +
+    '<div class="sec-title">Таблица лидеров</div><div class="seg" style="margin-bottom:8px">' + [['arena', 'Арена'], ['stack', 'Сила стака'], ['mmr', 'MMR'], ['inv', 'Invoker']].map(([k, n]) => '<button class="' + (boardSort === k ? 'active' : '') + '" onclick="boardSort=\'' + k + '\';renderOnline()">' + n + '</button>').join('') + '</div><div class="panel" id="board"><div class="muted" style="padding:14px">Загрузка…</div></div>' +
+    '<div class="muted" style="font-size:.75rem;margin-top:8px">☁ Облачное сохранение включено. <button class="btn ghost sm" onclick="cloudPush().then(()=>toast(\'☁\',\'Сохранено в облако\'))">Сохранить сейчас</button></div>';
+  // gift-kind toggling fix
+  document.getElementById('gift-kind').onchange = e => { document.getElementById('gift-amount').style.display = e.target.value === 'gems' ? '' : 'none'; document.getElementById('gift-item').style.display = e.target.value === 'gems' ? 'none' : ''; };
+  try {
+    if (force || !boardCache) { await cloudPush(); boardCache = await db('GET', 'board') || {}; }
+    const rows = Object.values(boardCache).filter(Boolean);
+    const key = { arena: r => -(r.arena || 0) * 1e9 - (r.stack || 0), stack: r => -(r.stack || 0), mmr: r => -(r.mmr || 1000), inv: r => r.inv || 1e9 }[boardSort];
+    rows.sort((a, b) => key(a) - key(b));
+    document.getElementById('board').innerHTML = '<table class="board"><tr><th>#</th><th>Игрок</th><th>Арена</th><th>Сила стака</th><th>MMR</th><th>Invoker</th></tr>' +
+      rows.slice(0, 50).map((r, i) => '<tr class="' + (r.nick === USER.nick ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(r.nick) + '</td><td>' + (r.arena || 0) + '/100</td><td>' + fmt(r.stack) + '</td><td style="color:' + rankOf(r.mmr || 1000)[2] + '">' + (r.mmr || 1000) + ' ' + rankOf(r.mmr || 1000)[0] + '</td><td>' + (r.inv ? r.inv.toFixed(2) + 's' : '—') + '</td></tr>').join('') + '</table>';
+  } catch (e) { document.getElementById('board').innerHTML = '<div class="auth-err" style="padding:14px">Не удалось загрузить: ' + esc(e.message) + '</div>'; }
+}
+function saveFb() {
+  const k = document.getElementById('fb-key').value.trim(), d = document.getElementById('fb-db').value.trim();
+  if (!k || !/^https:\/\/.+/.test(d)) return showModal('⚠', 'Проверь данные', 'Нужны API Key и адрес базы (https://…)', 'bad');
+  FB = { apiKey: k, dbUrl: d }; lsSet('d2m_fb', FB); renderOnline();
+}
+async function cloudConnect() {
+  const pass = document.getElementById('cl-pass').value, err = document.getElementById('cl-err');
+  const acc = lsGet(ACC_KEY, {})[USER.key];
+  if (await hashPass(pass, acc.salt) !== acc.hash) { err.textContent = 'Неверный пароль'; return; }
+  if (pass.length < 6) { err.textContent = 'Для облака нужен пароль от 6 символов — смени его в профиле'; return; }
+  err.style.color = 'var(--muted)'; err.textContent = 'Подключаюсь…';
+  await cloudAfterAuth('register', USER.nick, pass);
+  renderOnline(true);
+}
+
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `
+.online-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.online-grid{grid-template-columns:1fr}}
+table.board{width:100%;border-collapse:collapse;font-size:.85rem}
+table.board th{text-align:left;padding:8px 10px;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);font-size:.72rem;text-transform:uppercase;letter-spacing:.5px}
+table.board td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+table.board tr.me td{background:rgba(200,164,90,.12);color:#fff;font-weight:700}
+`;
+  document.head.appendChild(st);
+})();
 // ================= INVOKER GAME =================
 const INV_SPELLS = [
   { name: 'Cold Snap', orbs: 'QQQ', icon: 'invoker_cold_snap' },
@@ -2871,7 +4113,7 @@ function invRender() { document.getElementById('inv-best').textContent = S.invBe
 function invSetMode(m) {
   if (invRun) return;
   invMode = m;
-  ['tutorial', 'race', 'infinite'].forEach(x => document.getElementById('im-' + x).classList.toggle('active', x === m));
+  ['tutorial', 'race', 'infinite', 'survival'].forEach(x => document.getElementById('im-' + x).classList.toggle('active', x === m));
 }
 function invOrbsRender() {
   for (let i = 0; i < 3; i++) {
@@ -2890,7 +4132,19 @@ function invTarget() {
   document.getElementById('inv-spell-name').textContent = sp.name;
   document.getElementById('inv-spell-hint').textContent = (invMode === 'tutorial' ? sp.orbs + ' · ' : '') + (invIdx + 1) + '/' + invOrder.length;
 }
+let invDeadline = 0;
+function invSurvivalEnd(reason) {
+  invStop();
+  const n = invOk;
+  const g = typeof gamePay === 'function' ? gamePay('invoker', n * rewardScale() * 0.03) : 0;
+  const rec = typeof setBest === 'function' ? setBest('invoker', n, true) : false;
+  document.getElementById('inv-spell-name').textContent = 'Конец: ' + n;
+  document.getElementById('inv-spell-hint').textContent = reason;
+  showModal('🔮', 'Выживание: ' + n + ' заклинаний', reason + (rec ? ' · НОВЫЙ РЕКОРД!' : '') + (g ? ' · +' + fmt(g) + ' 💎' : ''), 'ok');
+  if (rec && n >= 20) hype('НИШТЯК');
+}
 function invStats() {
+  if (invRun && invMode === 'survival') { const left = invDeadline - Date.now(); document.getElementById('inv-spell-hint').textContent = '⏱ ' + Math.max(0, left / 1000).toFixed(1) + 's · ' + invOk; if (left <= 0) return invSurvivalEnd('Не успел!'); }
   document.getElementById('inv-ok').textContent = invOk;
   document.getElementById('inv-miss').textContent = invMiss;
   if (invT0) document.getElementById('inv-timer').textContent = ((Date.now() - invT0) / 1000).toFixed(2);
@@ -2901,6 +4155,7 @@ function invStart() {
   invOrder = INV_SPELLS.slice();
   if (invMode === 'race') invOrder.sort(() => Math.random() - 0.5);
   if (invMode === 'infinite') { invOrder = []; for (let i = 0; i < 30; i++) invOrder.push(pick(INV_SPELLS)); }
+  if (invMode === 'survival') { invOrder = []; for (let i = 0; i < 400; i++) invOrder.push(pick(INV_SPELLS)); invDeadline = Date.now() + 4000; }
   invOrbsRender(); invTarget(); invStats();
   clearInterval(invIv); invIv = setInterval(invStats, 50);
   document.getElementById('inv-start').textContent = '▶ Идёт…';
@@ -2920,6 +4175,7 @@ function invPress(k) {
   if (cast) { invInvoked = [cast].concat(invInvoked.filter(x => x !== cast)).slice(0, 2); }
   if (got === need) {
     invOk++; invIdx++; invOrbs = []; fb.textContent = '✓ ' + sp.name; fb.style.color = 'var(--ok)';
+    if (invMode === 'survival') invDeadline = Date.now() + Math.max(1200, 4000 - invOk * 110);
     if (invIdx >= invOrder.length) {
       invStop();
       const t = (Date.now() - invT0) / 1000;
@@ -2937,7 +4193,8 @@ function invPress(k) {
       invRender();
     } else invTarget();
   } else {
-    invMiss++; invOrbs = []; fb.textContent = '✗ ' + (cast ? cast.name : '?') + ' — нужно ' + sp.name + ' (' + sp.orbs + ')'; fb.style.color = 'var(--danger)';
+    invMiss++; if (invMode === 'survival') { invOrbs = []; invOrbsRender(); return invSurvivalEnd('Ошибка: нужно ' + sp.name); }
+    invOrbs = []; fb.textContent = '✗ ' + (cast ? cast.name : '?') + ' — нужно ' + sp.name + ' (' + sp.orbs + ')'; fb.style.color = 'var(--danger)';
   }
   invOrbsRender(); invStats();
 }
