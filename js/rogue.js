@@ -10,6 +10,17 @@ function migrateRogue(st) {
   const d = rogueDefaults();
   if (!st.rogue || typeof st.rogue !== 'object') st.rogue = d;
   for (const k in d) if (st.rogue[k] == null) st.rogue[k] = d[k];
+  // 2.4.2: облако теряет пустые {} и [] — возвращаем
+  const R = st.rogue, A = v => Array.isArray(v) ? v : v && typeof v === 'object' ? Object.keys(v).sort((a, b) => a - b).map(i => v[i]) : [];
+  ['unlocked', 'starts', 'builds'].forEach(k => { R[k] = A(R[k]); });
+  if (!R.stats || typeof R.stats !== 'object') R.stats = { hero: {}, item: {} }; if (!R.stats.hero) R.stats.hero = {}; if (!R.stats.item) R.stats.item = {};
+  if (!R.abyss || typeof R.abyss !== 'object') R.abyss = {};
+  const run = R.run;
+  if (run && typeof run === 'object') {
+    run.items = A(run.items); run.skillLv = [0, 1, 2, 3].map(i => (run.skillLv && run.skillLv[i]) || 0);
+    if (!run.bonus) run.bonus = { atk: 0, hp: 0 }; if (run.log == null) run.log = '';
+    if (run.map) { run.map = A(run.map).map(row => A(row).map(n => n ? Object.assign(n, { next: A(n.next) }) : n)); }
+  }
 }
 function RS() { if (!S.rogue) migrateRogue(S); return S.rogue; }
 function rgPool() { return ROGUE_POOL0.concat(RS().unlocked).filter(id => HERO_BY_ID[id]); }

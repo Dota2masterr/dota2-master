@@ -139,6 +139,25 @@ const MIGRATIONS = {
   }
 };
 function saveVersionOf(st) { return typeof st.version === 'number' ? st.version : typeof st.v === 'number' ? st.v : 1; }
+// 2.4.2: облако Firebase не хранит пустые {} и [] (и null внутри списков) — после загрузки из облака
+// такие поля пропадают, и код падает на «undefined». Возвращаем их на место.
+function repairEmpty(st) {
+  const obj = (o, k) => { if (o && (!o[k] || typeof o[k] !== 'object' || Array.isArray(o[k]))) o[k] = {}; };
+  const arr = (o, k) => { if (o && !Array.isArray(o[k])) o[k] = o[k] && typeof o[k] === 'object' ? Object.keys(o[k]).sort((a, b) => a - b).map(i => o[k][i]).filter(x => x != null) : []; };
+  obj(st, 'loadout'); arr(st, 'items');
+  if (st.shop) { arr(st.shop, 'owned'); arr(st.shop, 'slots'); }
+  if (st.fights) obj(st.fights, 'done');
+  if (st.event) obj(st.event, 'bought');
+  if (st.season) obj(st.season, 'dayXp');
+  if (st.coop) obj(st.coop, 'got');
+  if (st.onb) obj(st.onb, 'got');
+  if (st.daily) { arr(st.daily, 'quests'); if (!st.daily.login || typeof st.daily.login !== 'object') st.daily.login = { last: '', streak: 0, claimed: '' }; }
+  if (st.weekly) arr(st.weekly, 'quests');
+  if (st.pvp) obj(st.pvp, 'hitSeen');
+  ['fav', 'titlesWon', 'powerHist'].forEach(k => { if (st[k] != null) arr(st, k); });
+  if (st.customStack != null && !Array.isArray(st.customStack)) arr(st, 'customStack');
+  ['stats', 'ach', 'skinSel'].forEach(k => { if (st[k] != null) obj(st, k); });
+}
 function migrate(st) {
   let ver = saveVersionOf(st);
   if (ver > SAVE_VERSION) { st._newer = true; }        // сейв из более новой версии игры — не трогаем
@@ -148,6 +167,7 @@ function migrate(st) {
   st.items = st.items || []; st.loadout = st.loadout || {}; st.arena = st.arena || { cleared: 0, replays: 0, wins: 0, losses: 0 };
   if (!st.uid) st.uid = 1 + st.items.reduce((m, x) => Math.max(m, x.uid || 0), 0);
   if (typeof st.gems !== 'number') st.gems = CONFIG.startGems;
+  repairEmpty(st);
   if (typeof migrateRogue === 'function') migrateRogue(st);
   if (typeof migrateTower === 'function') migrateTower(st);
   // 2.3: снаряжение чужого героя снимаем (теперь оно надевается только на своего)

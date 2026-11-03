@@ -9,7 +9,7 @@ const FIGHTS = [
   { id: 'wisdom', n: 'Винсдум', ic: '📘', g: 'g-wis', d: 'Бой за руну мудрости 3 на 3. Награда — +1 уровень случайному герою стака.', team: 3, waves: 3, pow: 0.7, rw: 0.8, xp: 1 },
   { id: 'actives', n: '5 за активки', ic: '⚡', g: 'g-bot', d: 'Файт на ультах: у всех ульта каждые 3 действия.', team: 5, waves: 5, pow: 1.15, rw: 1.4, fast: 1 }
 ];
-function fightsDay() { const d = todayStr(); if (!S.fights || S.fights.d !== d) S.fights = { d, done: {} }; return S.fights; }
+function fightsDay() { const d = todayStr(); if (!S.fights || S.fights.d !== d) S.fights = { d, done: {} }; if (!S.fights.done) S.fights.done = {}; return S.fights; }
 function fightDef(f) {
   const L = Math.min(100, S.arena.cleared + 1), R = Math.round(reqPower(L) * f.pow);
   const loc = locOf(L), r = seeded(L * 131 + f.id.length * 7 + new Date().getDate());
