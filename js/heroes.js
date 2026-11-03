@@ -2,11 +2,10 @@
 let selectedHero = null, attrFilter = 'all', heroSort = 'name', heroSearch = '';
 let heroWheel = null;
 const SEGMENTS = [
-  { label: '+1 УР', type: 'level', value: 1, color: '#2f7a26', weight: 23 },
+  { label: '+1 УР', type: 'level', value: 1, color: '#2f7a26', weight: 29 },   // 2.4.2: +6 от убранного сектора «Сила +10%»
   { label: '🔶 ×0.6', type: 'gems', value: 0.6, color: '#1f6f7d', weight: 12 },
   { label: '+2 УР', type: 'level', value: 2, color: '#2a5fa8', weight: 14 },
   { label: 'БИЧ', sub: 'провал', type: 'fail', value: 0, color: '#3a3f46', weight: 18 },
-  { label: '⚡ СИЛА', sub: '+10%', type: 'power', value: 0.1, color: '#a8862f', weight: 6 },
   { label: '+3 УР', type: 'level', value: 3, color: '#6a3fb8', weight: 7 },
   { label: '🎨 СКИН', type: 'skin', value: 1, color: '#9a2f86', weight: 5 },
   { label: '🔶 ×1.5', type: 'gems', value: 1.5, color: '#178f9e', weight: 6 },

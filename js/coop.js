@@ -20,7 +20,7 @@ const COOP_BOSSES = [
     phases: [{ at: 1, m: ['heal', 'aggro'], t: 'демоны лечат босса — убейте их' }, { at: 0.55, m: ['heal', 'aggro', 'shield'], t: 'щит бездны! Ульты обоих в один ход' }, { at: 0.25, m: ['enrage'], t: 'ярость' }] }
 ];
 const COOP = { lobbySec: 90, waitSec: 30, maxTicks: 60, poll: 400 };
-function coopState() { const d = todayStr(); if (!S.coop || S.coop.d !== d) S.coop = { d, got: {} }; return S.coop; }
+function coopState() { const d = todayStr(); if (!S.coop || S.coop.d !== d) S.coop = { d, got: {} }; if (!S.coop.got) S.coop.got = {}; return S.coop; }
 // бой: 6 героев (3 игрока a, потом 3 игрока b)
 function coopDef(bi, team) {
   const B = COOP_BOSSES[bi], P = team.reduce((a, t) => a + t.p, 0);

@@ -53,7 +53,7 @@ function migrateTower(st) {
   if (!t.day) t.day = { d: '', n: 0 }; if (t.mmr == null) t.mmr = 1000; if (t.w == null) t.w = 0; if (t.l == null) t.l = 0;
   if (typeof migrateTowerMeta === 'function') migrateTowerMeta(t);
 }
-function TS() { if (!S.tower) migrateTower(S); return S.tower; }
+function TS() { if (!S.tower) migrateTower(S); else if (typeof migrateTowerMeta === 'function' && (!S.tower.road || !S.tower.road.got || !Array.isArray(S.tower.chests) || S.tower.chests.length !== 4 || !S.tower.q || !Array.isArray(S.tower.q.list) || !S.tower.cards)) migrateTowerMeta(S.tower); return S.tower; }
 
 // сила героя в «Башне»: уровень и снаряжение дают до +60%, дальше потолок (новичок тоже может победить)
 function twHeroMul(id) {

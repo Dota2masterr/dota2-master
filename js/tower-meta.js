@@ -69,9 +69,14 @@ function migrateTowerMeta(t) {
   if (t.cupsBest == null) t.cupsBest = t.cups;
   if (t.runes == null) t.runes = 0;
   if (!t.cards || typeof t.cards !== 'object') t.cards = {};
-  if (!Array.isArray(t.chests) || t.chests.length !== 4) t.chests = [null, null, null, null];
+  { const c = t.chests && typeof t.chests === 'object' ? t.chests : {}; t.chests = [0, 1, 2, 3].map(i => c[i] || null); }   // облако теряет null в массиве
+  // облако (Firebase) не хранит пустые {} и [] — после загрузки из облака их надо вернуть
   if (!t.road || typeof t.road !== 'object') t.road = { s: twSeasonId(), best: t.cups, got: {} };
+  if (!t.road.got || typeof t.road.got !== 'object') t.road.got = {};
+  if (t.road.best == null) t.road.best = t.cups;
   if (!t.q || typeof t.q !== 'object') t.q = { d: '', list: [] };
+  if (!Array.isArray(t.q.list)) t.q.list = [];
+  t.chests = t.chests.map(x => (x && TWM.chests[x.t]) ? x : null);
   if (t.mute == null) t.mute = false;
 }
 function twSeasonId() { return Math.floor((typeof nowMs === 'function' ? nowMs() : Date.now()) / 864e5 / TWM.season.days); }
