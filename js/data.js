@@ -1,7 +1,8 @@
 // ================= DATA =================
 const CSM = 'https://s-wiki.cs.money/data/dota/panorama/images/';   // wiki.cs.money
 const STEAM = 'https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/';
-const GEM_IMG = STEAM + 'items/gem.png';
+// 2.3: валюта — оранжевые кристаллы (как осколки в Dota)
+const GEM_IMG = "data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27a%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%271%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23ffe2a0%27/%3E%3Cstop%20offset%3D%27.45%27%20stop-color%3D%27%23ff9a2a%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23b84a08%27/%3E%3C/linearGradient%3E%3ClinearGradient%20id%3D%27b%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23fff6d8%27/%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23ffb84a%27/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%27M32%203%20L54%2022%20L32%2061%20L10%2022%20Z%27%20fill%3D%27url%28%23a%29%27%20stroke%3D%27%235a2404%27%20stroke-width%3D%272.5%27/%3E%3Cpath%20d%3D%27M32%203%20L42%2022%20L32%2061%20L22%2022%20Z%27%20fill%3D%27url%28%23b%29%27%20opacity%3D%27.55%27/%3E%3Cpath%20d%3D%27M10%2022%20H54%27%20stroke%3D%27%237a3406%27%20stroke-width%3D%272%27/%3E%3Cpath%20d%3D%27M22%2022%20L32%203%20L42%2022%27%20fill%3D%27none%27%20stroke%3D%27%23fff%27%20stroke-width%3D%271.5%27%20opacity%3D%27.7%27/%3E%3C/svg%3E";
 const ATTR_ICON = {
   str: STEAM + 'icons/hero_strength.png', agi: STEAM + 'icons/hero_agility.png',
   int: STEAM + 'icons/hero_intelligence.png', uni: STEAM + 'icons/hero_universal.png'
@@ -33,7 +34,7 @@ const HEROES = [
   {id:'monkey_king',name:'Monkey King'},{id:'morphling',name:'Morphling'},{id:'muerta',name:'Muerta'},
   {id:'naga_siren',name:'Naga Siren'},{id:'necrolyte',name:'Necrophos'},{id:'nevermore',name:'Shadow Fiend'},
   {id:'night_stalker',name:'Night Stalker'},{id:'nyx_assassin',name:'Nyx Assassin'},{id:'ogre_magi',name:'Ogre Magi'},
-  {id:'omniknight',name:'Omniknight'},{id:'oracle',name:'Oracle'},{id:'obsidian_destroyer',name:'Outworld Destroyer'},
+  {id:'omniknight',name:'Omniknight'},{id:'oracle',name:'Oracle'},{id:'obsidian_destroyer',name:'Outworld Devourer'},
   {id:'pangolier',name:'Pangolier'},{id:'phantom_assassin',name:'Phantom Assassin'},{id:'phantom_lancer',name:'Phantom Lancer'},
   {id:'phoenix',name:'Phoenix'},{id:'primal_beast',name:'Primal Beast'},{id:'puck',name:'Puck'},
   {id:'pudge',name:'Pudge'},{id:'pugna',name:'Pugna'},{id:'queenofpain',name:'Queen of Pain'},
@@ -51,14 +52,14 @@ const HEROES = [
   {id:'viper',name:'Viper'},{id:'visage',name:'Visage'},{id:'void_spirit',name:'Void Spirit'},
   {id:'warlock',name:'Warlock'},{id:'weaver',name:'Weaver'},{id:'windrunner',name:'Windranger'},
   {id:'winter_wyvern',name:'Winter Wyvern'},{id:'wisp',name:'Io'},{id:'witch_doctor',name:'Witch Doctor'},
-  {id:'zuus',name:'Zeus'},{id:'ringmaster',name:'Ringmaster'},{id:'kez',name:'Kez'}
+  {id:'zuus',name:'Zeus'},{id:'ringmaster',name:'Ringmaster'},{id:'kez',name:'Kez'},{id:'largo',name:'Largo'}
 ];
 const ATTRS = {
-  str: 'alchemist axe bristleback centaur chaos_knight dawnbreaker doom_bringer dragon_knight earth_spirit earthshaker elder_titan huskar kunkka legion_commander life_stealer mars night_stalker ogre_magi omniknight primal_beast pudge slardar spirit_breaker sven tidehunter tiny treant tusk abyssal_underlord undying skeleton_king',
-  agi: 'antimage bloodseeker bounty_hunter clinkz drow_ranger ember_spirit faceless_void gyrocopter hoodwink juggernaut kez luna medusa meepo monkey_king morphling naga_siren phantom_assassin phantom_lancer razor riki nevermore slark sniper spectre templar_assassin terrorblade troll_warlord ursa viper weaver vengefulspirit',
-  int: 'ancient_apparition crystal_maiden death_prophet disruptor enchantress grimstroke jakiro keeper_of_the_light leshrac lich lina lion muerta furion necrolyte oracle obsidian_destroyer puck pugna queenofpain ringmaster rubick shadow_demon shadow_shaman silencer skywrath_mage storm_spirit tinker warlock witch_doctor zuus'
+  str: 'alchemist axe bristleback centaur chaos_knight dawnbreaker doom_bringer dragon_knight earth_spirit earthshaker elder_titan huskar kunkka legion_commander life_stealer mars night_stalker ogre_magi omniknight primal_beast pudge slardar spirit_breaker sven tidehunter tiny treant tusk abyssal_underlord undying skeleton_king rattletrap lycan shredder phoenix largo',
+  agi: 'antimage bloodseeker bounty_hunter clinkz drow_ranger ember_spirit faceless_void gyrocopter hoodwink juggernaut kez luna medusa meepo monkey_king morphling naga_siren phantom_assassin phantom_lancer razor riki nevermore slark sniper spectre templar_assassin terrorblade troll_warlord ursa viper weaver vengefulspirit mirana broodmother lone_druid',
+  int: 'ancient_apparition crystal_maiden disruptor enchantress grimstroke jakiro keeper_of_the_light leshrac lich lina lion muerta necrolyte oracle obsidian_destroyer puck pugna queenofpain ringmaster rubick shadow_demon shadow_shaman silencer skywrath_mage storm_spirit tinker warlock witch_doctor zuus dark_seer chen invoker winter_wyvern dark_willow'
 };
-const RANGED = new Set(('ancient_apparition arc_warden bane batrider chen clinkz crystal_maiden dark_willow dazzle death_prophet disruptor drow_ranger enchantress enigma grimstroke gyrocopter hoodwink huskar invoker wisp jakiro keeper_of_the_light leshrac lich lina lion luna medusa mirana morphling muerta furion necrolyte oracle obsidian_destroyer phoenix puck pugna queenofpain razor ringmaster rubick shadow_demon shadow_shaman silencer skywrath_mage sniper snapfire storm_spirit techies templar_assassin tinker venomancer viper visage warlock weaver windrunner winter_wyvern witch_doctor zuus nevermore vengefulspirit').split(' '));
+const RANGED = new Set(('ancient_apparition arc_warden bane batrider chen clinkz crystal_maiden dark_willow dazzle death_prophet disruptor drow_ranger enchantress enigma grimstroke gyrocopter hoodwink huskar invoker wisp jakiro keeper_of_the_light leshrac lich lina lion luna medusa mirana morphling muerta furion necrolyte oracle obsidian_destroyer phoenix puck pugna queenofpain razor ringmaster rubick shadow_demon shadow_shaman silencer skywrath_mage sniper snapfire storm_spirit techies templar_assassin tinker venomancer viper visage warlock weaver windrunner winter_wyvern witch_doctor zuus nevermore vengefulspirit lone_druid troll_warlord').split(' '));
 HEROES.forEach(h => {
   h.attr = 'uni';
   for (const a of ['str','agi','int']) if (ATTRS[a].split(' ').includes(h.id)) h.attr = a;
@@ -69,7 +70,7 @@ HEROES.forEach(h => {
 const HERO_BY_ID = Object.fromEntries(HEROES.map(h => [h.id, h]));
 
 // cs.money не хранит портреты нескольких новых героев — для них Steam CDN
-const CSM_MISSING = new Set(['muerta','kez','ringmaster']);
+const CSM_MISSING = new Set(['muerta','kez','ringmaster','largo']);
 function heroImg(id) { return CSM_MISSING.has(id) ? STEAM + 'heroes/' + id + '.png' : CSM + 'heroes/npc_dota_hero_' + id + '_png.png'; }
 function heroTall(id) { return CSM_MISSING.has(id) ? STEAM + 'heroes/' + id + '.png' : CSM + 'heroes/selection/npc_dota_hero_' + id + '_png.png'; }
 function heroIcon(id) { return CSM_MISSING.has(id) ? STEAM + 'heroes/icons/' + id + '.png' : CSM + 'heroes/icons/npc_dota_hero_' + id + '_png.png'; }
@@ -315,8 +316,8 @@ const SKIN_SUFFIX = {
   arcana: ['Vision','Awakening','Ascension','Rebirth','Destiny','Soul','Truth','Finale']
 };
 
-// Самоцветы (валюта): иконка Gem of True Sight
-function gemHTML(n) { return '<span class="gemv">' + fmt(n) + '<img class="gem" src="' + GEM_IMG + '" alt="💎" referrerpolicy="no-referrer"></span>'; }
+// Кристаллы (валюта): иконка Gem of True Sight
+function gemHTML(n) { return '<span class="gemv">' + fmt(n) + '<img class="gem" src="' + GEM_IMG + '" alt="🔶" referrerpolicy="no-referrer"></span>'; }
 function fmt(n) { n = Math.floor(Number(n) || 0); return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
 function rnd(a, b) { return a + Math.random() * (b - a); }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }

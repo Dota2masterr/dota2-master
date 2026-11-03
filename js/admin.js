@@ -41,13 +41,13 @@ $('p-find').onclick = async () => {
     const [sv, bd, ban] = await Promise.all([db('GET', 'saves/' + uid).catch(() => null), db('GET', 'board/' + uid).catch(() => null), db('GET', 'banned/' + uid).catch(() => null)]);
     P = { uid, k, nick: $('p-nick').value.trim(), save: sv };
     const st = sv && sv.state || {};
-    $('p-info').innerHTML = '<table><tr><td>uid</td><td>' + esc(uid) + '</td></tr><tr><td>Самоцветы</td><td>' + esc((st.gems || 0).toLocaleString('ru-RU')) + '</td></tr><tr><td>Арена</td><td>' + esc(st.arena && st.arena.cleared) + '/100</td></tr><tr><td>Предметов</td><td>' + esc(st.items && st.items.length) + '</td></tr><tr><td>MMR</td><td>' + esc(st.pvp && st.pvp.mmr) + '</td></tr><tr><td>Версия сейва</td><td>' + esc(st.version || st.v) + '</td></tr><tr><td>Сохранён</td><td>' + (sv ? new Date(sv.at).toLocaleString('ru-RU') : '—') + '</td></tr><tr><td>В рейтинге</td><td>' + (bd ? 'да' : 'нет') + '</td></tr><tr><td>Бан</td><td>' + (ban ? '⛔ ' + esc(ban.reason || '') : 'нет') + '</td></tr></table>';
+    $('p-info').innerHTML = '<table><tr><td>uid</td><td>' + esc(uid) + '</td></tr><tr><td>Кристаллы</td><td>' + esc((st.gems || 0).toLocaleString('ru-RU')) + '</td></tr><tr><td>Арена</td><td>' + esc(st.arena && st.arena.cleared) + '/100</td></tr><tr><td>Предметов</td><td>' + esc(st.items && st.items.length) + '</td></tr><tr><td>MMR</td><td>' + esc(st.pvp && st.pvp.mmr) + '</td></tr><tr><td>Версия сейва</td><td>' + esc(st.version || st.v) + '</td></tr><tr><td>Сохранён</td><td>' + (sv ? new Date(sv.at).toLocaleString('ru-RU') : '—') + '</td></tr><tr><td>В рейтинге</td><td>' + (bd ? 'да' : 'нет') + '</td></tr><tr><td>Бан</td><td>' + (ban ? '⛔ ' + esc(ban.reason || '') : 'нет') + '</td></tr></table>';
     $('p-acts').classList.remove('hide');
   } catch (e) { say('p-log', e.message, true); }
 };
 $('p-gift').onclick = async () => {
   const n = Math.trunc(+$('p-amount').value); if (!n) return say('p-log', 'Укажи сумму (минус — забрать)', true);
-  try { await db('PUT', 'gifts/' + P.uid + '/' + rid(), { fromUid: 'admin', from: 'Администрация', kind: 'admin', amount: n, note: $('p-note').value.slice(0, 120), at: SV }); say('p-log', 'Готово: ' + n + ' 💎 придут игроку при следующем входе (или в течение 2 минут)'); }
+  try { await db('PUT', 'gifts/' + P.uid + '/' + rid(), { fromUid: 'admin', from: 'Администрация', kind: 'admin', amount: n, note: $('p-note').value.slice(0, 120), at: SV }); say('p-log', 'Готово: ' + n + ' 🔶 придут игроку при следующем входе (или в течение 2 минут)'); }
   catch (e) { say('p-log', e.message, true); }
 };
 $('p-ban').onclick = async () => {
@@ -66,7 +66,7 @@ $('p-save').onclick = () => { $('p-json').textContent = JSON.stringify(P.save, n
 // ---------- подарок всем ----------
 $('b-send').onclick = async () => {
   const n = Math.trunc(+$('b-amount').value); if (!(n > 0)) return say('b-log', 'Укажи положительную сумму', true);
-  if (!confirm('Разослать ' + n + ' 💎 всем игрокам из рейтинга?')) return;
+  if (!confirm('Разослать ' + n + ' 🔶 всем игрокам из рейтинга?')) return;
   try {
     const uids = Object.keys(await db('GET', 'board', undefined, { shallow: true }) || {});
     for (let i = 0; i < uids.length; i += 100) {

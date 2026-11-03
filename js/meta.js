@@ -35,8 +35,9 @@ function announce(text, opts) {
   if (!SETTINGS.voice || SETTINGS.vol <= 0 || !window.speechSynthesis) return;
   try {
     const u = new SpeechSynthesisUtterance(text);
-    const v = speechSynthesis.getVoices().find(x => /^en/i.test(x.lang)); if (v) u.voice = v;
-    u.lang = 'en-US'; u.pitch = (opts && opts.pitch) || 0.55; u.rate = (opts && opts.rate) || 0.9; u.volume = SETTINGS.vol;
+    const ru = opts && opts.lang === 'ru';
+    const v = speechSynthesis.getVoices().find(x => (ru ? /^ru/i : /^en/i).test(x.lang)); if (v) u.voice = v;
+    u.lang = ru ? 'ru-RU' : 'en-US'; u.pitch = (opts && opts.pitch) || 0.55; u.rate = (opts && opts.rate) || 0.9; u.volume = SETTINGS.vol;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) {}
 }
@@ -62,7 +63,7 @@ function renderChests() {
   host.innerHTML = '<div class="chest-row">' + CHESTS.map(ch =>
     '<div class="chest panel" style="--cc:' + ch.color + '"><div class="chest-ic"><div class="lid"></div><div class="box"></div></div><h3>' + esc(ch.name) + '</h3>' +
     '<div class="odds">' + Object.keys(ch.w).reverse().map(r => '<span style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + ' ' + ch.w[r] + '%</span>').join(' · ') + '</div>' +
-    '<div style="display:flex;gap:6px;justify-content:center;margin-top:8px"><button class="btn green" ' + (canPay(ch.cost) ? '' : 'disabled') + ' data-click="openChest(\'' + ch.id + '\')">Открыть · ' + fmt(ch.cost) + ' 💎</button><button class="btn ghost sm" data-click="previewChest(\'' + ch.id + '\')">Содержимое</button></div></div>').join('') + '</div>' +
+    '<div style="display:flex;gap:6px;justify-content:center;margin-top:8px"><button class="btn green" ' + (canPay(ch.cost) ? '' : 'disabled') + ' data-click="openChest(\'' + ch.id + '\')">Открыть · ' + fmt(ch.cost) + ' 🔶</button><button class="btn ghost sm" data-click="previewChest(\'' + ch.id + '\')">Содержимое</button></div></div>').join('') + '</div>' +
     '<div id="chest-stage"></div><div class="sec-title">Крафт · 10 → 1</div><div class="panel panel-b" id="craft-box"></div>';
   renderCraft();
 }
@@ -117,7 +118,16 @@ function renderCraft() {
     RARITIES.slice(0, 5).map(r => '<option value="' + r + '"' + (r === craftR ? ' selected' : '') + '>' + RARITY_NAMES[r] + '</option>').join('') + '</select>' +
     '<span>→ 1 предмет <b style="color:' + RARITY_COLOR[nx] + '">' + RARITY_NAMES[nx] + '</b></span><span class="muted">(есть ' + list.length + '/10, надетые не трогаем, сжигаются самые старые)</span>' +
     '<button class="btn gold" ' + (list.length >= 10 ? '' : 'disabled') + ' data-click="doCraft()">⚒ Скрафтить</button></div>' +
-    '<div class="prev-row" style="margin-top:8px">' + list.slice(0, 10).map(x => '<img title="' + esc(x.name) + '" src="' + itemImgChain(x)[0] + '" referrerpolicy="no-referrer" style="border-color:' + RARITY_COLOR[x.rarity] + '">').join('') + '</div>';
+    '<div class="craft-row" id="craft-row"></div>';
+  // 2.3: картинки крафта — с запасными адресами (раньше битая ссылка оставляла пустой квадрат) и стрелкой к результату
+  const row = document.getElementById('craft-row');
+  for (let i = 0; i < 10; i++) {
+    const x = list[i], c = document.createElement('div'); c.className = 'craft-cell' + (x ? '' : ' empty');
+    if (x) { c.style.borderColor = RARITY_COLOR[x.rarity]; c.title = x.name; c.appendChild(mkImg(itemImgChain(x), x.name)); } else c.textContent = '?';
+    row.appendChild(c);
+  }
+  const ar = document.createElement('div'); ar.className = 'craft-arrow'; ar.textContent = '⚒ →'; row.appendChild(ar);
+  const res = document.createElement('div'); res.className = 'craft-cell result'; res.style.borderColor = RARITY_COLOR[nx]; res.innerHTML = '<span style="color:' + RARITY_COLOR[nx] + '">' + RARITY_NAMES[nx] + '</span>'; row.appendChild(res);
 }
 function doCraft() {
   const list = craftable(craftR).slice(0, 10); if (list.length < 10) return;
@@ -127,7 +137,8 @@ function doCraft() {
   const it = Math.random() < 0.5 ? addEquipment(HERO_BY_ID[hero] ? hero : pick(HEROES).id, nx) : addSkin(HERO_BY_ID[hero] ? hero : pick(HEROES).id, nx);
   track('crafts'); save(); sfx('open'); renderCraft(); updateTop();
   if (nx === 'arcana') hype('НИШТЯК');
-  showModal('⚒', 'Крафт: ' + RARITY_NAMES[nx], it.name, 'ok', { auto: true });
+  showModal('⚒', 'Крафт: ' + RARITY_NAMES[nx], '<div class="craft-won" style="border-color:' + RARITY_COLOR[nx] + '"><img src="' + itemImgChain(it)[0] + '" referrerpolicy="no-referrer" alt=""></div><b style="color:' + RARITY_COLOR[nx] + '">' + esc(it.name) + '</b>', 'ok', { html: true });
+  const im = document.querySelector('.craft-won img'); if (im) setImg(im, itemImgChain(it), it.name);
 }
 
 // ---------- НАСТРОЙКИ ----------
@@ -142,7 +153,8 @@ function openSettings() {
     '<label><input type="checkbox" ' + (SETTINGS.haptics ? 'checked' : '') + ' data-change="setSetting(\'haptics\',this)"> Вибрация на телефоне</label>' +
     (typeof REDUCED_MOTION !== 'undefined' && REDUCED_MOTION ? '<div class="muted" style="font-size:.75rem">В системе включено «уменьшить движение» — анимации приглушены.</div>' : '') +
     '<label>Язык / Language <select data-change="setSetting(\'lang\',this)"><option value="ru"' + (SETTINGS.lang === 'ru' ? ' selected' : '') + '>Русский</option><option value="en"' + (SETTINGS.lang === 'en' ? ' selected' : '') + '>English</option></select></label>' +
-    '<button class="btn" data-click="restartTutorial()">Пройти обучение заново</button></div>', '', { html: true, buttons: [{ t: 'Готово', c: 'green', f: closeModal }] });
+    '<button class="btn" data-click="restartTutorial()">Пройти обучение заново</button>' +
+    '<button class="btn" data-click="rogueTestFight()">⚔ Тестовый бой «Путь Древнего» (герой против 3 крипов)</button></div>', '', { html: true, buttons: [{ t: 'Готово', c: 'green', f: closeModal }] });
 }
 
 // ---------- ЯЗЫК (интерфейс) ----------
@@ -177,12 +189,12 @@ function applyLang() {
 
 // ---------- ОБУЧЕНИЕ ----------
 const TUTORIAL = [
-  { sel: '#gems-chip', t: 'Это самоцветы — валюта игры. Они нужны для круток, слотов, лавки и сундуков.' },
+  { sel: '#gems-chip', t: 'Это кристаллы — валюта игры. Они нужны для круток, слотов, лавки и сундуков.' },
   { sel: '[data-tab=heroes]', t: 'Во вкладке «Герои» прокачивай героев на рулетке. С 10 уровня открываются таланты.' },
   { sel: '[data-tab=arena]', t: 'Арена: главный герой + 4 сильнейших сражаются с волнами врагов. 100 уровней, Рошан, лавка и режимы.' },
   { sel: '[data-tab=slots]', t: 'Слоты и сундуки дают скины и снаряжение. Снаряжение повышает силу героя.' },
   { sel: '[data-tab=quests]', t: 'Каждый день — награда за вход и три задания. Забирай награды здесь.' },
-  { sel: '#free-btn', t: 'Бесплатные самоцветы раз в 10 минут. Удачи, и пусть будет НИШТЯК!' }
+  { sel: '#free-btn', t: 'Бесплатные кристаллы раз в 10 минут. Удачи, и пусть будет НИШТЯК!' }
 ];
 let tutStep = -1;
 function startTutorial(force) {

@@ -3,6 +3,7 @@
 // stun — враг пропускает ходы; heal — лечит команду; shield — команда получает меньше урона;
 // crit — огромный крит; execute — добивает раненого; buff — усиливает атаку команды
 const ULTS = {
+  largo:['largo_amphibian_rhapsody','Amphibian Rhapsody','heal'],
   abaddon:['abaddon_borrowed_time','Borrowed Time','shield'], alchemist:['alchemist_chemical_rage','Chemical Rage','buff'],
   ancient_apparition:['ancient_apparition_ice_blast','Ice Blast','execute'], antimage:['antimage_mana_void','Mana Void','nuke'],
   arc_warden:['arc_warden_tempest_double','Tempest Double','buff'], axe:['axe_culling_blade','Culling Blade','execute'],

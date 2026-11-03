@@ -39,7 +39,28 @@ const ACHIEVEMENTS = [
   { id: 'inv20', icon: '🔮', name: 'Карл', d: 'Invoker Race быстрее 20 с', ok: () => S.invBest && S.invBest < 20, r: 3000 },
   { id: 'inv12', icon: '🔮', name: 'Арсенал магии', d: 'Invoker Race быстрее 12 с', ok: () => S.invBest && S.invBest < 12, r: 15000, item: 'mythical' },
   { id: 'sell100', icon: '💰', name: 'Торговец', d: 'Продай 100 предметов', ok: () => st('itemsSold') >= 100, r: 5000 },
-  { id: 'streak7', icon: '📅', name: 'Неделя в игре', d: 'Заходи 7 дней подряд', ok: () => S.daily && S.daily.login && S.daily.login.streak >= 7, r: 10000, item: 'immortal' }
+  { id: 'streak7', icon: '📅', name: 'Неделя в игре', d: 'Заходи 7 дней подряд', ok: () => S.daily && S.daily.login && S.daily.login.streak >= 7, r: 10000, item: 'immortal' },
+  // 2.3: новые достижения
+  { id: 'bich10', icon: '🤬', name: 'BITCH!', d: '10 раз поймай БИЧ', ok: () => st('bich') >= 10, r: 1500 },
+  { id: 'tw21', icon: '🃏', name: 'Twenty One', d: '21 раз выпадет «21»', ok: () => st('twentyone') >= 21, r: 2100 },
+  { id: 'spin5000', icon: '🎡', name: 'Вечный двигатель', d: '5000 круток героев', ok: () => st('heroSpins') >= 5000, r: 150000, item: 'arcana' },
+  { id: 'slot2000', icon: '🎰', name: 'Однорукий бандит', d: '2000 прокрутов слотов', ok: () => st('slotSpins') >= 2000, r: 60000 },
+  { id: 'lvl50x5', icon: '🌟', name: 'Пятёрка максимумов', d: '5 героев 50 уровня', ok: () => HEROES.filter(h => S.heroes[h.id].level >= 50).length >= 5, r: 200000, item: 'arcana' },
+  { id: 'arcana10', icon: '💚', name: 'Коллекция Arcana', d: '10 предметов Arcana', ok: () => S.items.filter(x => x.rarity === 'arcana').length >= 10, r: 50000 },
+  { id: 'items500', icon: '📦', name: 'Склад', d: '500 предметов в коллекции', ok: () => S.items.length >= 500, r: 20000 },
+  { id: 'pvp10', icon: '🥊', name: 'Боец', d: '10 побед в PvP', ok: () => S.pvp && S.pvp.w >= 10, r: 10000 },
+  { id: 'pvp100', icon: '🏆', name: 'Гладиатор', d: '100 побед в PvP', ok: () => S.pvp && S.pvp.w >= 100, r: 100000, item: 'immortal' },
+  { id: 'rosh5', icon: '🦍', name: 'Охотник на Рошана', d: 'Убей Рошана 5 раз', ok: () => st('roshanKills') >= 5, r: 25000 },
+  { id: 'fights6', icon: '⚔', name: 'Файтер', d: 'Выиграй 6 файтов', ok: () => st('fightsWon') >= 6, r: 15000 },
+  { id: 'rogue1', icon: '🌀', name: 'Путь пройден', d: 'Победи Древнего в «Пути Древнего»', ok: () => S.rogue && S.rogue.wins >= 1, r: 20000, item: 'mythical' },
+  { id: 'rogue5', icon: '🌀', name: 'Бездна зовёт', d: 'Открой 5-й уровень Бездны', ok: () => S.rogue && Object.values(S.rogue.abyss || {}).some(v => v >= 5), r: 60000, item: 'immortal' },
+  { id: 'tower10', icon: '🏰', name: 'Штурмовик', d: 'Пройди 10 этажей Башни', ok: () => S.tower && S.tower.best >= 10, r: 15000 },
+  { id: 'tower50', icon: '🏯', name: 'Покоритель Башни', d: 'Пройди все 50 этажей Башни', ok: () => S.tower && S.tower.best >= 50, r: 300000, item: 'arcana' },
+  { id: 'craft10', icon: '⚒', name: 'Ремесленник', d: '10 крафтов', ok: () => st('crafts') >= 10, r: 8000 },
+  { id: 'gift5', icon: '🎁', name: 'Щедрый', d: 'Отправь 5 подарков', ok: () => st('gifts') >= 5, r: 5000 },
+  { id: 'fav5', icon: '⭐', name: 'Любимчики', d: 'Добавь 5 героев в избранное', ok: () => (S.fav || []).length >= 5, r: 1000 },
+  { id: 'ss10', icon: '☀', name: 'Exort-мастер', d: 'Попади всеми 10 Sun Strike', ok: () => S.gameBest && S.gameBest.sunstrike >= 10, r: 10000 },
+  { id: 'streak30', icon: '📅', name: 'Месяц в игре', d: 'Заходи 30 дней подряд', ok: () => S.daily && S.daily.login && S.daily.login.streak >= 30, r: 100000, item: 'arcana' }
 ];
 function st(k) { return (S.stats && S.stats[k]) || 0; }
 function ensureMeta() {
@@ -111,7 +132,7 @@ function renderQuests() {
   for (let d = 1; d <= 7; d++) {
     const rw = loginReward(d);
     const state = d < cur || (d === cur && claimedToday) ? 'got' : d === cur ? 'today' : '';
-    html += '<div class="lday panel ' + state + '"><div class="dn">День ' + d + '</div><div class="ic">' + (rw.item ? (rw.item === 'immortal' ? '👑' : '🎁') : '💎') + '</div><div>' + gemHTML(rw.gems) + '</div>' + (rw.item ? '<div style="font-size:.7rem;color:' + RARITY_COLOR[rw.item] + '">+ ' + RARITY_NAMES[rw.item] + '</div>' : '') + (state === 'got' ? '<div class="ok">✓</div>' : '') + '</div>';
+    html += '<div class="lday panel ' + state + '"><div class="dn">День ' + d + '</div><div class="ic">' + (rw.item ? (rw.item === 'immortal' ? '👑' : '🎁') : '🔶') + '</div><div>' + gemHTML(rw.gems) + '</div>' + (rw.item ? '<div style="font-size:.7rem;color:' + RARITY_COLOR[rw.item] + '">+ ' + RARITY_NAMES[rw.item] + '</div>' : '') + (state === 'got' ? '<div class="ok">✓</div>' : '') + '</div>';
   }
   html += '</div><div style="text-align:center;margin:10px 0 4px"><button class="btn green" ' + (claimedToday ? 'disabled' : '') + ' data-click="claimLogin()">' + (claimedToday ? 'Получено — приходи завтра' : 'Забрать награду дня') + '</button></div>';
   html += '<div class="sec-title">Задания на сегодня <span class="muted" style="font-size:.75rem;letter-spacing:0;font-family:Roboto Condensed;text-transform:none">обновятся в полночь</span></div><div class="quest-list">';
@@ -139,19 +160,19 @@ async function claimLogin() {
   const lg = S.daily.login; if (lg.claimed === S.daily.day) return;
   const rw = loginReward(lg.streak);
   lg.claimed = S.daily.day; addGems(rw.gems);
-  let msg = '+' + fmt(rw.gems) + ' 💎';
+  let msg = '+' + fmt(rw.gems) + ' 🔶';
   if (rw.item) { const it = addEquipment(mainHeroId(), rw.item); msg += ' · ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'; }
   save(); renderQuests(); showModal('📅', 'День ' + (((lg.streak - 1) % 7) + 1), msg, 'ok', { auto: true });
 }
 function claimQuest(i) {
   const q = S.daily.quests[i]; if (!q || q.claimed || q.prog < q.n) return;
   q.claimed = true; addGems(q.reward); save(); renderQuests();
-  showModal('✅', 'Задание выполнено', '+' + fmt(q.reward) + ' 💎', 'ok', { auto: true });
+  showModal('✅', 'Задание выполнено', '+' + fmt(q.reward) + ' 🔶', 'ok', { auto: true });
 }
 function claimAch(id) {
   const a = ACHIEVEMENTS.find(x => x.id === id); if (!a || S.ach[id] || !safeOk(a)) return;
   S.ach[id] = Date.now(); addGems(a.r);
-  let msg = '+' + fmt(a.r) + ' 💎';
+  let msg = '+' + fmt(a.r) + ' 🔶';
   if (a.item) { const it = addEquipment(mainHeroId(), a.item); msg += ' · ' + it.name; }
   save(); renderQuests(); showModal(a.icon, a.name, msg, 'ok', { auto: true });
   if (a.item === 'arcana') hype('НИШТЯК');

@@ -25,7 +25,7 @@ function validateSave(raw) {
   if (!isObj(st.heroes)) { st.heroes = {}; fixes.push('heroes'); }
   if (!Array.isArray(st.items)) { st.items = []; fixes.push('items'); }
 
-  // самоцветы
+  // кристаллы
   const g = num(st.gems, 0, SAVE_LIMITS.gems, NaN);
   if (!isFinite(g)) { st.gems = CONFIG.startGems; fixes.push('gems'); }
   else if (g !== st.gems) { st.gems = Math.floor(g); fixes.push('gems'); }

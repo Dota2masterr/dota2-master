@@ -95,7 +95,7 @@ async function checkBan() {
   const _chest = openChest; openChest = function (id) { if (killed('chests', 'Сундуки')) return; return _chest(id); };
   const _rows = publicRows; publicRows = function (c) { return LIVE.me.banned ? {} : _rows(c); };
   const _start = startGame; startGame = function () { _start(); renderAnnounce(); if (typeof cloud === 'function' && cloud()) setTimeout(checkBan, 2500); };
-  // подарки от администрации: могут быть и отрицательными (забрать самоцветы)
+  // подарки от администрации: могут быть и отрицательными (забрать кристаллы)
   const _check = checkGifts;
   checkGifts = async function () {
     const c = cloud(); if (!c || conflictOpen) return _check();
@@ -107,7 +107,7 @@ async function checkBan() {
         const snap = JSON.stringify(S), n = Math.trunc(num(g.amount, -1e13, 1e13, 0));
         addGems(n);
         const at = Math.max(nowMs(), ((S.cloud && S.cloud.at) || 0) + 1); S.savedAt = at; S.cloud = { at, h: stateHash(S) };
-        try { await dbMulti({ ['gifts/' + c.uid + '/' + gid]: null, ['saves/' + c.uid]: { at, nick: USER.nick, state: S } }); save(); toast('📨 От администрации', (n >= 0 ? '+' : '') + fmt(n) + ' 💎' + (g.note ? ' · ' + String(g.note).slice(0, 120) : '')); }
+        try { await dbMulti({ ['gifts/' + c.uid + '/' + gid]: null, ['saves/' + c.uid]: { at, nick: USER.nick, state: S } }); save(); toast('📨 От администрации', (n >= 0 ? '+' : '') + fmt(n) + ' 🔶' + (g.note ? ' · ' + String(g.note).slice(0, 120) : '')); }
         catch (e) { S = JSON.parse(snap); }
       }
     } catch (e) { }

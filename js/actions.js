@@ -61,6 +61,7 @@ function setSetting(k, el) {
   else if (k === 'lang') SETTINGS.lang = el.value;
   else SETTINGS[k] = el.checked;
   saveSettings();
+  if (k === 'lang' && S) { try { switchTab(currentTab); updateTop(); updateProfileChip(); } catch (e) { } }   // 2.3: перерисовать на новом языке
   if (k === 'sfx') sfx('click');
   if (k === 'voice') announce('First Blood!');
 }

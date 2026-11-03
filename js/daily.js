@@ -33,7 +33,7 @@ function afterSlotSpin(full, win) {
   updateAutoUI();
   if (full) return stopAuto('стоп на НИШТЯК!');
   if (autoLeft <= 0) return stopAuto('готово');
-  if (!canPay(bets[curMachine.id])) return stopAuto('кончились самоцветы');
+  if (!canPay(bets[curMachine.id])) return stopAuto('кончились кристаллы');
   if (currentTab !== 'slots') return stopAuto('вкладка закрыта');
   setTimeout(() => { if (autoTotal) spinSlots(); }, speed === 'fast' ? 250 : 600);
 }
@@ -46,7 +46,9 @@ function updateAutoUI() {
 
 // ---------- Титулы ----------
 const ACH_COLORS = ['#e8c77a', '#ade55c', '#7ad3ff', '#ff8a3a', '#c8a4ff'];
-const GRANTED_TITLES = { dranik: [{ id: 'gomo', name: 'Гомо', color: '#ff4ae0' }] };
+// Особые титулы по нику (ключ — ник в нижнем регистре). «ГОМО» — титул разработчиков и выданный лично.
+const GOMO = { id: 'gomo', name: 'ГОМО', color: '#ff4ae0', icon: '🛠' };
+const GRANTED_TITLES = { dranik: [GOMO], wowchess: [GOMO], 'доза героина': [GOMO] };
 function grantedTitles() { return (USER && GRANTED_TITLES[USER.key]) || []; }
 function titleOptions() {
   const res = grantedTitles().map(t => ({ id: t.id, name: t.name, color: t.color, special: true }));

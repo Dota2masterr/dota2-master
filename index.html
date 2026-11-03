@@ -9,6 +9,8 @@
 <meta name="description" content="Бесплатная браузерная фан-игра по Dota 2: прокачивай героев на рулетке, собирай скины и снаряжение, проходи арену из 100 уровней, сражайся в PvP и выполняй задания сезона. Без доната.">
 <meta name="theme-color" content="#0b0e12">
 <meta name="color-scheme" content="dark">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="canonical" href="https://dota2masterr.github.io/dota2-master/">
@@ -63,6 +65,7 @@
       <button data-tab="collection" data-click="switchTab('collection')">Коллекция</button>
       <button data-tab="upgrade" data-click="switchTab('upgrade')">Апгрейдер</button>
       <button data-tab="arena" data-click="switchTab('arena')">Арена</button>
+      <button data-tab="rogue" data-click="switchTab('rogue')">Путь Древнего</button>
       <button data-tab="invoker" data-click="switchTab('invoker')">Invoker Game</button>
       <button data-tab="quests" data-click="switchTab('quests')">Задания</button>
       <button data-tab="chests" data-click="switchTab('chests')">Сундуки</button>
@@ -70,7 +73,7 @@
       <button data-tab="online" data-click="switchTab('online')">Онлайн</button>
     </nav>
     <div class="userbox">
-      <div class="cur-chip" title="Самоцветы" id="gems-chip"></div>
+      <div class="cur-chip" title="Кристаллы" id="gems-chip"></div>
       <div class="profile-chip" data-click="openProfile()" title="Профиль">
         <img id="pc-img" alt="">
         <div><div class="nick" id="pc-nick">—</div><div class="lvl" id="pc-sub">профиль</div></div>
@@ -150,7 +153,7 @@
 
 <!-- ============ SLOTS ============ -->
 <section class="tab" id="tab-slots">
-  <div class="cur-warn">🎮 Ставки, слоты и сундуки — только на игровую валюту. Самоцветы нельзя купить за деньги или вывести. <b>12+</b></div>
+  <div class="cur-warn">🎮 Ставки, слоты и сундуки — только на игровую валюту. Кристаллы нельзя купить за деньги или вывести. <b>12+</b></div>
   <div class="subtabs" id="slot-subtabs"></div>
   <div id="slot-machine-host"></div>
 </section>
@@ -164,6 +167,9 @@
     <div class="panel cstat"><div class="n" id="c-arcana" style="color:#ade55c">0</div><div class="l">Arcana</div></div>
     <div class="panel cstat"><div class="n" id="c-value">0</div><div class="l">Стоимость</div></div>
   </div>
+  <div class="sec-title">Экипировка героя <span class="muted" style="font-size:.7rem;letter-spacing:0;text-transform:none;font-family:'Roboto Condensed'">снаряжение надевается только на своего героя</span></div>
+  <div class="panel panel-b" id="loadout-box"></div>
+  <div class="panel toolbar coll-eq-tools"><button class="btn gold sm" data-click="equipBestAll()">⚡ Надеть лучшее всем</button><label class="chk"><input type="checkbox" id="auto-eq" data-change="toggleAutoEquip(this)"> Надевать новое автоматически</label></div>
   <div class="panel toolbar">
     <label>Тип</label>
     <div class="seg" id="f-type"><button data-v="all" class="active">Все</button><button data-v="skin">Скины</button><button data-v="eq">Снаряжение</button></div>
@@ -172,8 +178,11 @@
       <option value="rdesc">По редкости ↓</option><option value="rasc">По редкости ↑</option>
       <option value="type">По типу</option><option value="new">Сначала новые</option><option value="hero">По герою</option><option value="name">По названию</option>
     </select>
-    <label>Надеть на</label>
+    <label>Слот</label>
+    <select id="f-slot"></select>
+    <label>Герой</label>
     <select id="f-equip-hero" style="max-width:170px"></select>
+    <label class="chk"><input type="checkbox" id="f-hero-only"> только его предметы</label>
     <div class="spacer"></div>
     <button class="btn sm" data-click="sellVisible()">Продать видимые</button>
     <button class="btn red sm" data-click="sellCommons()">Продать Common</button>
@@ -181,8 +190,6 @@
   <div class="chips" id="f-rarity" style="margin-bottom:10px"></div>
   <div class="inv-grid" id="inv-grid"></div>
   <div class="empty" id="inv-empty">Пусто. Крути слоты и рулетку, проходи арену!</div>
-  <div class="sec-title">Экипировка героя</div>
-  <div class="panel panel-b" id="loadout-box"></div>
 </section>
 
 <!-- ============ UPGRADER ============ -->
@@ -218,10 +225,11 @@
       <div class="pick-ctrl">
         <label class="muted" style="font-size:.8rem">Главный герой:</label>
         <select id="main-hero" style="max-width:220px" data-change="setMainHero(this.value)"></select>
+        <button class="btn sm gold" data-click="openStackPicker()">🧩 Свой стак</button>
         <div class="spacer" style="flex:1"></div>
         <div>Сила стака: <span class="stack-power" id="stack-power">0</span></div>
       </div>
-      <div class="muted" style="font-size:.75rem;padding:0 12px 12px">Команда = главный герой + 4 самых сильных. В бою учитывается только мощь этих пятерых (стака), а не всех героев.</div>
+      <div class="muted" style="font-size:.75rem;padding:0 12px 12px">Команда = главный герой + 4 самых сильных, или твой собственный стак (кнопка «Свой стак» или нажми на героя). В бою учитывается только мощь этих пятерых.</div>
     </div>
     <div class="panel panel-b">
       <div class="loc-tabs" id="loc-tabs"></div>
@@ -233,6 +241,7 @@
     <div class="panel"><div class="panel-h"><h3>Лавка · предметы главного героя</h3></div><div class="panel-b" id="shop-box"></div></div>
     <div>
       <div class="panel" style="margin-bottom:14px"><div class="panel-h"><h3>Рошан</h3></div><div class="panel-b" id="roshan-box"></div></div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-h"><h3>Файты</h3></div><div class="panel-b" id="fights-box"></div></div>
       <div class="panel"><div class="panel-h"><h3>Синергии стака</h3></div><div class="panel-b" id="syn-box"></div></div>
     </div>
   </div>
@@ -253,6 +262,7 @@
         <img id="inv-spell-img" alt="">
         <div class="sn" id="inv-spell-name">—</div>
         <div class="muted" id="inv-spell-hint" style="font-size:.85rem">Нажми Start</div>
+        <div class="inv-next" id="inv-next"></div>
       </div>
       <div class="orbs"><div class="orb" id="orb0"></div><div class="orb" id="orb1"></div><div class="orb" id="orb2"></div></div>
       <div class="invoked" id="invoked"><div class="slotx"></div><div class="slotx"></div></div>
@@ -271,7 +281,8 @@
 </section>
 <!-- ============ QUESTS ============ -->
 <section class="tab" id="tab-quests"><div id="quests-host"></div></section>
-<section class="tab" id="tab-chests"><div class="cur-warn">🎮 Ставки, слоты и сундуки — только на игровую валюту. Самоцветы нельзя купить за деньги или вывести. <b>12+</b></div><div id="event-host"></div><div id="chests-host"></div></section>
+<section class="tab" id="tab-chests"><div class="cur-warn">🎮 Ставки, слоты и сундуки — только на игровую валюту. Кристаллы нельзя купить за деньги или вывести. <b>12+</b></div><div id="event-host"></div><div id="chests-host"></div></section>
+<section class="tab" id="tab-rogue"><div id="rogue-host"></div></section>
 <section class="tab" id="tab-games"><div id="games-host"></div></section>
 <section class="tab" id="tab-online"><div id="online-host"></div></section>
 </div>
@@ -295,6 +306,8 @@
       <div class="bt-side left" id="bt-left"></div>
       <div class="bt-side right" id="bt-right"></div>
     </div>
+    <div class="bt-ctrl" id="bt-ctrl"></div>
+    <div class="bt-log" id="bt-log" aria-live="polite"></div>
     <div class="bt-foot"><div class="bt-status" id="bt-status">⚔</div><div class="bt-feed" id="bt-feed"></div><button class="btn sm" id="bt-skip" data-click="battleSkip()">Пропустить ⏩</button></div>
   </div>
 </div>
@@ -318,19 +331,25 @@
 <!-- Скрипты игры: порядок важен (каждый файл может пользоваться предыдущими). Новые файлы добавляй перед invoker.js -->
 <script src="js/errors.js"></script>
 <script src="js/version.js"></script>
+<script src="js/intro.js"></script>
 <script src="js/config.js"></script>
 <script src="js/actions.js"></script>
 <script src="js/data.js"></script>
 <script src="js/data-abilities.js"></script>
 <script src="js/data-sets.js"></script>
+<script src="js/data-skills.js"></script>
+<script src="js/data-talents.js"></script>
 <script src="js/core.js"></script>
 <script src="js/guard.js"></script>
 <script src="js/heroes.js"></script>
+<script src="js/skills.js"></script>
 <script src="js/slots.js"></script>
 <script src="js/collection.js"></script>
+<script src="js/battle.js"></script>
 <script src="js/arena.js"></script>
 <script src="js/quests.js"></script>
 <script src="js/arena-extras.js"></script>
+<script src="js/fights.js"></script>
 <script src="js/meta.js"></script>
 <script src="js/minigames.js"></script>
 <script src="js/cloud.js"></script>
@@ -343,6 +362,11 @@
 <script src="js/social.js"></script>
 <script src="js/events.js"></script>
 <script src="js/quality.js"></script>
+<script src="js/rogue-data.js"></script>
+<script src="js/rogue.js"></script>
+<script src="js/rogue-ui.js"></script>
+<script src="js/tower.js"></script>
+<script src="js/tower-live.js"></script>
 <script src="js/invoker.js"></script>
 </body>
 </html>

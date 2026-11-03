@@ -15,7 +15,7 @@ function checkWhatsNew() {
 
 // ---------- удаление аккаунта и всех данных ----------
 function openDeleteAccount() {
-  showModal('🗑', 'Удалить аккаунт и данные', '<div style="text-align:left;font-size:.88rem"><p>Будут <b>безвозвратно</b> удалены: прогресс, предметы, самоцветы, строка в рейтинге, стак для PvP, ник, друзья, код восстановления, облачный аккаунт и всё на этом устройстве.</p>' +
+  showModal('🗑', 'Удалить аккаунт и данные', '<div style="text-align:left;font-size:.88rem"><p>Будут <b>безвозвратно</b> удалены: прогресс, предметы, кристаллы, строка в рейтинге, стак для PvP, ник, друзья, код восстановления, облачный аккаунт и всё на этом устройстве.</p>' +
     '<div class="field"><label>Для подтверждения введи свой ник: <b>' + esc(USER.nick) + '</b></label><input type="text" id="del-nick" autocomplete="off"></div>' +
     '<div class="field"><label>Пароль</label><input type="password" id="del-pass" autocomplete="current-password"></div><div class="auth-err" id="del-err"></div></div>', 'bad', { html: true, buttons: [
       { t: 'Удалить навсегда', c: 'red', f: deleteAccount }, { t: 'Отмена', c: 'ghost', f: closeModal }] });

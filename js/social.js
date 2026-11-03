@@ -73,7 +73,7 @@ async function duelFriend(uid) {
   const v = cleanStack(await db('GET', 'stacks/' + uid).catch(() => null));
   if (!v) return showModal('⚔', 'Нет стака', 'Друг ещё не сохранял стак онлайн.', '');
   const sum = v.team.reduce((a, t) => a + t.p, 0);
-  const def = { L: 0, loc: pick(LOCS), waves: v.team.map((t, i) => ({ id: t.id, power: Math.round(t.p * v.tm.atk), boss: i === 0, name: (i === 0 ? '👑 ' : '') + HERO_BY_ID[t.id].name + ' (' + v.nick + ')' })), R: sum, reward: 0, pvp: { uid, nick: v.nick, mmr: v.mmr, bot: true, duel: true, power: sum } };
+  const def = { L: 0, loc: pick(LOCS), waves: v.team.map((t, i) => ({ id: t.id, power: Math.round(t.p * v.tm.atk), boss: i === 0, name: (i === 0 ? '👑 ' : '') + HERO_BY_ID[t.id].name + ' (' + v.nick + ')' })), R: sum, reward: 0, back: 'online', pvp: { uid, nick: v.nick, mmr: v.mmr, bot: true, duel: true, power: sum } };
   def.K = 1.5 / v.team.reduce((a, t) => a + Math.pow(t.p / sum, 2), 0);
   switchTab('arena'); startBattle(0, false, def);
 }
@@ -130,7 +130,7 @@ async function referralTick() {
       await db('PUT', 'refs/' + c.uid + '/' + fuid + '/claimed', true);
       S.ref.claimed = (S.ref.claimed || 0) + 1;
       addGems(Math.round(rewardScale() * CONFIG.social.refMul)); const it = addEquipment(mainHeroId(), 'immortal');
-      save(); toast('🎉 Друг ' + String(r.nick || '').slice(0, 20) + ' прошёл 10-й уровень', '+' + fmt(Math.round(rewardScale() * CONFIG.social.refMul)) + ' 💎 и ' + it.name);
+      save(); toast('🎉 Друг ' + String(r.nick || '').slice(0, 20) + ' прошёл 10-й уровень', '+' + fmt(Math.round(rewardScale() * CONFIG.social.refMul)) + ' 🔶 и ' + it.name);
     }
   } catch (e) { }
 }

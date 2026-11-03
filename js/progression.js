@@ -41,7 +41,7 @@ function weeklyReward() { return Math.round(rewardScale() * CONFIG.progression.w
 function claimWeekly(i) {
   const w = ensureWeekly(), q = w.quests[i]; if (!q || q.claimed || q.prog < q.n) return;
   q.claimed = true; addGems(weeklyReward()); seasonXp(CONFIG.progression.xp.weekly, 'weekly');
-  let msg = '+' + fmt(weeklyReward()) + ' 💎 · +' + CONFIG.progression.xp.weekly + ' XP сезона';
+  let msg = '+' + fmt(weeklyReward()) + ' 🔶 · +' + CONFIG.progression.xp.weekly + ' XP сезона';
   if (!w.bonus && w.quests.every(x => x.claimed)) { w.bonus = true; const it = giveRewardItem('immortal'); msg += ' · все 3 выполнены: ' + it.name + ' (Immortal)'; hype('НИШТЯК'); }
   save(); renderQuests(); showModal('📆', 'Недельное задание', msg, 'ok', { auto: true });
 }
@@ -80,7 +80,7 @@ function claimSeason() {
   }
   s.claimed = lvl; addGems(gems); save(); renderQuests();
   if (got.some(x => /Arcana|титул/.test(x))) hype('НИШТЯК');
-  showModal('🎫', 'Награды сезона', '+' + fmt(gems) + ' 💎' + (got.length ? ' · ' + got.join(', ') : ''), 'ok');
+  showModal('🎫', 'Награды сезона', '+' + fmt(gems) + ' 🔶' + (got.length ? ' · ' + got.join(', ') : ''), 'ok');
 }
 // смена сезона: невыданные награды выдаются автоматически, MMR мягко сбрасывается, лига даёт награду
 function seasonRollover(newId) {
@@ -90,14 +90,14 @@ function seasonRollover(newId) {
   const lvl = Math.min(CONFIG.progression.levels, Math.floor(s.xp / CONFIG.progression.xpPerLevel));
   let g = 0;
   for (let L = s.claimed + 1; L <= lvl; L++) { const r = seasonLevelReward(L); g += r.gems; if (r.item) giveRewardItem(r.item); if (r.title) grantTitle(r.title); }
-  if (g) { addGems(g); lines.push('Невыданные награды пропуска: +' + fmt(g) + ' 💎'); }
+  if (g) { addGems(g); lines.push('Невыданные награды пропуска: +' + fmt(g) + ' 🔶'); }
   // лига PvP
   if (S.pvp && (S.pvp.w + S.pvp.l) > 0) {
     const peak = Math.max(S.pvp.peak || 0, S.pvp.mmr), rk = rankOf(peak), ri = RANKS.indexOf(rk);
     const lg = Math.round(rewardScale() * CONFIG.progression.leagueMul[ri]);
-    addGems(lg); lines.push('Лига ' + rk[0] + ': +' + fmt(lg) + ' 💎');
+    addGems(lg); lines.push('Лига ' + rk[0] + ': +' + fmt(lg) + ' 🔶');
     if (ri >= 4) { grantTitle({ id: 'league-' + old, name: rk[0] + ' · ' + seasonName(old), color: rk[2], icon: '🏅' }); lines.push('титул «' + rk[0] + ' · ' + seasonName(old) + '»'); }
-    const nm = Math.round(1000 + (S.pvp.mmr - 1000) * CONFIG.progression.mmrKeep);
+    const nm = Math.round(S.pvp.mmr * CONFIG.progression.mmrKeep);
     lines.push('MMR: ' + S.pvp.mmr + ' → ' + nm + ' (мягкий сброс)');
     S.pvp.mmr = nm; S.pvp.peak = nm; S.pvp.seasonW = 0; S.pvp.seasonL = 0;
   }
@@ -118,7 +118,7 @@ function claimOnb(id) {
   S.onb = S.onb || { got: {} }; S.onb.got = S.onb.got || {};
   const st0 = ONBOARDING.find(x => x.id === id); if (!st0 || S.onb.got[id] || !st0.ok()) return;
   S.onb.got[id] = true; addGems(st0.gems);
-  let msg = '+' + fmt(st0.gems) + ' 💎';
+  let msg = '+' + fmt(st0.gems) + ' 🔶';
   if (st0.item) { const it = addSkin(mainHeroId(), st0.item); msg += ' · ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'; hype('НИШТЯК'); }
   if (ONBOARDING.every(x => S.onb.got[x.id])) { S.onb.done = true; msg += ' · Первые шаги пройдены!'; }
   save(); renderHome(); updateTop(); showModal('🚀', 'Первые шаги', msg, 'ok', { auto: !st0.item });
@@ -149,7 +149,7 @@ function pvpBot() {
 function leagueHTML() {
   ensurePvp();
   const P = CONFIG.progression;
-  return '<div class="sec-title">Лиги сезона «' + esc(seasonName()) + '» <span class="muted" style="font-size:.75rem;font-family:Roboto Condensed;letter-spacing:0;text-transform:none">до конца ' + daysLeftInSeason() + ' дн. · награда за лучший ранг сезона, затем MMR сжимается к 1000 на ' + Math.round((1 - P.mmrKeep) * 100) + '%</span></div>' +
+  return '<div class="sec-title">Лиги сезона «' + esc(seasonName()) + '» <span class="muted" style="font-size:.75rem;font-family:Roboto Condensed;letter-spacing:0;text-transform:none">до конца ' + daysLeftInSeason() + ' дн. · награда за лучший ранг сезона, затем MMR уменьшается на ' + Math.round((1 - P.mmrKeep) * 100) + '%</span></div>' +
     '<div class="league-row">' + RANKS.map((r, i) => '<div class="lg' + (rankOf(Math.max(S.pvp.peak || 0, S.pvp.mmr))[0] === r[0] ? ' cur' : '') + '" style="--c:' + r[2] + '"><b>' + r[0] + '</b><span>' + r[1] + '+</span><span>' + gemHTML(Math.round(rewardScale() * P.leagueMul[i])) + '</span>' + (i >= 4 ? '<span>🏅 титул</span>' : '') + '</div>').join('') + '</div>';
 }
 
@@ -168,8 +168,8 @@ function seasonHTML() {
   let cells = '';
   for (let L = 1; L <= P.levels; L++) {
     const r = seasonLevelReward(L), got = L <= s.claimed, open = L <= lvl;
-    cells += '<div class="sp-cell' + (got ? ' got' : open ? ' open' : '') + (r.item || r.title ? ' big' : '') + '" title="' + esc('Ур. ' + L + ': ' + fmt(r.gems) + ' 💎' + (r.item ? ' + ' + RARITY_NAMES[r.item] : '') + (r.title ? ' + титул «' + r.title.name + '»' : '')) + '"><b>' + L + '</b>' +
-      (r.title ? '<span>' + r.title.icon + '</span>' : r.item ? '<span style="color:' + RARITY_COLOR[r.item] + '">◆</span>' : '<span>💎</span>') + '</div>';
+    cells += '<div class="sp-cell' + (got ? ' got' : open ? ' open' : '') + (r.item || r.title ? ' big' : '') + '" title="' + esc('Ур. ' + L + ': ' + fmt(r.gems) + ' 🔶' + (r.item ? ' + ' + RARITY_NAMES[r.item] : '') + (r.title ? ' + титул «' + r.title.name + '»' : '')) + '"><b>' + L + '</b>' +
+      (r.title ? '<span>' + r.title.icon + '</span>' : r.item ? '<span style="color:' + RARITY_COLOR[r.item] + '">◆</span>' : '<span>🔶</span>') + '</div>';
   }
   return '<div class="sec-title">🎫 Сезон «' + esc(seasonName()) + '» <span class="muted" style="font-size:.75rem;letter-spacing:0;font-family:Roboto Condensed;text-transform:none">бесплатный пропуск · осталось ' + daysLeftInSeason() + ' дн.</span></div>' +
     '<div class="panel panel-b season"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div>Уровень <b style="color:#fff;font-size:1.2rem">' + lvl + '</b>/' + P.levels + ' · XP ' + fmt(s.xp) + '</div>' +

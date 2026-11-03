@@ -47,138 +47,31 @@ function replayFactor() {
   S.replayDay.n++;
   return S.replayDay.n > CONFIG.arena.replayRewardedPerDay ? CONFIG.arena.replayOverMul : 1;
 }
-// ---- чистая симуляция боя (результат считается заранее, анимация его проигрывает) ----
-// у каждого героя своя ульта (ULTS): копится 6 атак, затем срабатывает её эффект
-const ULT_EVERY = 6, ENEMY_ULT_EVERY = 5, BOSS_ULT_EVERY = 4;
-// team: [{id, p, mods}] ; mods (необязательно): atk, hp, crit, critMul, ultEvery, ultMul, stunImmune, taken, lifesteal, refresher, aegis, cheese
-// def.team (необязательно): командные модификаторы {atk, taken, stunExtra, aoe}
-function simulateBattle(team, def, rand, opts) {
-  rand = rand || Math.random; opts = opts || {};
-  const TM = Object.assign({ atk: 1, taken: 1, stunExtra: 0, aoe: 1, hp: 1 }, def.team || {});
-  const form = 0.85 + rand() * 0.3;            // «форма» команды в этом матче
-  const T = team.map(t => {
-    const m = Object.assign({ atk: 1, hp: 1, crit: 0, critMul: 1.9, ultEvery: ULT_EVERY, ultMul: 1, taken: 1, lifesteal: 0 }, t.mods || {});
-    const max = t.p * 10 * m.hp * TM.hp;
-    return { id: t.id, p: t.p, hp: max, max, atk: t.p * form * m.atk * TM.atk, crit: (HERO_BY_ID[t.id] && HERO_BY_ID[t.id].attr === 'agi' ? 0.22 : 0.1) + m.crit, m, n: 0, alive: true, stun: 0, ult: ultOf(t.id), aegis: !!m.aegis, cheese: !!m.cheese, refresher: !!m.refresher };
-  });
-  const E = def.waves.map(w => ({ id: w.id, name: w.name, p: w.power, hp: w.power * 10 * (w.hpMul || 1), max: w.power * 10 * (w.hpMul || 1), atk: w.power * def.K, alive: true, boss: w.boss, stun: 0, n: 0, ult: ultOf(w.id), rage: 0, mech: w.mech, phase: 0, noExec: w.mech === 'ancient', wt: 0 }));
-  const ticks = [];
-  let wi = 0, guard = 0, shield = 0, buff = 0;
-  const maxTicks = opts.maxTicks || 400;
-  const used = { aegis: false, cheese: false, rapierLost: false };
-  const hitE = (e, dmg) => { e.hp = Math.max(0, e.hp - dmg); };
-  const hurt = (ti, d, ev) => {
-    const t = T[ti]; t.hp = Math.max(0, t.hp - d);
-    if (t.hp <= 0 && t.alive) {
-      if (t.aegis) { t.aegis = false; used.aegis = true; t.hp = t.max; ev.push({ k: 'aegis', to: ti }); return; }
-      t.alive = false; ev.push({ k: 'tkill', to: ti });
-      if (ti === 0 && t.m.rapier) { used.rapierLost = true; ev.push({ k: 'rapier' }); }
-    } else if (t.cheese && t.alive && t.hp < t.max * 0.25) { t.cheese = false; used.cheese = true; t.hp = t.max; ev.push({ k: 'cheese', to: ti }); }
-  };
-  while (wi < E.length && T.some(t => t.alive) && guard++ < maxTicks) {
-    const ev = [];
-    const e = E[wi];
-    // ---- механики боссов 25/50/75/100 ----
-    e.wt++;
-    const night = e.mech === 'night' && e.wt <= 10;
-    if (e.mech === 'night' && e.wt === 1) ev.push({ k: 'mech', text: '🌙 Наступила ночь: Night Stalker сильнее, твои атаки слабее' });
-    if (e.mech === 'night' && e.wt === 11) ev.push({ k: 'mech', text: '☀ Рассвет! Ночь кончилась' });
-    T.forEach((t, ti) => { if (t.alive && t.doom > 0) { t.doom--; hurt(ti, t.max * 0.08, ev); } });
-    for (let i = 0; i < T.length && e.alive; i++) {
-      const t = T[i]; if (!t.alive) continue;
-      if (t.stun > 0) { t.stun--; ev.push({ k: 'stunned', who: i }); continue; }
-      t.n++;
-      const isUlt = t.n % t.m.ultEvery === 0 && !(t.doom > 0);
-      const atk = t.atk * (buff > 0 ? 1.3 : 1) * (night ? 0.7 : 1) * (0.8 + rand() * 0.4);
-      const casts = isUlt && t.refresher ? 2 : 1;
-      if (isUlt && t.refresher) t.refresher = false;
-      for (let c = 0; c < casts && e.alive; c++) {
-        let dealt = 0;
-        if (isUlt) {
-          const type = t.ult.type;
-          let mult = ({ nuke: 3.2, crit: 4, aoe: 2 * TM.aoe, stun: 1.5, heal: 1, shield: 1, buff: 1.5, execute: 2 }[type] || 2) * t.m.ultMul;
-          let exec = false;
-          if (type === 'execute' && e.hp / e.max < 0.35 && !e.noExec) { exec = true; mult = 0; }
-          const dmg = exec ? e.hp : atk * mult;
-          hitE(e, dmg); dealt = dmg;
-          const x = { k: 'ult', from: i, type, dmg: Math.round(dmg), exec, hp: e.hp / e.max, wave: wi, refresh: c > 0 };
-          if (type === 'aoe') { x.splash = []; for (let j = wi + 1; j < E.length; j++) { const sd = atk * 0.7 * TM.aoe; E[j].hp = Math.max(E[j].max * 0.05, E[j].hp - sd); x.splash.push(j); } }
-          if (type === 'stun') e.stun = 2 + TM.stunExtra;
-          if (type === 'heal') { x.heal = []; T.forEach((a, ai) => { if (a.alive) { a.hp = Math.min(a.max, a.hp + a.max * 0.2 * t.m.ultMul); x.heal.push([ai, a.hp / a.max]); } }); }
-          if (type === 'shield') shield = 2;
-          if (type === 'buff') buff = 3;
-          ev.push(x);
-        } else {
-          const crit = rand() < t.crit;
-          const miss = e.mech === 'void' && rand() < 0.2;
-          const dmg = miss ? 0 : atk * (crit ? t.m.critMul : 1);
-          hitE(e, dmg); dealt = dmg;
-          ev.push({ k: 'hit', from: i, dmg: Math.round(dmg), crit, hp: e.hp / e.max, wave: wi });
-        }
-        if (t.m.lifesteal && dealt) t.hp = Math.min(t.max, t.hp + dealt * t.m.lifesteal * 10 * 0.1);
-        if (e.hp <= 0) { e.alive = false; ev.push({ k: 'ekill', wave: wi }); }
-        if (e.alive && e.mech === 'ancient' && !e.phase && e.hp < e.max * 0.5) {
-          e.phase = 1; e.hp = e.max * 0.75; e.atk *= 1.3;
-          T.forEach(a => { if (a.alive && !a.m.stunImmune) a.stun = Math.max(a.stun, 1); });
-          ev.push({ k: 'mech', text: '🏛 Древний во 2-й фазе: лечится, оглушает команду и звереет!', ehp: e.hp / e.max });
-        }
-      }
-    }
-    if (e.alive) {
-      const alive = T.map((t, i) => i).filter(i => T[i].alive);
-      if (e.stun > 0) { e.stun--; ev.push({ k: 'estunned' }); }
-      else if (alive.length) {
-        e.n++;
-        const every = e.boss ? BOSS_ULT_EVERY : ENEMY_ULT_EVERY;
-        const dm = (shield > 0 ? 0.45 : 1) * (e.rage > 0 ? 1.4 : 1) * (night ? 1.6 : 1) * TM.taken;
-        const tk = ti => dm * T[ti].m.taken;
-        if (e.boss && e.mech === 'doom' && (e.n === 1 || e.n % 3 === 0)) {
-          const cand = alive.filter(ti => !(T[ti].doom > 0)).sort((a, b) => T[b].atk - T[a].atk);
-          if (cand.length) { T[cand[0]].doom = 4; ev.push({ k: 'mech', text: '🔥 Doom проклинает ' + HERO_BY_ID[T[cand[0]].id].name + ': 4 хода без ульты' }); }
-        }
-        if (e.n % every === 0) {
-          const type = e.ult.type;
-          const x = { k: 'eult', type, hits: [] };
-          ev.push(x);
-          if (e.boss && e.mech === 'void') {
-            alive.forEach(ti => { T[ti].stun = Math.max(T[ti].stun, 1); });
-            ev.push({ k: 'mech', text: '⏳ Хроносфера! Команда замерла' });
-          }
-          const after = [];
-          if (type === 'aoe' || (e.boss && type !== 'heal')) {
-            alive.forEach(ti => { const d = e.atk * (0.8 + rand() * 0.4) * 0.6 * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]); });
-          } else if (type === 'stun') {
-            const ti = alive[Math.floor(rand() * alive.length)];
-            if (!T[ti].m.stunImmune) { T[ti].stun = 2; x.stunned = ti; } else x.bkb = ti;
-            const d = e.atk * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]);
-          } else if (type === 'heal') {
-            e.hp = Math.min(e.max, e.hp + e.max * 0.15); x.ehp = e.hp / e.max;
-          } else if (type === 'buff' || type === 'shield') {
-            e.rage = 2; const ti = alive[Math.floor(rand() * alive.length)]; const d = e.atk * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]);
-          } else {
-            const ti = alive[Math.floor(rand() * alive.length)]; const d = e.atk * 2.5 * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]);
-          }
-          after.forEach(([ti, d], hi) => { hurt(ti, d, ev); x.hits[hi][2] = T[ti].hp / T[ti].max; });
-        } else {
-          const ti = alive[Math.floor(rand() * alive.length)];
-          const dmg = e.atk * (0.8 + rand() * 0.4) * tk(ti);
-          const x = { k: 'ehit', to: ti, dmg: Math.round(dmg), hp: 0, wave: wi };
-          ev.push(x); hurt(ti, dmg, ev); x.hp = T[ti].hp / T[ti].max;
-        }
-        if (e.rage > 0) e.rage--;
-      }
-    } else { wi++; if (wi < E.length) { ev.push({ k: 'wave', wave: wi, hp: E[wi].hp / E[wi].max }); if (E[wi].mech) ev.push({ k: 'mech', text: '⚠ БОСС: ' + E[wi].name }); } }
-    if (shield > 0) shield--; if (buff > 0) buff--;
-    ticks.push(ev);
-  }
-  const dmgDealt = E.reduce((a, x) => a + (x.max - x.hp), 0);
-  return { win: wi >= E.length, ticks, alive: T.filter(t => t.alive).length, used, wavesCleared: wi, dmgDealt, enemyHp: E.map(x => x.hp / x.max) };
-}
-
+// ---- бой считается движком js/battle.js (createBattle / simulateBattle) ----
 // ---------- UI ----------
 let arenaLoc = null, arenaSel = null;
 function initArena() { arenaLoc = null; arenaSel = null; }
-function setMainHero(id) { S.mainHero = id === 'auto' ? null : id; save(); renderArena(); updateTop(); }
+function setMainHero(id) { S.mainHero = id === 'auto' ? null : id; if (S.customStack && HERO_BY_ID[id]) { const cs = S.customStack.filter(x => x !== id); cs.unshift(id); S.customStack = cs.slice(0, 5); } save(); renderArena(); updateTop(); }
+// ---------- 2.3: свой стак ----------
+let stackDraft = null;
+function openStackPicker() {
+  stackDraft = (S.customStack && S.customStack.length === 5 ? S.customStack : getStack()).slice();
+  renderStackPicker();
+}
+function renderStackPicker() {
+  const fav = S.fav || [];
+  const list = HEROES.slice().sort((a, b) => (fav.includes(b.id) - fav.includes(a.id)) || heroPower(b.id) - heroPower(a.id));
+  const html = '<div class="muted" style="font-size:.8rem;margin-bottom:6px">Выбери 5 героев. Первый — главный (👑). Нажми на выбранного, чтобы убрать. ⭐ — избранные.</div>' +
+    '<div class="sp-sel">' + [0, 1, 2, 3, 4].map(i => { const id = stackDraft[i]; return '<div class="sp-slot">' + (id ? '<img src="' + STEAM + 'heroes/' + id + '.png" referrerpolicy="no-referrer" alt=""><small>' + (i === 0 ? '👑 ' : '') + esc(HERO_BY_ID[id].name) + '</small>' : '<small>пусто</small>') + '</div>'; }).join('') + '</div>' +
+    '<div class="sp-grid">' + list.map(h => '<button class="sp-h' + (stackDraft.includes(h.id) ? ' on' : '') + '" data-click="stackToggle(\'' + h.id + '\')"><img src="' + STEAM + 'heroes/' + h.id + '.png" referrerpolicy="no-referrer" alt=""><small>' + (fav.includes(h.id) ? '⭐' : '') + esc(h.name) + '<br>⚔' + fmtShort(heroPower(h.id)) + '</small></button>').join('') + '</div>';
+  showModal('🧩', 'Свой стак', html, '', { html: true, buttons: [{ t: 'Сохранить', c: 'green', f: () => { if (stackDraft.length !== 5) return; S.customStack = stackDraft.slice(); S.mainHero = stackDraft[0]; save(); closeModal(); renderArena(); updateTop(); } }, { t: 'Авто (сильнейшие)', f: () => { S.customStack = null; save(); closeModal(); renderArena(); updateTop(); } }] });
+}
+function stackToggle(id) {
+  if (!stackDraft) return;
+  if (stackDraft.includes(id)) stackDraft = stackDraft.filter(x => x !== id);
+  else if (stackDraft.length < 5) stackDraft.push(id);
+  renderStackPicker();
+}
 function renderArena() {
   const sel = document.getElementById('main-hero');
   sel.innerHTML = '<option value="auto">Авто (сильнейший)</option>' + sortedByPower().map(h => '<option value="' + h.id + '">' + esc(h.name) + ' · ур.' + S.heroes[h.id].level + ' · ⚔' + fmt(heroPower(h.id)) + '</option>').join('');
@@ -190,10 +83,10 @@ function renderArena() {
     if (i === 0) { const c = document.createElement('div'); c.className = 'crown'; c.textContent = 'MAIN'; d.appendChild(c); }
     const ul = ultOf(id); const ui = mkImg(ultIconChain(id), ul.name, 'pult'); ui.title = ul.name + ' — ' + EFFECT_NAME[ul.type]; d.appendChild(ui);
     const n = document.createElement('div'); n.className = 'pn'; n.innerHTML = esc(HERO_BY_ID[id].name) + '<b>⚔ ' + fmt(heroPower(id)) + '</b><span style="color:' + EFFECT_COLOR[ul.type] + ';font-size:.6rem">' + esc(ul.name) + '</span>';
-    d.appendChild(n); pr.appendChild(d);
+    d.appendChild(n); d.onclick = openStackPicker; d.style.cursor = 'pointer'; pr.appendChild(d);
   });
   document.getElementById('stack-power').textContent = fmt(stackPower());
-  renderShopPanel(); renderSynergyBox(); renderRoshan();
+  renderShopPanel(); renderSynergyBox(); renderRoshan(); if (typeof renderFights === 'function') renderFights();
   const cur = Math.min(100, S.arena.cleared + 1);
   if (!arenaLoc) arenaLoc = locOf(cur).id;
   if (!arenaSel) arenaSel = cur;
@@ -268,12 +161,12 @@ let BT = null;
 function startBattle(L, chain, customDef) {
   if (busy.battle) return;
   const def = customDef || modeDef(levelDef(L));
-  const bt = buildTeam({ noCons: !!def.roshan });
+  const bt = buildTeam({ noCons: !!def.roshan, size: def.teamSize });
   def.team = bt.tm;
   const team = bt.team;
-  const result = simulateBattle(team, def, null, def.roshan ? { maxTicks: 14 } : {});
+  const engine = createBattle(team, def, null, { maxTicks: def.roshan ? 14 : 400, manualUlt: !!S.manualUlt });
   busy.battle = true;
-  BT = { L, def, team, result, chain, tick: 0, skip: false, timer: null, charge: [0, 0, 0, 0, 0], wave: 0, prevSpeed: speed };
+  BT = { L, def, team, engine, result: null, chain, tick: 0, skip: false, timer: null, wave: 0, prevSpeed: speed, inputs: [], mult: S.btMult || 1 };
   if (def.turbo) speed = 'fast';
   sfx('start');
   const stage = document.getElementById('bt-stage');
@@ -283,6 +176,8 @@ function startBattle(L, chain, customDef) {
   document.getElementById('bt-status').textContent = '⚔';
   document.getElementById('bt-status').style.color = '';
   document.getElementById('bt-feed').innerHTML = '';
+  document.getElementById('bt-log').innerHTML = '';
+  renderBtControls();
   document.getElementById('bt-skip').textContent = 'Пропустить ⏩';
   document.getElementById('bt-skip').onclick = battleSkip;
   // towers
@@ -293,26 +188,69 @@ function startBattle(L, chain, customDef) {
     stage.appendChild(t);
   });
   const left = document.getElementById('bt-left'); left.innerHTML = '';
-  team.forEach((t, i) => left.appendChild(unitEl(t.id, HERO_BY_ID[t.id].name, t.p, i === 0 ? 'main' : '', false)));
+  team.forEach((t, i) => { const u = unitEl(t.id, HERO_BY_ID[t.id].name, t.p, i === 0 ? 'main' : '', false, true); u.dataset.i = i; u.onclick = () => queueUlt(i); left.appendChild(u); });
   const right = document.getElementById('bt-right'); right.innerHTML = '';
   showWave(0, false);
   renderQueue(0);
   document.getElementById('battle').classList.add('show');
   const syn = activeSynergies(bt.ids);
   feed(def.roshan ? 'Рошан проснулся! У тебя 14 ходов.' : def.survival ? 'Выживание: держись как можно дольше!' : 'Бой начинается! Против тебя ' + def.waves.length + ' противников подряд.' + (syn.length ? ' Синергии: ' + syn.map(x => x.name).join(', ') : ''));
-  BT.timer = setTimeout(playTick, speed === 'fast' ? 300 : 700);
+  BT.timer = setTimeout(playTick, btDelay(speed === 'fast' ? 300 : 700));
 }
-function unitEl(id, name, p, cls, enemy) {
+// ---------- управление боем: скорость x1/x2/x4, ручная ульта, лог ----------
+function btDelay(ms) { return Math.round(ms / ((BT && BT.mult) || 1)); }
+function renderBtControls() {
+  const box = document.getElementById('bt-ctrl'); if (!box) return;
+  const m = (BT && BT.mult) || S.btMult || 1;
+  box.innerHTML = [1, 2, 4].map(x => '<button class="btn sm ' + (m === x ? 'gold' : 'ghost') + '" data-click="setBtMult(' + x + ')">x' + x + '</button>').join('') +
+    '<button class="btn sm ' + (S.manualUlt ? 'gold' : 'ghost') + '" data-click="toggleManualUlt()" title="Ульта срабатывает по нажатию на героя, когда шкала полная">' + (S.manualUlt ? '✋ Ульты вручную' : '🤖 Ульты сами') + '</button>';
+}
+function setBtMult(x) { x = [1, 2, 4].includes(+x) ? +x : 1; S.btMult = x; if (BT) BT.mult = x; save(); renderBtControls(); }
+function toggleManualUlt() {
+  S.manualUlt = !S.manualUlt; save(); renderBtControls();
+  if (BT && BT.engine && !BT.engine.done) { BT.engine.setManual(S.manualUlt); }
+  if (BT) feed(S.manualUlt ? '✋ Ульты вручную: нажми на героя, когда его шкала светится' : '🤖 Ульты срабатывают сами', 'var(--gold2)');
+}
+function queueUlt(i) {
+  if (!BT || !BT.engine || BT.engine.done || !S.manualUlt) return;
+  const u = document.getElementById('bt-left').children[i];
+  if (!u || !u.classList.contains('ult-ready')) return;
+  if (!BT.inputs.includes(i)) BT.inputs.push(i);
+  u.classList.add('ult-queued');
+}
+function btLog(text, col) {
+  const l = document.getElementById('bt-log'); if (!l || !text) return;
+  const d = document.createElement('div'); d.textContent = text; if (col) d.style.color = col;
+  l.prepend(d); while (l.children.length > 40) l.lastChild.remove();
+}
+function setStatus(el, list) {
+  if (!el) return; let s = el.querySelector('.ustat');
+  if (!s) { s = document.createElement('div'); s.className = 'ustat'; el.appendChild(s); }
+  s.textContent = (list || []).map(k => STATUS_ICON[k] || '').join('');
+}
+// 2.3: облик (скин) героя заменяет его картинку в бою
+function heroSkin(id) {
+  if (!S || !S.items) return null;
+  const sel = S.skinSel && S.skinSel[id];
+  const chosen = sel && S.items.find(x => x.uid === sel && x.heroId === id && x.type === 'skin');
+  if (chosen) return chosen;
+  return S.items.filter(x => x.type === 'skin' && x.heroId === id && x.path).sort((a, b) => rarityIdx(b.rarity) - rarityIdx(a.rarity))[0] || null;
+}
+function heroLookChain(id) { const sk = heroSkin(id); return sk && sk.path ? [itemImg(sk.path)].concat(heroImgChain(id)) : heroImgChain(id); }
+function unitEl(id, name, p, cls, enemy, mine) {
   const u = document.createElement('div'); u.className = 'unit ' + (enemy ? 'enemy ' : '') + cls;
-  u.appendChild(mkImg(unitImgChain(id), name, 'uimg'));
+  u.appendChild(mkImg(mine ? heroLookChain(id) : unitImgChain(id), name, 'uimg'));
   const nm = document.createElement('div'); nm.className = 'uname'; nm.textContent = name + ' ⚔' + fmtShort(p); u.appendChild(nm);
   const ul = ultOf(id);
   const ic = mkImg(ultIconChain(id), ul.name, 'uult'); ic.title = ul.name + ' — ' + EFFECT_NAME[ul.type]; u.appendChild(ic);
   const b = document.createElement('div'); b.className = 'ubar'; b.innerHTML = '<div style="width:100%"></div>'; u.appendChild(b);
   const m = document.createElement('div'); m.className = 'umana'; m.innerHTML = '<div style="width:0%"></div>'; u.appendChild(m);
+  const c = document.createElement('div'); c.className = 'ucharge'; c.innerHTML = '<div style="width:0%"></div>'; u.appendChild(c);
+  const st = document.createElement('div'); st.className = 'ustat'; u.appendChild(st);
   return u;
 }
 function showWave(i, animate, hp) {
+  if (!BT) return;                                         // бой уже закрыт (отложенная анимация)
   const w = BT.def.waves[i];
   const right = document.getElementById('bt-right'); right.innerHTML = '';
   const u = unitEl(w.id, w.name, w.power, w.boss ? 'boss' : '', true);
@@ -321,6 +259,7 @@ function showWave(i, animate, hp) {
   right.appendChild(u);
 }
 function renderQueue(cur) {
+  if (!BT) return;
   const q = document.getElementById('bt-queue'); q.innerHTML = '<span>Волны:</span>';
   BT.def.waves.forEach((w, i) => { const im = mkImg(unitImgChain(w.id), w.name); if (i < cur) im.className = 'done'; else if (i === cur) im.className = 'cur'; if (w.boss) im.style.borderColor = '#ff8a3a'; q.appendChild(im); });
 }
@@ -393,12 +332,14 @@ function stageFx(cls, el, color, extra) {
 }
 function setBar(el, sel, v) { if (el) { const b = el.querySelector(sel); if (b) b.style.width = Math.max(0, v * 100) + '%'; } }
 function playTick() {
-  if (!BT) return;
-  const ev = BT.result.ticks[BT.tick++];
-  if (!ev) return endBattle();
+  if (!BT || BT.ended) return;
+  if (BT.engine.done) { BT.result = BT.engine.result(); return endBattle(); }
+  const ev = BT.engine.step(BT.inputs.splice(0));
+  BT.tick++;
+  if (!ev) { BT.result = BT.engine.result(); return endBattle(); }
   const left = document.getElementById('bt-left').children;
-  const step = speed === 'fast' ? 70 : 120;
-  const late = speed === 'fast' ? 150 : 280;
+  const step = btDelay(speed === 'fast' ? 70 : 120);
+  const late = btDelay(speed === 'fast' ? 150 : 280);
   let delay = 0;
   ev.forEach(e => {
     setTimeout(() => {
@@ -406,8 +347,8 @@ function playTick() {
       const enemyEl = document.getElementById('bt-right').firstChild;
       if (e.k === 'hit' || e.k === 'ult') {
         const id = BT.team[e.from].id, hero = HERO_BY_ID[id];
-        BT.charge[e.from] = e.k === 'ult' ? 0 : BT.charge[e.from] + 1;
-        setBar(left[e.from], '.umana div', BT.charge[e.from] / (ULT_EVERY - 1));
+        if (e.log) btLog('⚡ ' + e.log, EFFECT_COLOR[e.type]);
+        if (e.k === 'hit' && e.miss) floatDmg(enemyEl || left[e.from], 'промах', '', '#aaa');
         if (e.k === 'ult') {
           ultiFlash(id, false);
           left[e.from].classList.add('casting'); setTimeout(() => left[e.from] && left[e.from].classList.remove('casting'), 700);
@@ -423,6 +364,35 @@ function playTick() {
         }
         if (enemyEl && e.dmg > 0) heroFx(left[e.from], enemyEl, hero, { crit: e.crit || e.type === 'crit', ulti: e.k === 'ult', dmg: e.dmg });
         setTimeout(() => setBar(enemyEl, '.ubar div', e.hp), late);
+      } else if (e.k === 'skill') {
+        const id = BT.team[e.from].id, hero = HERO_BY_ID[id], k = SKILL_KIND[e.kind] || SKILL_KIND.dmg;
+        btLog(k.i + ' ' + e.log, k.c);
+        skillPop(left[e.from], e.key, id, e.name, k.c);
+        if (e.miss) { if (enemyEl) floatDmg(enemyEl, 'промах', '', '#aaa'); }
+        else if (e.kind === 'heal' && e.to != null) { setBar(left[e.to], '.ubar div', e.thp); stageFx('healfx', left[e.to]); }
+        else if (e.kind === 'shield' || e.kind === 'buff' || e.kind === 'summon') { left[e.from].classList.add(e.kind === 'shield' ? 'shielded' : 'buffed'); setTimeout(() => left[e.from] && left[e.from].classList.remove('shielded', 'buffed'), btDelay(1200)); }
+        else if (enemyEl) {
+          if (e.dmg > 0) heroFx(left[e.from], enemyEl, hero, { crit: false, ulti: false, dmg: e.dmg });
+          if (e.stun) stageFx('stunfx', enemyEl);
+          if (e.kind === 'aoe') stageFx('shock', enemyEl, k.c);
+          setTimeout(() => setBar(enemyEl, '.ubar div', e.hp), late);
+        }
+      } else if (e.k === 'eskill') {
+        const w = BT.def.waves[BT.wave], k = SKILL_KIND[e.kind] || SKILL_KIND.dmg;
+        btLog(k.i + ' ' + e.log, '#ff9a8a');
+        if (enemyEl) skillPop(enemyEl, e.key, w.id, e.name, k.c);
+        if (e.ehp != null && enemyEl) { setBar(enemyEl, '.ubar div', e.ehp); stageFx('healfx', enemyEl); }
+        e.hits.forEach(([ti, d, hp]) => setTimeout(() => { const t = left[ti]; if (!t) return; setBar(t, '.ubar div', hp); if (d > 0) { t.classList.remove('hit'); void t.offsetWidth; t.classList.add('hit'); floatDmg(t, '-' + fmtShort(d), '', '#ff7a6a'); } else if (!e.st) floatDmg(t, 'уклон', '', '#aaa'); }, 150));
+        if (e.stunned != null) setTimeout(() => stageFx('stunfx', left[e.stunned]), 200);
+      } else if (e.k === 'poison') {
+        if (enemyEl) { floatDmg(enemyEl, '☠' + fmtShort(e.dmg), '', '#7ad35a'); setBar(enemyEl, '.ubar div', e.hp); }
+      } else if (e.k === 'tpoison') {
+        const t = left[e.to]; if (t) { floatDmg(t, '☠' + fmtShort(e.dmg), '', '#7ad35a'); setBar(t, '.ubar div', e.hp); }
+      } else if (e.k === 'log') {
+        btLog(e.text);
+      } else if (e.k === 'st') {
+        e.m.forEach((v, i) => { const u = left[i]; if (!u) return; setBar(u, '.umana div', v); setBar(u, '.ucharge div', e.c[i]); setStatus(u, e.s[i]); u.classList.toggle('ult-ready', !!e.r[i]); u.classList.toggle('manual', !!S.manualUlt); if (!e.r[i]) u.classList.remove('ult-queued'); });
+        if (enemyEl) setStatus(enemyEl, e.es);
       } else if (e.k === 'mech') {
         setTimeout(() => { feed(e.text, '#ffb84a'); if (e.ehp != null) { const en = document.getElementById('bt-right').firstChild; if (en) setBar(en, '.ubar div', e.ehp); } }, 0);
       } else if (e.k === 'stunned') {
@@ -433,6 +403,7 @@ function playTick() {
         const w = BT.def.waves[BT.wave];
         ultiFlash(w.id, true);
         if (enemyEl) { enemyEl.classList.add('casting'); setTimeout(() => enemyEl.classList.remove('casting'), 700); }
+        if (e.log) btLog('⚡ ' + e.log, '#ff9a8a');
         if (e.ehp != null) { setBar(enemyEl, '.ubar div', e.ehp); if (enemyEl) stageFx('healfx', enemyEl); feed('💚 ' + w.name + ' лечится', '#ff9a8a'); }
         e.hits.forEach(([ti, d, hp]) => setTimeout(() => { const t = left[ti]; if (!t) return; t.classList.remove('hit'); void t.offsetWidth; t.classList.add('hit'); setBar(t, '.ubar div', hp); floatDmg(t, '-' + fmtShort(d), 'crit', '#ff5a3a'); }, 200));
         if (e.bkb != null) feed('🟡 BKB: ' + HERO_BY_ID[BT.team[e.bkb].id].name + ' не оглушён', '#ffd36a');
@@ -441,7 +412,7 @@ function playTick() {
       } else if (e.k === 'ehit') {
         const t = left[e.to];
         if (enemyEl) { enemyEl.classList.remove('lunge-l'); void enemyEl.offsetWidth; enemyEl.classList.add('lunge-l'); }
-        setTimeout(() => { t.classList.remove('hit'); void t.offsetWidth; t.classList.add('hit'); setBar(t, '.ubar div', e.hp); floatDmg(t, '-' + fmtShort(e.dmg), '', '#ff7a6a'); }, 150);
+        setTimeout(() => { t.classList.remove('hit'); void t.offsetWidth; t.classList.add('hit'); setBar(t, '.ubar div', e.hp); floatDmg(t, e.miss ? 'уклон' : '-' + fmtShort(e.dmg), '', e.miss ? '#aaa' : '#ff7a6a'); }, 150);
       } else if (e.k === 'aegis') {
         const t = left[e.to]; setBar(t, '.ubar div', 1); stageFx('healfx', t); floatDmg(t, 'AEGIS', 'crit', '#ffd36a'); feed('🛡 Aegis! ' + HERO_BY_ID[BT.team[e.to].id].name + ' возрождается', '#ffd36a');
       } else if (e.k === 'cheese') {
@@ -449,28 +420,40 @@ function playTick() {
       } else if (e.k === 'rapier') {
         feed('⚔ Divine Rapier выпала!', 'var(--danger)');
       } else if (e.k === 'ekill') {
-        setTimeout(() => { if (enemyEl) enemyEl.classList.add('dead'); feed('☠ ' + BT.def.waves[e.wave].name + ' повержен!', 'var(--ok)'); }, 250);
+        btLog('☠ ' + BT.def.waves[e.wave].name + ' повержен', 'var(--ok)');
+        setTimeout(() => { if (!BT) return; if (enemyEl) enemyEl.classList.add('dead'); feed('☠ ' + BT.def.waves[e.wave].name + ' повержен!', 'var(--ok)'); }, 250);
       } else if (e.k === 'tkill') {
-        setTimeout(() => { left[e.to].classList.add('dead'); feed('💀 ' + HERO_BY_ID[BT.team[e.to].id].name + ' погиб', 'var(--danger)'); }, 300);
+        btLog('💀 ' + HERO_BY_ID[BT.team[e.to].id].name + ' погиб', 'var(--danger)');
+        setTimeout(() => { if (!BT || !left[e.to]) return; left[e.to].classList.add('dead'); feed('💀 ' + HERO_BY_ID[BT.team[e.to].id].name + ' погиб', 'var(--danger)'); }, 300);
       } else if (e.k === 'wave') {
         BT.wave = e.wave;
-        setTimeout(() => { showWave(e.wave, true, e.hp); renderQueue(e.wave); feed('Следующий противник: ' + BT.def.waves[e.wave].name + (BT.def.waves[e.wave].boss ? ' (БОСС)' : '')); }, 350);
+        setTimeout(() => { if (!BT || BT.skip) return; showWave(e.wave, true, e.hp); renderQueue(e.wave); feed('Следующий противник: ' + BT.def.waves[e.wave].name + (BT.def.waves[e.wave].boss ? ' (БОСС)' : '')); }, 350);
       }
     }, delay);
-    delay += e.k === 'hit' ? step : e.k === 'ult' || e.k === 'eult' ? step * 4 : step * 1.4;
+    delay += e.k === 'st' || e.k === 'log' ? 0 : e.k === 'hit' ? step : e.k === 'ult' || e.k === 'eult' ? step * 4 : e.k === 'skill' || e.k === 'eskill' ? step * 2.2 : step * 1.4;
   });
-  BT.timer = setTimeout(playTick, delay + (speed === 'fast' ? 240 : 460));
+  BT.timer = setTimeout(playTick, delay + btDelay(speed === 'fast' ? 240 : 460));
 }
-function battleSkip() { if (!BT) return; BT.skip = true; clearTimeout(BT.timer); endBattle(); }
+function battleSkip() { if (!BT) return; BT.skip = true; clearTimeout(BT.timer); BT.result = BT.engine.finish(); endBattle(); }
+// всплывающая иконка навыка над героем
+function skillPop(el, key, heroId, name, col) {
+  if (!el) return;
+  const p = relPos(el), d = document.createElement('div'); d.className = 'skpop';
+  d.style.left = (p.x - 18) + 'px'; d.style.top = (p.y - 70) + 'px'; d.style.borderColor = col;
+  d.appendChild(mkImg(skillIconChain(key, heroId), name));
+  document.getElementById('bt-stage').appendChild(d); setTimeout(() => d.remove(), btDelay(900));
+}
 function endBattle() {
   if (!BT || BT.ended) return;
   BT.ended = true; clearTimeout(BT.timer);
+  if (!BT.result) BT.result = BT.engine.finish();
   const { L, def, result } = BT;
   const st = document.getElementById('bt-status');
   const replay = L <= S.arena.cleared;
   let msg;
   speed = BT.prevSpeed;
   consumeAfterBattle(result.used);
+  if (def.fight) { endFightBattle(def, result, st); return; }
   if (def.roshan || def.survival || def.pvp) { endSpecialBattle(def, result, st); return; }
   if (result.win) {
     st.textContent = '🏆 ПОБЕДА'; st.style.color = 'var(--ok)';
@@ -487,14 +470,14 @@ function endBattle() {
       if (L % 10 === 0 && Math.random() < 0.5) { S.cons = S.cons || { aegis: 0, cheese: 0 }; S.cons.cheese++; got.push({ name: 'Cheese', rarity: 'immortal' }); }
       if (def.skin) got.push(addSkin(def.waves[def.waves.length - 1].id, RARITIES[Math.min(5, ri + 1)]));
     } else S.arena.replays++;
-    msg = 'Уровень ' + L + ' пройден! +' + fmt(g) + ' 💎' + (got.length ? ' · ' + got.map(x => x.name + ' (' + RARITY_NAMES[x.rarity] + ')').join(', ') : '');
+    msg = 'Уровень ' + L + ' пройден! +' + fmt(g) + ' 🔶' + (got.length ? ' · ' + got.map(x => x.name + ' (' + RARITY_NAMES[x.rarity] + ')').join(', ') : '');
     arenaLog('win', '🏆 ' + msg);
     feed(msg, 'var(--ok)');
   } else {
     st.textContent = '💀 ПОРАЖЕНИЕ'; st.style.color = 'var(--danger)'; sfx('lose'); S.winStreak = 0;
     const pity = Math.round(def.reward * 0.08);
     addGems(pity); S.arena.losses++;
-    msg = 'Поражение на уровне ' + L + ' (дошёл до волны ' + (Math.min(def.waves.length, result.ticks.filter(t => t.some(e => e.k === 'wave')).length + 1)) + '/' + def.waves.length + '). Утешение +' + fmt(pity) + ' 💎';
+    msg = 'Поражение на уровне ' + L + ' (дошёл до волны ' + (Math.min(def.waves.length, result.ticks.filter(t => t.some(e => e.k === 'wave')).length + 1)) + '/' + def.waves.length + '). Утешение +' + fmt(pity) + ' 🔶';
     arenaLog('lose', '💀 ' + msg); feed(msg, 'var(--danger)');
   }
   save(); updateTop(); updateProfileChip();
@@ -525,7 +508,7 @@ function endSpecialBattle(def, result, st) {
       const g = Math.round(rewardScale() * CONFIG.roshan.rewardMul); addGems(g);
       const it = addEquipment(mainHeroId(), 'immortal');
       st.textContent = '🏆 РОШАН ПОВЕРЖЕН'; st.style.color = 'var(--ok)'; sfx('win'); announce('Roshan has fallen to the Radiant!');
-      msg = 'Рошан повержен! Aegis + Cheese + ' + fmt(g) + ' 💎 + ' + it.name; track('roshanKills');
+      msg = 'Рошан повержен! Aegis + Cheese + ' + fmt(g) + ' 🔶 + ' + it.name; track('roshanKills');
     } else {
       st.textContent = '⏳ РОШАН ЖИВ'; st.style.color = 'var(--gold2)';
       msg = 'Нанесено ' + fmt(result.dmgDealt) + ' урона. У Рошана осталось ' + Math.round((1 - r.dealt / r.pool) * 100) + '% здоровья. Попыток: ' + r.tries;
@@ -536,7 +519,7 @@ function endSpecialBattle(def, result, st) {
     addGems(g);
     const rec = n > (S.survivalBest || 0); if (rec) S.survivalBest = n;
     st.textContent = '🌊 ВОЛН: ' + n; st.style.color = 'var(--gold2)'; sfx(n ? 'win' : 'lose');
-    msg = 'Выживание: пройдено ' + n + ' волн' + (rec ? ' — НОВЫЙ РЕКОРД!' : '') + ' · +' + fmt(g) + ' 💎';
+    msg = 'Выживание: пройдено ' + n + ' волн' + (rec ? ' — НОВЫЙ РЕКОРД!' : '') + ' · +' + fmt(g) + ' 🔶';
     if (rec && n >= 10) hype('НИШТЯК');
     track('survivalRuns');
   }
@@ -547,11 +530,14 @@ function endSpecialBattle(def, result, st) {
 function unitImgChain(id) {
   if (id === 'roshan') return [spellIcon('roshan_slam'), ITEM_ICON('aegis')];
   if (id === 'creeps') return [ITEM_ICON('tango')];
+  if (id === 'tormentor') return [ITEM_ICON('aghanims_shard'), spellIcon('miniboss_reflect')];
   return heroImgChain(id);
 }
 function closeBattle(keep) {
   document.getElementById('battle').classList.remove('show');
   if (BT && BT.prevSpeed) speed = BT.prevSpeed;
+  const back = BT && BT.def && BT.def.back;
   busy.battle = false; BT = null;
+  if (back) { switchTab(back); return; }                 // 2.3: после PvP/дуэли/файтов — обратно туда, откуда пришёл
   if (!keep) { const c = Math.min(100, S.arena.cleared + 1); arenaSel = c; arenaLoc = locOf(c).id; cmBan = -1; renderArena(); }
 }

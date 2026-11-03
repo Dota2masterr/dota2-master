@@ -120,7 +120,7 @@ function showAuth() {
 // ---------- версии сохранения ----------
 // SAVE_VERSION растёт, когда меняется формат сейва. Для каждого шага пишется функция в MIGRATIONS —
 // она переводит сейв с версии N-1 на N. Старые сейвы проходят все шаги по очереди и не теряются.
-const SAVE_VERSION = 3;
+const SAVE_VERSION = 4;
 const MIGRATIONS = {
   // 1 → 2: сейвы до появления поля версии (старый Dota 2 Upgrader) — данных не трогаем
   2: st => { },
@@ -129,6 +129,13 @@ const MIGRATIONS = {
     delete st.v; delete st._imported_done;
     // этап 3: «гарантированный джекпот первой крутки» только для новых — у кого уже были крутки, считаем выданным
     if (st.spins > 0) st.firstSpinDone = true;
+  },
+  // 3 → 4 (версия 2.2): настройки новой боёвки, рогалик «Путь Древнего», «Битва за Башню»
+  4: st => {
+    if (st.manualUlt == null) st.manualUlt = false;
+    if (st.btMult == null) st.btMult = 1;
+    if (typeof migrateRogue === 'function') migrateRogue(st);
+    if (typeof migrateTower === 'function') migrateTower(st);
   }
 };
 function saveVersionOf(st) { return typeof st.version === 'number' ? st.version : typeof st.v === 'number' ? st.v : 1; }
@@ -141,6 +148,12 @@ function migrate(st) {
   st.items = st.items || []; st.loadout = st.loadout || {}; st.arena = st.arena || { cleared: 0, replays: 0, wins: 0, losses: 0 };
   if (!st.uid) st.uid = 1 + st.items.reduce((m, x) => Math.max(m, x.uid || 0), 0);
   if (typeof st.gems !== 'number') st.gems = CONFIG.startGems;
+  if (typeof migrateRogue === 'function') migrateRogue(st);
+  if (typeof migrateTower === 'function') migrateTower(st);
+  // 2.3: снаряжение чужого героя снимаем (теперь оно надевается только на своего)
+  for (const hid in st.loadout) for (const sl in st.loadout[hid]) { const it = st.items.find(x => x.uid === st.loadout[hid][sl]); if (!it || it.heroId !== hid) delete st.loadout[hid][sl]; }
+  // 2.3: MMR всех игроков сброшен в 0 (один раз)
+  if (st.pvp && st.pvp.reset !== 1) { st.pvp.mmr = 0; st.pvp.peak = 0; st.pvp.reset = 1; }
 }
 // перенос прогресса из старой версии (Dota 2 Upgrader) в первый созданный аккаунт
 function importLegacy(st) {
@@ -172,6 +185,9 @@ function totalPower() { return HEROES.reduce((a, h) => a + heroPower(h.id), 0); 
 function sortedByPower() { return HEROES.slice().sort((a, b) => heroPower(b.id) - heroPower(a.id)); }
 function mainHeroId() { return S.mainHero && HERO_BY_ID[S.mainHero] ? S.mainHero : sortedByPower()[0].id; }
 function getStack() {
+  // 2.3: свой стак из 5 героев (первый — главный)
+  const cs = S.customStack;
+  if (Array.isArray(cs) && cs.length === 5 && cs.every(id => HERO_BY_ID[id]) && new Set(cs).size === 5) return cs.slice();
   const main = mainHeroId();
   const rest = sortedByPower().filter(h => h.id !== main).slice(0, 4).map(h => h.id);
   return [main].concat(rest);
@@ -184,7 +200,22 @@ function canPay(n) { return S.gems >= n; }
 
 // ---------- items ----------
 function rarityIdx(r) { return RARITIES.indexOf(r); }
-function pickCatalog(rarity, slot, heroId) {
+// 2.3: снаряжение у каждого героя своё. Если в каталоге cs.money нет предмета героя нужной редкости —
+// создаём предмет героя: название по слоту и редкости, картинка — иконка его способности.
+const EQ_NOUN = { weapon: 'Blade', head: 'Helm', armor: 'Armor', arms: 'Bracers', back: 'Mantle', mount: 'Steed' };
+function genHeroEq(heroId, rarity, slot) {
+  slot = slot || pick(EQ_SLOTS).id;
+  const sk = (typeof getSkills === 'function' ? getSkills(heroId) : []).map(s => s.key);
+  const art = { weapon: sk[0], head: sk[1], armor: sk[2], arms: sk[1], back: sk[3], mount: sk[0] }[slot] || sk[0] || null;
+  return { name: pick(SKIN_PREFIX[rarity]) + ' ' + EQ_NOUN[slot] + ' of ' + HERO_BY_ID[heroId].name, hero: heroId, path: undefined, art, rarity, slot };
+}
+function pickCatalog(rarity, slot, heroId, strict) {
+  if (strict && heroId && HERO_BY_ID[heroId]) {
+    let own = CS_ITEMS.filter(x => x.hero === heroId && x.rarity === rarity);
+    const os = slot ? own.filter(x => x.slot === slot) : [];
+    if (os.length) own = os;
+    return own.length && Math.random() < 0.75 ? pick(own) : genHeroEq(heroId, rarity, slot);
+  }
   let pool = CS_ITEMS.filter(x => x.rarity === rarity);
   if (!pool.length) pool = CS_ITEMS;
   const byHero = heroId ? pool.filter(x => x.hero === heroId) : [];
@@ -193,7 +224,7 @@ function pickCatalog(rarity, slot, heroId) {
   if (bySlot.length && Math.random() < 0.6) pool = bySlot;
   return pick(pool);
 }
-function eqFromCatalog(c, uid) { return { uid, type: 'eq', heroId: c.hero, rarity: c.rarity, name: c.name, path: c.path, slot: c.slot, ts: Date.now() }; }
+function eqFromCatalog(c, uid) { const it = { uid, type: 'eq', heroId: c.hero, rarity: c.rarity, name: c.name, path: c.path, slot: c.slot, ts: Date.now() }; if (c.art) it.art = c.art; if (!it.path) delete it.path; return it; }
 function skinName(heroId, rarity) {
   const u = UNIQUE_SKINS[heroId] && UNIQUE_SKINS[heroId][rarity];
   if (u && Math.random() < 0.55) return u;
@@ -208,7 +239,8 @@ function addSkin(heroId, rarity) {
   return it;
 }
 function addEquipment(heroId, rarity, slot) {
-  const c = pickCatalog(rarity, slot, heroId);
+  if (!HERO_BY_ID[heroId]) heroId = pick(HEROES).id;
+  const c = pickCatalog(rarity, slot, heroId, true);
   const it = eqFromCatalog(c, S.uid++);
   S.items.unshift(it);
   // авто-экипировка на героя-владельца, если слот пуст или предмет лучше
@@ -219,6 +251,8 @@ function addEquipment(heroId, rarity, slot) {
   return it;
 }
 function autoEquip(it, heroId) {
+  heroId = it.heroId;                                  // снаряжение надевается только на своего героя
+  if (!HERO_BY_ID[heroId] || S.autoEquipOff) return;
   if (!S.loadout[heroId]) S.loadout[heroId] = {};
   const cur = S.items.find(x => x.uid === S.loadout[heroId][it.slot]);
   if (!cur || rarityIdx(it.rarity) > rarityIdx(cur.rarity)) { unequipItem(it.uid); S.loadout[heroId][it.slot] = it.uid; }
@@ -232,15 +266,15 @@ function unequipItem(uid) {
 }
 function removeItem(uid) { unequipItem(uid); S.items = S.items.filter(x => x.uid !== uid); }
 function weightedRarity(w) {
-  w = w || { common: 34, uncommon: 25, rare: 18, mythical: 12, immortal: 7, arcana: 4 };
+  w = w || { common: 28, uncommon: 24, rare: 20, mythical: 14, immortal: 9, arcana: 5 };   // 2.3: редкость выше
   const tot = Object.values(w).reduce((a, b) => a + b, 0);
   let r = Math.random() * tot;
   for (const k in w) { r -= w[k]; if (r <= 0) return k; }
   return 'common';
 }
-function sellPrice(it) { return Math.round(CONFIG.sell[it.rarity] * (it.type === 'eq' ? CONFIG.sellEqMul : 1)); }
+function sellPrice(it) { return Math.round(CONFIG.sell[it.rarity] * (it.type === 'eq' ? CONFIG.sellEqMul : CONFIG.sellSkinMul || 1)); }
 function itemImgChain(it) {
-  if (it.type === 'eq') return [itemImg(it.path)];
+  if (it.type === 'eq') return it.path ? [itemImg(it.path)] : [STEAM + 'abilities/' + (it.art || '') + '.png', it.art ? spellIcon(it.art) : null, heroImg(it.heroId)].filter(Boolean);
   if (it.path) return [itemImg(it.path)].concat(heroTallChain(it.heroId));
   return heroTallChain(it.heroId);
 }
@@ -273,6 +307,7 @@ function switchTab(t) {
   if (t === 'collection') renderCollection();
   if (t === 'upgrade') renderUpgrade();
   if (t === 'arena') renderArena();
+  if (t === 'rogue' && typeof renderRogue === 'function') renderRogue();
   if (t === 'invoker') invRender();
   if (t === 'quests') renderQuests();
   if (t === 'chests') renderChests();
@@ -316,7 +351,8 @@ function hype(text) {
   if (text === 'НИШТЯК' && typeof track === 'function') track('nishtyak');
   if (text === 'БИЧ' && typeof track === 'function') track('bich');
   if (text === '21' && typeof track === 'function') track('twentyone');
-  if (typeof announce === 'function') { if (text === 'НИШТЯК') announce('Godlike!'); else if (text === 'БИЧ') announce('Fresh meat!', { pitch: 0.25, rate: 0.75 }); else if (text === '21') announce('Double kill!'); }
+  // 2.3: голос — проигрыш «BITCH», 21 — быстрое «twenty one», джекпот — «НИШТЯЯЯК»
+  if (typeof announce === 'function') { if (text === 'НИШТЯК') announce('Ништяяяяк!', { lang: 'ru', pitch: 0.8, rate: 0.75 }); else if (text === 'БИЧ') announce('Bitch!', { pitch: 0.6, rate: 0.9 }); else if (text === '21') announce('twenty one', { rate: 1.9, pitch: 1.1 }); }
   if (typeof sfx === 'function') sfx(text === 'БИЧ' ? 'lose' : 'win');
   clearTimeout(hypeTimer);
   hypeTimer = setTimeout(() => el.classList.remove('show'), 1750);
@@ -329,14 +365,14 @@ function setSpeed(m) {
   lsSet('d2m_speed', m);
 }
 
-// бесплатные самоцветы раз в 10 минут
+// бесплатные кристаллы раз в 10 минут
 function freeAmount() { return Math.max(CONFIG.free.min, Math.round(rewardScale() * CONFIG.free.mul / 50) * 50); }
 function freeLeft() { return Math.min(CONFIG.free.cooldownMs, (S.freeAt || 0) - nowMs()); }
 function freeGems() {
   const left = freeLeft();
   if (left > 0) return;
   const fg = freeAmount(); addGems(fg); S.freeAt = nowMs() + CONFIG.free.cooldownMs; save(); sfx('coin');
-  showModal('💎', '+' + fmt(fg) + ' самоцветов', 'Следующий бонус через 10 минут.', 'ok', { auto: true });
+  showModal('🔶', '+' + fmt(fg) + ' кристаллов', 'Следующий бонус через 10 минут.', 'ok', { auto: true });
   updateFreeBtn();
 }
 function updateFreeBtn() {
@@ -353,7 +389,7 @@ function upgradeAll() {
   if (!targets.length) return showModal('⬆', 'Максимум', 'Все герои уже 50 уровня.', '');
   const cost = targets.reduce((a, h) => a + Math.round(spinCost(S.heroes[h.id].level) * 0.9), 0);
   confirmBox('Улучшить всех', 'Все ' + targets.length + ' героев получат +1 уровень за ' + gemHTML(cost) + '. Цена зависит от уровня каждого героя.', () => {
-    if (!canPay(cost)) return showModal('💎', 'Мало самоцветов', 'Нужно ' + fmt(cost) + ' 💎', 'bad');
+    if (!canPay(cost)) return showModal('🔶', 'Мало кристаллов', 'Нужно ' + fmt(cost) + ' 🔶', 'bad');
     addGems(-cost);
     targets.forEach(h => S.heroes[h.id].level++); track('heroLevels', targets.length);
     save(); updateTop();
@@ -365,15 +401,33 @@ function upgradeAll() {
 function refreshUI() { switchTab(currentTab); updateTop(); updateProfileChip(); showModal('🔄', 'Обновлено', 'Интерфейс и картинки перерисованы.', 'ok', { auto: true }); }
 
 // ---------- profile ----------
+// 2.3: профиль — карточка игрока со статистикой; настройки аккаунта свернуты ниже
+function profileCardHTML() {
+  const pv = S.pvp || { mmr: 0, w: 0, l: 0 }, rk = typeof rankOf === 'function' ? rankOf(pv.mmr || 0) : ['—', 0, '#888'];
+  const ach = S.ach ? Object.keys(S.ach).length : 0, achT = typeof ACHIEVEMENTS !== 'undefined' ? ACHIEVEMENTS.length : 0;
+  const maxed = HEROES.filter(h => S.heroes[h.id] && S.heroes[h.id].level >= CONFIG.maxLevel).length;
+  const arc = S.items.filter(x => x.rarity === 'arcana').length;
+  const top = sortedByPower().slice(0, 3);
+  const ct = typeof currentTitle === 'function' ? currentTitle() : null;
+  const st = (i, n, v) => '<div class="pf-st"><span>' + i + '</span><b>' + v + '</b><small>' + n + '</small></div>';
+  return '<div class="pf-card"><div class="pf-ava"><img src="' + STEAM + 'heroes/' + (S.avatar || 'invoker') + '.png" referrerpolicy="no-referrer" alt=""></div>' +
+    '<div class="pf-main"><div class="pf-nick">' + esc(USER.nick) + '</div>' + (ct ? titleHTML(ct) : '') +
+    '<div class="pf-rank" style="color:' + rk[2] + ';border-color:' + rk[2] + '">' + rk[0] + ' · ' + (pv.mmr || 0) + ' MMR</div></div></div>' +
+    '<div class="pf-stats">' + st('⚔', 'Арена', (S.arena.cleared || 0) + '/100') + st('💪', 'Сила стака', fmtShort(stackPower())) + st('🏆', 'PvP', (pv.w || 0) + '–' + (pv.l || 0)) +
+    st('⭐', 'Героев 50 ур.', maxed + '/' + HEROES.length) + st('🎒', 'Предметов', fmt(S.items.length)) + st('🟢', 'Arcana', arc) +
+    st('🏅', 'Достижения', ach + '/' + achT) + st('🏰', 'Башня', 'этаж ' + ((S.tower && S.tower.best) || 0)) + st('🌀', 'Путь Древнего', ((S.rogue && S.rogue.wins) || 0) + ' побед') + '</div>' +
+    '<div class="pf-top"><div class="muted">Лучшие герои</div>' + top.map(h => '<div class="pf-hero"><img src="' + STEAM + 'heroes/' + h.id + '.png" referrerpolicy="no-referrer" alt=""><span>' + esc(h.name) + '<small>ур. ' + S.heroes[h.id].level + ' · ⚔ ' + fmtShort(heroPower(h.id)) + '</small></span></div>').join('') + '</div>';
+}
 function openProfile() {
-  const html = '<div style="text-align:left">' +
+  const html = '<div style="text-align:left">' + profileCardHTML() +
+    '<details class="pf-edit"><summary>✏ Изменить профиль и аккаунт</summary>' +
     '<div class="field"><label>Ник</label><input type="text" id="pf-nick" maxlength="20" value="' + esc(USER.nick) + '"></div>' +
     titlePickerHTML() +
     '<label class="muted" style="font-size:.72rem;letter-spacing:1px;text-transform:uppercase">Аватар</label><div class="profile-heroes" id="pf-heroes"></div>' +
     '<div class="field"><label>Новый пароль (необязательно)</label><input type="password" id="pf-pass" maxlength="64" autocomplete="new-password"></div>' +
     '<div class="field"><label>Текущий пароль (нужен для смены пароля или ника)</label><input type="password" id="pf-old" maxlength="64" autocomplete="current-password"></div>' +
     (typeof cloud === 'function' && cloud() ? '<div style="margin:4px 0 8px"><button class="btn sm ghost" type="button" data-click="askNewRecovery()">🔑 Новый код восстановления</button></div>' : '') +
-    '<div class="auth-err" id="pf-err"></div></div>';
+    '</details><div class="auth-err" id="pf-err"></div></div>';
   showModal('👤', 'Профиль', html, '', { html: true, buttons: [
     { t: 'Сохранить', c: 'green', f: saveProfile }, { t: '💾 Перенос', c: 'gold', f: openTransfer }, { t: 'Выйти', c: 'red', f: logout }, { t: 'Сброс прогресса', c: 'ghost', f: resetProgress }, { t: '🗑 Удалить аккаунт', c: 'ghost', f: () => openDeleteAccount() }, { t: '✕', c: 'ghost', f: closeModal }] });
   const box = document.getElementById('pf-heroes');
@@ -421,7 +475,7 @@ async function saveProfile() {
   if (currentTab === 'home') renderHome();
 }
 function resetProgress() {
-  confirmBox('Сбросить прогресс?', 'Самоцветы, уровни героев, предметы и арена обнулятся. Аккаунт останется.', () => {
+  confirmBox('Сбросить прогресс?', 'Кристаллы, уровни героев, предметы и арена обнулятся. Аккаунт останется.', () => {
     const av = S.avatar; S = freshState(); S.avatar = av; save(); startGame();
     showModal('🗑', 'Сброс', 'Прогресс очищен. Удачи с нуля!', '', { auto: true });
   });
@@ -541,7 +595,7 @@ function renderHome() {
   document.getElementById('home-profile').innerHTML =
     '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">' +
     '<div id="hp-av"></div><div style="flex:1;min-width:200px"><div class="cinzel" style="font-size:1.3rem;color:#fff;font-weight:700">' + esc(USER.nick) + titleHTML(currentTitle()) + '</div>' +
-    '<div class="muted" style="font-size:.85rem;margin-top:4px">Самоцветы: ' + gemHTML(S.gems) + ' · Сила стака: <b style="color:var(--gold2)">' + fmt(stackPower()) + '</b> · Арена: <b>' + S.arena.cleared + '/100</b> · Побед: ' + S.arena.wins + ' · Предметов: ' + S.items.length + '</div>' +
+    '<div class="muted" style="font-size:.85rem;margin-top:4px">Кристаллы: ' + gemHTML(S.gems) + ' · Сила стака: <b style="color:var(--gold2)">' + fmt(stackPower()) + '</b> · Арена: <b>' + S.arena.cleared + '/100</b> · Побед: ' + S.arena.wins + ' · Предметов: ' + S.items.length + '</div>' +
     '<div class="muted" style="font-size:.85rem;margin-top:4px">Сильнейший герой: <b style="color:#fff">' + best.name + '</b> (ур. ' + S.heroes[best.id].level + ', ⚔ ' + fmt(heroPower(best.id)) + ')' + (S.invBest ? ' · Рекорд Invoker: ' + S.invBest.toFixed(2) + 's' : '') + '</div></div>' +
     '<button class="btn" data-click="openProfile()">Изменить ник / аватар</button></div>';
   document.getElementById('hod-home').innerHTML = hodBanner(false);
@@ -560,6 +614,6 @@ function startGame() {
   const h = (location.hash || '').slice(1);
   switchTab(['home','heroes','slots','collection','upgrade','arena','invoker','quests','chests','games','online'].includes(h) ? h : 'home');
   setTimeout(() => startTutorial(false), 600);
-  if (typeof cloud === 'function' && fbOn() && cloud() && !bootSynced) { bootSynced = true; setTimeout(async () => { try { await syncServerTime(); } catch (e) { } try { await ensureNickClaim(); } catch (e) { } try { await cloudSync(); } catch (e) { } checkGifts(); }, 1200); }
-  if (S._imported) { delete S._imported; save(); showModal('📦', 'Прогресс перенесён', 'Уровни героев, золото (теперь самоцветы) и предметы из старой версии перенесены в этот аккаунт.', 'ok'); }
+  if (typeof cloud === 'function' && fbOn() && cloud() && !bootSynced) { bootSynced = true; setTimeout(async () => { try { await syncServerTime(); } catch (e) { } try { await ensureNickClaim(); } catch (e) { } try { await cloudSync(); } catch (e) { } checkGifts(); checkPvpHits(); }, 1200); }
+  if (S._imported) { delete S._imported; save(); showModal('📦', 'Прогресс перенесён', 'Уровни героев, золото (теперь кристаллы) и предметы из старой версии перенесены в этот аккаунт.', 'ok'); }
 }

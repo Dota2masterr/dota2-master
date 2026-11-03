@@ -1,9 +1,12 @@
 // ================= COLLECTION =================
-let fType = 'all', fRarity = 'all', fSort = 'rdesc';
+let fType = 'all', fRarity = 'all', fSort = 'rdesc', fSlot = 'all', fHeroOnly = false;
 function initCollection() {
   document.querySelectorAll('#f-type button').forEach(b => b.onclick = () => { fType = b.dataset.v; document.querySelectorAll('#f-type button').forEach(x => x.classList.toggle('active', x === b)); renderInventory(); });
   document.getElementById('f-sort').onchange = e => { fSort = e.target.value; renderInventory(); };
   document.getElementById('f-equip-hero').onchange = () => { renderInventory(); renderLoadout(); };
+  const fs = document.getElementById('f-slot');
+  if (fs) { fs.innerHTML = '<option value="all">Все слоты</option>' + EQ_SLOTS.map(s => '<option value="' + s.id + '">' + s.icon + ' ' + s.name + '</option>').join(''); fs.onchange = e => { fSlot = e.target.value; renderInventory(); }; }
+  const fh = document.getElementById('f-hero-only'); if (fh) fh.onchange = e => { fHeroOnly = e.target.checked; renderInventory(); };
   rarityChips(document.getElementById('f-rarity'), () => fRarity, v => { fRarity = v; renderInventory(); });
 }
 function rarityChips(host, get, set) {
@@ -21,8 +24,8 @@ function fillHeroSelect(sel, value) {
   sel.innerHTML = sortedByPower().map(h => '<option value="' + h.id + '">' + esc(h.name) + ' · ⚔' + fmt(heroPower(h.id)) + '</option>').join('');
   sel.value = cur;
 }
-function filteredItems(type, rar, sort) {
-  let list = S.items.filter(it => (type === 'all' || it.type === type) && (rar === 'all' || it.rarity === rar));
+function filteredItems(type, rar, sort, slot, hero) {
+  let list = S.items.filter(it => (type === 'all' || it.type === type) && (rar === 'all' || it.rarity === rar) && (!slot || slot === 'all' || (it.type === 'eq' && it.slot === slot)) && (!hero || it.heroId === hero));
   const hn = it => HERO_BY_ID[it.heroId] ? HERO_BY_ID[it.heroId].name : it.heroId;
   const cmp = {
     rdesc: (a, b) => rarityIdx(b.rarity) - rarityIdx(a.rarity) || b.ts - a.ts,
@@ -57,6 +60,7 @@ function itemCard(it, acts) {
 }
 function renderCollection() {
   fillHeroSelect(document.getElementById('f-equip-hero'));
+  const ae = document.getElementById('auto-eq'); if (ae) ae.checked = !S.autoEquipOff;
   const sk = S.items.filter(x => x.type === 'skin').length;
   document.getElementById('c-total').textContent = fmt(S.items.length);
   document.getElementById('c-skins').textContent = fmt(sk);
@@ -67,23 +71,26 @@ function renderCollection() {
 }
 function renderInventory() {
   const grid = document.getElementById('inv-grid');
-  const list = filteredItems(fType, fRarity, fSort);
-  grid.innerHTML = '';
-  document.getElementById('inv-empty').style.display = list.length ? 'none' : 'block';
   const target = document.getElementById('f-equip-hero').value;
+  const list = filteredItems(fType, fRarity, fSort, fSlot, fHeroOnly ? target : null);
+  grid.innerHTML = '';
+  syncCollFilters();
+  document.getElementById('inv-empty').style.display = list.length ? 'none' : 'block';
   renderChunked(grid, list, it => {
     const acts = [{ t: 'Продать ' + fmt(sellPrice(it)), c: 'sell', f: () => sellItem(it.uid) }];
+    if (it.type === 'skin') { const on = S.skinSel && S.skinSel[it.heroId] === it.uid; acts.push({ t: on ? '✓ Облик' : 'Облик', c: 'eq', f: () => { S.skinSel = S.skinSel || {}; if (on) delete S.skinSel[it.heroId]; else S.skinSel[it.heroId] = it.uid; save(); renderInventory(); } }); }
     if (rarityIdx(it.rarity) < 5) acts.push({ t: '🔧', c: 'up', f: () => { switchTab('upgrade'); setUgMain(it.uid); } });
     if (it.type === 'eq') {
       const on = equippedOn(it.uid);
       acts.push(on ? { t: 'Снять', c: 'eq', f: () => { unequipItem(it.uid); save(); renderCollection(); updateTop(); } }
-                   : { t: 'Надеть', c: 'eq', f: () => equipTo(it.uid, target) });
+                   : { t: 'Надеть на ' + (HERO_BY_ID[it.heroId] ? HERO_BY_ID[it.heroId].name.split(' ')[0] : '?'), c: 'eq', f: () => equipTo(it.uid, it.heroId) });
     }
     return itemCard(it, acts);
   });
 }
 function equipTo(uid, heroId) {
   const it = S.items.find(x => x.uid === uid); if (!it) return;
+  if (it.heroId !== heroId) return showModal('🛡', 'Чужой предмет', 'Это снаряжение героя ' + (HERO_BY_ID[it.heroId] ? HERO_BY_ID[it.heroId].name : '?') + ' — надеть можно только на него.', 'bad');
   unequipItem(uid);
   if (!S.loadout[heroId]) S.loadout[heroId] = {};
   S.loadout[heroId][it.slot] = uid;
@@ -110,8 +117,27 @@ function sellItem(uid) {
   if (ugMain === uid) ugMain = null; ugFuel = ugFuel.filter(x => x !== uid);
   save(); renderCollection(); updateTop();
 }
+// 2.3: кнопки фильтров всегда показывают текущий выбор (раньше после перерисовки сбрасывались визуально)
+function syncCollFilters() {
+  document.querySelectorAll('#f-type button').forEach(x => x.classList.toggle('active', x.dataset.v === fType));
+  document.querySelectorAll('#f-rarity .chip').forEach((c, i) => c.classList.toggle('active', (i === 0 ? 'all' : RARITIES.slice().reverse()[i - 1]) === fRarity));
+  const fsel = document.getElementById('f-sort'); if (fsel && fsel.value !== fSort) fsel.value = fSort;
+  const fs = document.getElementById('f-slot'); if (fs) { fs.value = fSlot; fs.style.display = fType === 'skin' ? 'none' : ''; }
+}
+// 2.3: надеть лучшее снаряжение всем героям сразу
+function equipBestAll() {
+  let n = 0;
+  S.items.filter(it => it.type === 'eq' && HERO_BY_ID[it.heroId]).sort((a, b) => rarityIdx(b.rarity) - rarityIdx(a.rarity)).forEach(it => {
+    const lo = S.loadout[it.heroId] = S.loadout[it.heroId] || {};
+    const cur = S.items.find(x => x.uid === lo[it.slot]);
+    if (!cur || rarityIdx(it.rarity) > rarityIdx(cur.rarity)) { unequipItem(it.uid); lo[it.slot] = it.uid; n++; }
+  });
+  save(); updateTop(); renderCollection();
+  showModal('🛡', 'Готово', n ? 'Надето предметов: ' + n + '. Каждый — на своего героя, лучший в своём слоте.' : 'Всё лучшее уже надето.', 'ok', { auto: true });
+}
+function toggleAutoEquip(el) { S.autoEquipOff = !el.checked; save(); }
 function sellVisible() {
-  const list = filteredItems(fType, fRarity, fSort);
+  const list = filteredItems(fType, fRarity, fSort, fSlot, fHeroOnly ? document.getElementById('f-equip-hero').value : null);
   if (!list.length) return;
   const sum = list.reduce((a, x) => a + sellPrice(x), 0);
   confirmBox('Продать видимые', 'Продать ' + list.length + ' предмет(ов) за ' + gemHTML(sum) + '?', () => {
@@ -196,11 +222,14 @@ function addUgFuel(uid) {
   ugFuel.push(uid); renderUpgrade();
 }
 function clearUpgrade() { if (busy.ug) return; ugMain = null; ugFuel = []; document.getElementById('ug-result').textContent = 'Выбери предмет'; document.getElementById('ug-result').className = 'ug-result'; renderUpgrade(); }
-function spinUpgrade() {
+function spinUpgrade(ok) {
   const it = S.items.find(x => x.uid === ugMain);
   if (busy.ug || !it) return;
+  // 2.3: предмет надет на героя — сначала спросить (при провале он сгорит)
+  const worn = [it.uid].concat(ugFuel).filter(u => equippedOn(u));
+  if (worn.length && ok !== true) return confirmBox('Предмет надет', 'В апгрейде участвует надетое снаряжение (' + worn.length + ' шт.). При провале или как донор оно пропадёт с героя. Продолжить?', () => spinUpgrade(true));
   const cost = CONFIG.upgrade.cost[it.rarity];
-  if (!canPay(cost)) return showModal('💎', 'Мало самоцветов', 'Нужно ' + fmt(cost) + ' 💎', 'bad');
+  if (!canPay(cost)) return showModal('🔶', 'Мало кристаллов', 'Нужно ' + fmt(cost) + ' 🔶', 'bad');
   const ch = ugChance();
   addGems(-cost); busy.ug = true; track('upgradesTry');
   document.getElementById('ug-btn').disabled = true;
@@ -217,8 +246,8 @@ function spinUpgrade() {
       const nx = RARITIES[rarityIdx(it.rarity) + 1];
       const old = it.name;
       if (it.type === 'eq') {
-        const c = pickCatalog(nx, it.slot);
-        Object.assign(it, { rarity: c.rarity, name: c.name, path: c.path, slot: c.slot, heroId: c.hero });
+        const c = pickCatalog(nx, it.slot, it.heroId, true);   // герой предмета не меняется
+        Object.assign(it, { rarity: c.rarity, name: c.name, path: c.path, slot: c.slot, heroId: it.heroId }); if (c.art) it.art = c.art; if (!it.path) delete it.path;
       } else { it.rarity = nx; it.name = skinName(it.heroId, nx); }
       res.className = 'ug-result win'; res.textContent = 'УСПЕХ! ' + RARITY_NAMES[nx];
       showModal('⬆', 'Успех!', old + ' → ' + it.name + ' (' + RARITY_NAMES[nx] + ')', 'ok', { auto: true });

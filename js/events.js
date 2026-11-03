@@ -8,7 +8,7 @@ const EVENTS = [
     earn: { arenaWins: 2, questsDone: 10, gameRounds: 1, pvp: 3, roshanHits: 4, login: 15, weekly: 40 },   // сколько валюты за действие
     chest: { name: 'Морозный сундук', price: 25, w: { rare: 40, mythical: 34, immortal: 21, arcana: 5 } },
     shop: [
-      { id: 'gems', kind: 'gems', name: 'Мешок самоцветов', mul: 6, price: 30 },
+      { id: 'gems', kind: 'gems', name: 'Мешок кристаллов', mul: 6, price: 30 },
       { id: 'imm', kind: 'item', rarity: 'immortal', name: 'Immortal для главного героя', price: 120 },
       { id: 'arc', kind: 'item', rarity: 'arcana', name: 'Arcana для главного героя', price: 450, limit: 1 },
       { id: 'title', kind: 'title', name: 'Титул «Дед Мороз Древних»', title: { id: 'ev-newyear', name: 'Дед Мороз Древних', color: '#9ad8ff', icon: '🎅' }, price: 300, limit: 1 },
@@ -21,7 +21,7 @@ const EVENTS = [
     earn: { arenaWins: 2, questsDone: 10, gameRounds: 1, pvp: 3, roshanHits: 6, login: 15, weekly: 40 },
     chest: { name: 'Тыквенный сундук', price: 25, w: { rare: 40, mythical: 34, immortal: 21, arcana: 5 } },
     shop: [
-      { id: 'gems', kind: 'gems', name: 'Мешок самоцветов', mul: 6, price: 30 },
+      { id: 'gems', kind: 'gems', name: 'Мешок кристаллов', mul: 6, price: 30 },
       { id: 'imm', kind: 'item', rarity: 'immortal', name: 'Immortal для главного героя', price: 120 },
       { id: 'title', kind: 'title', name: 'Титул «Повелитель Диретайда»', title: { id: 'ev-halloween', name: 'Повелитель Диретайда', color: '#ff8a3a', icon: '🎃' }, price: 300, limit: 1 }
     ]
@@ -62,7 +62,7 @@ function evBuy(id) {
   if (st.cur < it.price) return showModal(ev.cur.icon, 'Не хватает', 'Нужно ' + it.price + ' ' + ev.cur.icon, 'bad');
   st.cur -= it.price; st.bought[id] = (st.bought[id] || 0) + 1;
   let msg = '';
-  if (it.kind === 'gems') { const g = Math.round(rewardScale() * it.mul); addGems(g); msg = '+' + fmt(g) + ' 💎'; }
+  if (it.kind === 'gems') { const g = Math.round(rewardScale() * it.mul); addGems(g); msg = '+' + fmt(g) + ' 🔶'; }
   else if (it.kind === 'item') { const x = addEquipment(mainHeroId(), it.rarity); msg = x.name + ' (' + RARITY_NAMES[x.rarity] + ')'; }
   else if (it.kind === 'title') { grantTitle(it.title); msg = 'Титул «' + it.title.name + '» — выбери его в профиле'; hype('НИШТЯК'); }
   else if (it.kind === 'cons') { ensureShop(); S.cons[it.cons] = (S.cons[it.cons] || 0) + 1; msg = '+1 ' + it.cons; }
@@ -121,11 +121,12 @@ function collectionMul(id) { return collectionCount(id) >= 6 ? 1 + CONFIG.social
 // ---------- прозрачные шансы ----------
 function slotOddsHTML(m) {
   const tot = Object.values(SLOT_W).reduce((a, b) => a + b, 0);
-  return '<div style="text-align:left;font-size:.85rem"><p class="muted">Каждый барабан выбирает редкость символа независимо:</p><table class="board">' +
-    '<tr><th>Редкость</th><th>Шанс символа</th><th>Все ' + m.reels + ' одинаковые</th><th>Выплата (× ставки)</th></tr>' +
-    Object.keys(SLOT_W).reverse().map(r => { const p = SLOT_W[r] / tot; return '<tr><td style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + '</td><td>' + (p * 100).toFixed(1) + '%</td><td>' + (Math.pow(p, m.reels) * 100).toFixed(m.reels > 3 ? 4 : 2) + '%</td><td>×' + m.full[r] + '</td></tr>'; }).join('') + '</table>' +
-    '<p style="margin-top:6px">Частичные совпадения: ' + Object.entries(m.multi).map(([n, x]) => n + ' одинаковых → ×' + x).join(', ') + (m.arcAny ? '; любая Arcana на барабане → ×' + m.arcAny : '') + (m.boost ? '; шанс повысить редкость выигрышного скина ' + Math.round(m.boost * 100) + '%' : '') + '.</p>' +
-    '<p class="muted">Средний возврат самоцветами — меньше 100% ставки: слоты — развлечение, а не заработок. Всё только на игровую валюту.</p></div>';
+  const ev = Object.keys(SLOT_W).reduce((e, r) => { const p = SLOT_W[r] / tot; return e + (m.reels === 3 ? p * p * p * m.full[r] + p * p * (1 - p) * m.pair[r] : Math.pow(p, 5) * m.p5[r] + Math.pow(p, 4) * (1 - p) * m.p4[r] + Math.pow(p, 3) * (1 - p) * m.p3[r]); }, 0);
+  return '<div style="text-align:left;font-size:.85rem"><p class="muted">Каждая клетка сетки 3×' + m.reels + ' выбирает редкость независимо. Ставка делится на ' + m.lines + ' линий, совпадения считаются слева направо.</p><table class="board">' +
+    '<tr><th>Редкость</th><th>Шанс символа</th><th>' + (m.reels === 3 ? '3 в линию' : '5 в линию') + '</th><th>Выплата линии</th></tr>' +
+    Object.keys(SLOT_W).reverse().map(r => { const p = SLOT_W[r] / tot; return '<tr><td style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + '</td><td>' + (p * 100).toFixed(1) + '%</td><td>' + (Math.pow(p, m.reels) * 100).toFixed(m.reels > 3 ? 4 : 2) + '%</td><td>×' + (m.reels === 3 ? m.full[r] : m.p5[r]) + '</td></tr>'; }).join('') + '</table>' +
+    '<p style="margin-top:6px">Средний возврат кристаллами: ' + Math.round(ev * 100) + '% ставки' + (m.boost ? '; шанс повысить редкость выигрышного скина ' + Math.round(m.boost * 100) + '%' : '') + '. Плюс предметы за полные линии.</p>' +
+    '<p class="muted">Слоты — развлечение, а не заработок. Всё только на игровую валюту.</p></div>';
 }
 function openSlotOdds() { showModal('🎰', 'Шансы и выплаты · ' + curMachine.name, slotOddsHTML(curMachine), '', { html: true }); }
 function openWheelOdds() {

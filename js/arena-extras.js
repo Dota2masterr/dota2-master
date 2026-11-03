@@ -37,9 +37,15 @@ function mergeMods(a, b) {
   }
   return r;
 }
+// 2.3: у каждого героя свои таланты из Dota (js/data-talents.js); сила ступени у всех одинаковая
+function heroTalent(id, L, c) {
+  const i = TALENT_LEVELS.indexOf(L), ht = typeof HERO_TALENTS !== 'undefined' && HERO_TALENTS[id];
+  if (ht && ht[i] && ht[i][c]) return { n: ht[i][c][0], t: ht[i][c][2], m: ht[i][c][1] };
+  return { n: TALENTS[L][c].t, t: TALENTS[L][c].t, m: TALENTS[L][c].m };
+}
 function talentMods(id) {
   const h = S.heroes[id]; let m = {};
-  TALENT_LEVELS.forEach(L => { const c = h.talents && h.talents[L]; if (c != null && h.level >= L) m = mergeMods(m, TALENTS[L][c].m); });
+  TALENT_LEVELS.forEach(L => { const c = h.talents && h.talents[L]; if (c != null && h.level >= L) m = mergeMods(m, heroTalent(id, L, c).m); });
   return m;
 }
 function pendingTalents(id) { const h = S.heroes[id]; return TALENT_LEVELS.filter(L => h.level >= L && !(h.talents && h.talents[L] != null)); }
@@ -50,7 +56,7 @@ function renderTalents(id) {
   TALENT_LEVELS.slice().reverse().forEach(L => {
     const ch = h.talents && h.talents[L];
     const open = h.level >= L;
-    html += '<div class="tt-row">' + [0, 1].map(c => '<button class="tt-opt' + (ch === c ? ' on' : '') + (ch != null && ch !== c ? ' off' : '') + '" ' + (!open || ch != null ? 'disabled' : '') + ' data-click="pickTalent(\'' + id + '\',' + L + ',' + c + ')">' + TALENTS[L][c].t + '</button>').join('<span class="tt-lvl' + (open ? ' open' : '') + '">' + L + '</span>') + '</div>';
+    html += '<div class="tt-row">' + [0, 1].map(c => '<button class="tt-opt' + (ch === c ? ' on' : '') + (ch != null && ch !== c ? ' off' : '') + '" ' + (!open || ch != null ? 'disabled' : '') + ' data-click="pickTalent(\'' + id + '\',' + L + ',' + c + ')"><b>' + esc(heroTalent(id, L, c).n) + '</b><small>' + heroTalent(id, L, c).t + '</small></button>').join('<span class="tt-lvl' + (open ? ' open' : '') + '">' + L + '</span>') + '</div>';
   });
   return html + '</div>';
 }
@@ -98,10 +104,11 @@ function setBonusMul(id) { const n = setCount(id); return n >= 6 ? 1.25 : n >= 3
 function buildTeam(opts) {
   opts = opts || {};
   ensureShop();
-  const ids = getStack();
+  const ids = getStack().slice(0, opts.size || 5);
   const team = ids.map((id, i) => {
     let m = talentMods(id);
     if (i === 0) {
+      if (S.shards) m = mergeMods(m, { ultMul: 1 + 0.05 * Math.min(5, S.shards) });   // Aghanim's Shard с Торментора
       S.shop.slots.forEach(sid => { const it = SHOP.find(x => x.id === sid); if (it && it.mods) m = mergeMods(m, it.mods); });
       if (!opts.noCons) {
         if (S.cons.aegis > 0 && S.useCons.aegis) m.aegis = true;
@@ -140,7 +147,7 @@ function renderShopPanel() {
   SHOP.forEach(it => {
     const owned = S.shop.owned.includes(it.id), on = S.shop.slots.includes(it.id);
     html += '<div class="shop-item' + (on ? ' on' : '') + '"><img src="' + ITEM_ICON(it.id) + '" referrerpolicy="no-referrer"><div class="si-t"><b>' + esc(it.name) + '</b><div class="muted">' + esc(it.d) + '</div></div>' +
-      (on ? '<button class="btn sm" data-click="shopUnequip(\'' + it.id + '\')">Снять</button>' : owned ? '<button class="btn sm green" data-click="shopEquip(\'' + it.id + '\')">Надеть</button>' : '<button class="btn sm gold" ' + (canPay(it.cost) ? '' : 'disabled') + ' data-click="shopBuy(\'' + it.id + '\')">' + fmt(it.cost) + ' 💎</button>') + '</div>';
+      (on ? '<button class="btn sm" data-click="shopUnequip(\'' + it.id + '\')">Снять</button>' : owned ? '<button class="btn sm green" data-click="shopEquip(\'' + it.id + '\')">Надеть</button>' : '<button class="btn sm gold" ' + (canPay(it.cost) ? '' : 'disabled') + ' data-click="shopBuy(\'' + it.id + '\')">' + fmt(it.cost) + ' 🔶</button>') + '</div>';
   });
   box.innerHTML = html + '</div>';
 }
@@ -223,7 +230,8 @@ function fightRoshan() {
 .talent-tree{margin-top:8px;padding:8px;background:#05070a;border:1px solid var(--line);border-radius:3px}
 .tt-title{font-family:Cinzel;color:var(--gold2);font-size:.75rem;letter-spacing:2px;text-align:center;margin-bottom:4px}
 .tt-row{display:grid;grid-template-columns:1fr 30px 1fr;gap:4px;margin:3px 0;align-items:center}
-.tt-opt{font-size:.66rem;padding:5px 3px;border:1px solid #2a333d;background:#11161c;color:var(--muted);border-radius:2px;cursor:pointer;font-family:inherit;line-height:1.1}
+.tt-opt b{display:block;font-weight:700;color:inherit}.tt-opt small{display:block;font-size:.6rem;color:#9fd38a;margin-top:2px}
+.tt-opt{font-size:.66rem;padding:5px 3px;min-height:44px;border:1px solid #2a333d;background:#11161c;color:var(--muted);border-radius:2px;cursor:pointer;font-family:inherit;line-height:1.1}
 .tt-opt:not(:disabled):hover{border-color:var(--gold);color:#fff}
 .tt-opt.on{background:linear-gradient(180deg,#4a3a18,#2a200c);color:var(--gold2);border-color:var(--gold)}
 .tt-opt.off{opacity:.35}.tt-opt:disabled{cursor:default}
