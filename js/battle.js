@@ -145,7 +145,7 @@ function createBattle(team, def, rand, opts) {
     if (u.silence > 0) return null;
     const ready = u.skills.filter(s => !(u.cd[s.key] > 0) && (u.mana == null || u.mana >= s.mana));
     if (!ready.length) return null;
-    const low = allies ? allies.some(a => a.alive && pct(a) < 0.6) : pct(u) < 0.6;
+    const low = pct(u) < 0.6;                    // 2.4.5: навык лечения лечит только самого героя
     for (const s of ready) {
       if (s.kind === 'heal' && !low) continue;
       if (s.kind === 'shield' && pct(u) > 0.85) continue;
@@ -240,9 +240,9 @@ function createBattle(team, def, rand, opts) {
       case 'dot': e.poison.push({ d: base, t: s.dur }); x.log = t.name + ' отравил ' + e.name + ' (' + s.name + ')'; break;
       case 'debuff': e.amp = s.pow; e.ampT = s.dur; d = hitE(e, atk * 0.6 * H); x.log = t.name + ' ослабил ' + e.name + ': урон по нему ×' + s.pow; break;
       case 'heal': {
-        const tg = T.filter(a => a.alive).sort((a, b) => pct(a) - pct(b))[0] || t;
-        tg.hp = Math.min(tg.max, tg.hp + tg.max * s.pow); x.to = T.indexOf(tg); x.thp = pct(tg);
-        x.log = t.name + ' лечит ' + tg.name + ' (' + s.name + ')'; break;
+        // 2.4.5: обычный навык лечит только самого героя; всю команду лечит ульта (type 'heal')
+        t.hp = Math.min(t.max, t.hp + t.max * s.pow); x.to = i; x.thp = pct(t);
+        x.log = t.name + ' лечит себя (' + s.name + ')'; break;
       }
       case 'shield': t.shield = s.pow; t.shieldT = s.dur + 1; x.log = t.name + ': ' + s.name + ' — щит'; break;
       case 'buff': t.buff = s.pow; t.buffT = s.dur + 1; x.log = t.name + ' усиливается (' + s.name + ')'; break;
