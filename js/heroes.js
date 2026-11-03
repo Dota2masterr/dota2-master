@@ -114,7 +114,7 @@ function renderPreview() {
   if (typeof collectionCount === 'function') { const cc = collectionCount(h.id); const cb = document.createElement('div'); cb.className = 'sub'; cb.style.color = cc >= 6 ? '#ade55c' : 'var(--muted)'; cb.textContent = '🌈 Коллекция редкостей: ' + cc + '/6' + (cc >= 6 ? ' → +' + Math.round(CONFIG.social.collectionBonus * 100) + '% силы' : ' (предметы героя всех редкостей = +' + Math.round(CONFIG.social.collectionBonus * 100) + '% силы)'); m.appendChild(cb); }
   const cost = heroSpinCost(h.id);
   const hod = h.id === heroOfDay();
-  document.getElementById('spin-cost').innerHTML = gemHTML(cost) + (hod ? ' <span style="color:var(--gold2)">☀ −50%</span>' : '') + (st.level < CONFIG.maxLevel ? ' <span class="muted">(след. ур.: ' + fmt(Math.round(spinCost(st.level + 1) * (hod ? CONFIG.heroOfDay.spinMul : 1))) + ')</span>' : '');
+  document.getElementById('spin-cost').innerHTML = gemHTML(cost) + (hod && CONFIG.heroOfDay.spinMul < 1 ? ' <span style="color:var(--gold2)">☀ −' + Math.round((1 - CONFIG.heroOfDay.spinMul) * 100) + '%</span>' : '') + (st.level < CONFIG.maxLevel ? ' <span class="muted">(след. ур.: ' + fmt(Math.round(spinCost(st.level + 1) * (hod ? CONFIG.heroOfDay.spinMul : 1))) + ')</span>' : '');
   btn.disabled = busy.hero || !canPay(cost);
 }
 function toggleFav(id) { S.fav = S.fav || []; S.fav = S.fav.includes(id) ? S.fav.filter(x => x !== id) : S.fav.concat([id]); save(); renderPreview(); renderHeroList(); }

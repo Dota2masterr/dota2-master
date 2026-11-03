@@ -10,7 +10,7 @@ const SKILL_KIND = {
 };
 const ROLE_NAME = { carry: 'Керри', support: 'Саппорт', nuker: 'Нюкер', initiator: 'Инициатор', tank: 'Танк' };
 const SKILL_CACHE = {};
-function heroRole(id) { return (SKILL_DB[id] && SKILL_DB[id].role) || 'carry'; }
+// роль героя — heroRole() в js/battle.js (2.4: выводится из ульты и атрибута, есть танки)
 // навыки героя как объекты: { key, name, kind, pow, cd, mana, dur, target, extra, desc, ult }
 function getSkills(id) {
   if (SKILL_CACHE[id]) return SKILL_CACHE[id];

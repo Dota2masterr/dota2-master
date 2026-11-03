@@ -30,10 +30,11 @@ function setBest(g, v, higherBetter) {
 }
 function startGame_(id) {
   stopGames(); curGame = id;
-  if (id === 'invoker') { switchTab('invoker'); invSetMode('survival'); invStart(); return; }
+  if (id === 'invoker') { switchTab('invoker'); invSetMode('survival'); invStart(); if (typeof applyMysticBg === 'function') applyMysticBg(document.querySelector('.inv-target')); return; }
   if (id === 'tower') { renderGames(); document.getElementById('game-stage').innerHTML = '<div id="tower-menu"></div>'; renderTowerMenu(); return; }
   renderGames();
   ({ lasthit: lhStart, hook: hookStart, guess: guessStart, sunstrike: ssStart })[id]();
+  if (id === 'guess' && typeof applyMysticBg === 'function') applyMysticBg(document.getElementById('game-stage'));
 }
 let gTimers = [];
 function stopGames() { if (typeof TB !== 'undefined' && TB) { if (TB.online && !TB.done) twLiveLeave(); twStop(); } gTimers.forEach(t => { clearInterval(t); clearTimeout(t); cancelAnimationFrame(t); }); gTimers = []; document.onkeydown_game = null; }
@@ -75,8 +76,15 @@ function lhStart() {
       const tgt = foes.sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0];
       const reach = c.rng ? 140 : 40;
       if (tgt && Math.abs(tgt.x - c.x) <= reach) { c.cd -= dt; if (c.cd <= 0) { c.cd = 1000 + Math.random() * 300; const d = (c.rng ? 22 : 19) + Math.random() * 10; tgt.hp -= d; if (tgt.hp <= 0) { tgt.hp = 0; tgt.dieT = 30; if (tgt.side === 1) { LH.miss++; LH.fx.push({ x: tgt.x, y: tgt.y - 30, t: 'упущен', c: '#ff7a6a', life: 30 }); } } } }
-      else c.x += (c.side === 0 ? 1 : -1) * 0.05 * dt;
+      else {
+        // 2.4: не заходить в своего крипа впереди — встают «очередью»
+        const dir = c.side === 0 ? 1 : -1;
+        const ahead = LH.creeps.some(o => o !== c && o.hp > 0 && o.side === c.side && Math.abs(o.y - c.y) < 22 && (o.x - c.x) * dir > 0 && (o.x - c.x) * dir < 30);
+        if (!ahead) c.x += dir * 0.05 * dt;
+      }
     });
+    // расталкивание: у каждого крипа радиус 15
+    for (let i = 0; i < LH.creeps.length; i++) for (let j = i + 1; j < LH.creeps.length; j++) { const a = LH.creeps[i], b = LH.creeps[j]; if (a.hp <= 0 || b.hp <= 0) continue; const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01; if (d < 30) { const p = (30 - d) / 2 / d * (a.side === b.side ? 1 : 0.4); a.x -= dx * p; a.y -= dy * p; b.x += dx * p; b.y += dy * p; a.y = Math.max(115, Math.min(175, a.y)); b.y = Math.max(115, Math.min(175, b.y)); } }
     // снаряды героя
     LH.shots = LH.shots.filter(sh => {
       const c = LH.creeps.find(x => x.id === sh.to); sh.t += dt;
@@ -95,15 +103,11 @@ function lhStart() {
 }
 function lhDraw() {
   const { ctx } = LH;
-  const g = ctx.createLinearGradient(0, 0, 0, 300); g.addColorStop(0, '#1d2c16'); g.addColorStop(1, '#14200f'); ctx.fillStyle = g; ctx.fillRect(0, 0, 720, 300);
-  ctx.fillStyle = '#5e4f33'; ctx.fillRect(0, 105, 720, 80);
-  ctx.fillStyle = 'rgba(0,0,0,.18)'; for (let i = 0; i < 24; i++) ctx.fillRect((i * 37) % 720, 110 + (i * 13) % 70, 14, 4);
-  for (const [x, y] of [[40, 40], [120, 30], [600, 35], [680, 50], [60, 250], [650, 255]]) { ctx.fillStyle = '#0f3a12'; ctx.beginPath(); ctx.arc(x, y, 22, 0, 6.3); ctx.fill(); ctx.fillStyle = '#185418'; ctx.beginPath(); ctx.arc(x - 6, y - 6, 12, 0, 6.3); ctx.fill(); }
+  ctx.drawImage(texLasthit(), 0, 0);                         // 2.4: новая текстура лайна (js/textures.js)
   LH.creeps.forEach(c => {
     ctx.globalAlpha = c.hp > 0 ? 1 : Math.max(0, c.dieT / 30);
-    ctx.fillStyle = c.side === 0 ? '#3f8f3a' : '#a0392a'; ctx.beginPath(); ctx.arc(c.x, c.y, c.rng ? 11 : 14, 0, 6.3); ctx.fill();
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.rng ? '🏹' : '🗡', c.x, c.y + 1);
+    drawCreep(ctx, c.x, c.y, c.rng ? 13 : 16, c.side, c.rng, ctx.globalAlpha);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     if (c.hp > 0) { ctx.fillStyle = '#000'; ctx.fillRect(c.x - 18, c.y - 26, 36, 6); ctx.fillStyle = c.side === 0 ? '#6cc53f' : '#e0452f'; ctx.fillRect(c.x - 18, c.y - 26, 36 * c.hp / c.max, 6);
       if (c.side === 1 && c.hp <= LH.dmg) { ctx.strokeStyle = '#ffd36a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(c.x, c.y, 19, 0, 6.3); ctx.stroke(); } }
     ctx.globalAlpha = 1;
@@ -186,6 +190,7 @@ function hookEnd() {
 // 2.3: фон — река, трава, деревья, камни (рисуется один раз в отдельный холст)
 let HOOK_BG = null;
 function hookBg(ctx, t) {
+  if (!HOOK_BG && typeof texRiver === 'function') HOOK_BG = texRiver();   // 2.4: новая текстура реки
   if (!HOOK_BG) {
     const c = document.createElement('canvas'); c.width = 760; c.height = 360; const g = c.getContext('2d');
     const gr = g.createLinearGradient(0, 0, 0, 360); gr.addColorStop(0, '#22361a'); gr.addColorStop(1, '#16260f'); g.fillStyle = gr; g.fillRect(0, 0, 760, 360);

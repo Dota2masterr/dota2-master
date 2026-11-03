@@ -6,10 +6,26 @@ function openChangelog() {
     '<div style="margin-bottom:10px"><b style="color:var(--gold2)">Версия ' + esc(c.v) + '</b> <span class="muted">· ' + esc(c.date) + '</span><ul style="margin:4px 0 0 18px">' + c.items.map(i => '<li>' + esc(i) + '</li>').join('') + '</ul></div>').join('') +
     '<a href="roadmap.html" target="_blank" rel="noopener">Роадмап и вся история →</a></div>', '', { html: true });
 }
+// 2.4: окно «Что нового в 2.4» с цифрами «было → стало»
+function openWhatsNew24() {
+  const row = (a, b, c) => '<tr><td>' + a + '</td><td class="was">' + b + '</td><td class="now">' + c + '</td></tr>';
+  const tb = (title, rows) => '<div class="wn-h">' + title + '</div><table class="wn-t"><tr><th></th><th>было</th><th>стало</th></tr>' + rows.join('') + '</table>';
+  showModal('🆕', 'Что нового в 2.4', '<div class="wn">' +
+    '<p>Главное: в бою теперь решает тактика, а не только сила, а кристаллы снова чего-то стоят.</p>' +
+    tb('⚔ Боёвка арены', [row('Урон героев и врагов', '100%', '85%'), row('Длина боя (x1)', '22–35 с', '25–40 с'), row('Контр-пик роли', '—', '+15% / −10% урона'), row('Ульта в удачный момент', '—', '×1.4'), row('Враги сзади', 'по одному', 'второй бьёт из задней линии'), row('Подбор врагов против стака', '—', 'с 30 уровня: 15% → 60%')]) +
+    tb('📊 Арена: шанс победы при силе ×1.0 / ×1.2', [row('Уровень 1', '72% / 100%', '64% / 100%'), row('Уровень 25', '52% / 91%', '45% / 87%'), row('Уровень 50', '28% / 73%', '31% / 75%'), row('Уровень 75', '29% / 77%', '28% / 63%'), row('Уровень 100', '27% / 60%', '15% / 61%')]) +
+    '<div class="muted" style="font-size:.74rem">С ульты вручную в удачный момент шанс выше: на 1–50 уровне +12…19%.</div>' +
+    tb('🔶 Экономика', [row('Рост награды после 40 ур.', '×1.085 за уровень', '×1.03'), row('Награда арены, 100 ур.', '226 000', '≈ 9 900'), row('Повтор уровня', '×0.4, без лимита', '×0.15, 30 в день'), row('Утешение за поражение', '8%, без лимита', '2%, 10 в день'), row('Мини-игры / PvP / бесплатные', '100%', '40% / 50% / 50%'), row('Сундук Immortal / Arcana', '20 000 / 80 000', '≈ 2 / 3 дня дохода'), row('Кристаллы на руках', 'сколько было', 'не больше 20 000')]) +
+    tb('🏆 Ранги', [row('Шаг ранга', '150–200 MMR', '1000 MMR, 5 ступеней'), row('Подбор', '±150…1000', '±1000, иначе бот 🤖 с рейтингом')]) +
+    '<div class="wn-h">Новое</div><ul><li>🤝 Пати-боссы на двоих (Арена → под Рошаном)</li><li>🏯 Защита башен: кубки, арены, прокачка карт, Руны, сундуки, дорога кубков</li><li>🛒 12 новых предметов в лавке</li><li>🎯 Кнопка «Фокус» и роли героев в бою</li></ul>' +
+    '</div>', '', { html: true });
+}
+function whenModalClosed(fn) { const t = setInterval(() => { if (!document.getElementById('modal').classList.contains('show')) { clearInterval(t); fn(); } }, 700); }
 function checkWhatsNew() {
   const seen = lsGet('d2m_seen_ver', null);
   lsSet('d2m_seen_ver', APP_VERSION);
-  if (seen && seen !== APP_VERSION && CHANGELOG[0] && CHANGELOG[0].v === APP_VERSION) setTimeout(openChangelog, 1200);
+  if (seen && seen !== APP_VERSION && APP_VERSION === '2.4.0') setTimeout(() => whenModalClosed(openWhatsNew24), 1500);
+  else if (seen && seen !== APP_VERSION && CHANGELOG[0] && CHANGELOG[0].v === APP_VERSION) setTimeout(openChangelog, 1200);
   const v = document.getElementById('app-ver'); if (v) v.textContent = 'версия ' + APP_VERSION;
 }
 

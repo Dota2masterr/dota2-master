@@ -277,12 +277,12 @@ async function rogueLoadBoards() {
   const a = document.getElementById('rg-board-d'), b = document.getElementById('rg-board-a');
   try {
     const d = await db('GET', 'runs_daily/' + todayStr(), undefined, false, { orderBy: 'd', limitToLast: 30 }) || {};
-    const rows = Object.values(d).filter(x => x && typeof x.d === 'number').sort((x, y) => y.d - x.d || x.t - y.t);
+    const rows = Object.entries(d).filter(([u]) => !LIVE.banned[u]).map(([, x]) => x).filter(x => x && typeof x.d === 'number').sort((x, y) => y.d - x.d || x.t - y.t);
     if (a) a.innerHTML = rows.length ? '<table class="rg-tab"><tr><th>#</th><th>Игрок</th><th>Глубина</th><th>Время</th><th>Герой</th></tr>' + rows.map((x, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(x.n) + (x.w ? ' 🏆' : '') + '</td><td>' + x.d + '</td><td>' + Math.floor(x.t / 60) + ':' + String(x.t % 60).padStart(2, '0') + '</td><td>' + esc(HERO_BY_ID[x.h] ? HERO_BY_ID[x.h].name : x.h) + '</td></tr>').join('') + '</table>' : 'Сегодня ещё никто не прошёл ежедневный забег. Будь первым!';
   } catch (e) { if (a) a.textContent = 'Нужен вход онлайн.'; }
   try {
     const d = await db('GET', 'abyss', undefined, false, { orderBy: 'm', limitToLast: 20 }) || {};
-    const rows = Object.values(d).filter(x => x && typeof x.m === 'number').sort((x, y) => y.m - x.m);
+    const rows = Object.entries(d).filter(([u]) => !LIVE.banned[u]).map(([, x]) => x).filter(x => x && typeof x.m === 'number').sort((x, y) => y.m - x.m);
     if (b) b.innerHTML = rows.length ? '<table class="rg-tab"><tr><th>#</th><th>Игрок</th><th>Бездна</th><th>Лучшие герои</th></tr>' + rows.map((x, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(x.n) + '</td><td>' + x.m + '</td><td>' + Object.keys(x.h || {}).sort((p, q) => x.h[q] - x.h[p]).slice(0, 3).map(k => esc(HERO_BY_ID[k] ? HERO_BY_ID[k].name : k) + ' ' + x.h[k]).join(', ') + '</td></tr>').join('') + '</table>' : 'Пока пусто.';
   } catch (e) { if (b) b.textContent = 'Нужен вход онлайн.'; }
 }

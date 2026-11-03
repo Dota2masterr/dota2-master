@@ -26,15 +26,32 @@ const TW_CARDS = {
   catapult: { n: 'Катапульта', cost: 4, ic: '🪨', u: { hp: 720, dmg: 190, range: 190, spd: 28, cd: 3, r: 15, bld: 1 }, count: 1 },
   sunstrike: { n: 'Sun Strike', cost: 3, ic: '☀', spell: { r: 45, dmg: 460, delay: 0.8, bldMul: 0.3 }, key: 'invoker_sun_strike' },
   chrono: { n: 'Chronosphere', cost: 5, ic: '⏳', spell: { r: 70, freeze: 3 }, key: 'faceless_void_chronosphere' },
-  blackhole: { n: 'Black Hole', cost: 6, ic: '🌀', spell: { r: 80, dps: 130, dur: 3, stun: 1 }, key: 'enigma_black_hole' }
+  blackhole: { n: 'Black Hole', cost: 6, ic: '🌀', spell: { r: 80, dps: 130, dur: 3, stun: 1 }, key: 'enigma_black_hole' },
+  // 2.4: 14 новых карт (у каждой своя роль и контра — см. TW_CARD_INFO в js/tower-meta.js)
+  kobolds: { n: 'Кобольды ×5', cost: 2, ic: '🐀', u: { hp: 110, dmg: 28, range: 16, spd: 58, cd: 0.9, r: 8 }, count: 5 },
+  wolves: { n: 'Волки ×2', cost: 3, ic: '🐺', u: { hp: 380, dmg: 60, range: 18, spd: 72, cd: 0.8, r: 11 }, count: 2 },
+  treants: { n: 'Энты ×3', cost: 4, ic: '🌳', u: { hp: 520, dmg: 50, range: 20, spd: 36, cd: 1.1, r: 12 }, count: 3 },
+  spiders: { n: 'Паучки ×6', cost: 3, ic: '🕷', u: { hp: 90, dmg: 22, range: 14, spd: 64, cd: 0.7, r: 7 }, count: 6 },
+  mega: { n: 'Мега-крипы ×2', cost: 6, ic: '⚔', u: { hp: 900, dmg: 95, range: 22, spd: 44, cd: 1.0, r: 14 }, count: 2 },
+  golem: { n: 'Голем', cost: 6, ic: '🔥', u: { hp: 2800, dmg: 120, range: 24, spd: 30, cd: 1.4, r: 19, bld: 1 }, count: 1 },
+  arrow: { n: 'Sacred Arrow', cost: 2, ic: '🎯', spell: { r: 30, dmg: 240, delay: 0.3, bldMul: 0.2, stun: 2 }, key: 'mirana_arrow' },
+  ravage: { n: 'Ravage', cost: 5, ic: '🐙', spell: { r: 95, dmg: 220, delay: 0.2, bldMul: 0.25, stun: 1.6 }, key: 'tidehunter_ravage' },
+  meteor: { n: 'Chaos Meteor', cost: 4, ic: '☄', spell: { r: 55, dmg: 380, delay: 1.0, bldMul: 0.5 }, key: 'invoker_chaos_meteor' },
+  freezing: { n: 'Freezing Field', cost: 5, ic: '❄', spell: { r: 85, dps: 110, dur: 3.5, noStun: 1 }, key: 'crystal_maiden_freezing_field' },
+  mekansm: { n: 'Mekansm', cost: 3, ic: '💚', spell: { r: 90, heal: 0.35, delay: 0.1 } },
+  sentry: { n: 'Башенка', cost: 4, ic: '🗼', u: { hp: 1000, dmg: 55, range: 130, spd: 0, cd: 0.9, r: 15, life: 35 }, count: 1 },
+  healward: { n: 'Healing Ward', cost: 3, ic: '✚', u: { hp: 300, dmg: 0, range: 0, spd: 0, cd: 9, r: 10, life: 25, heal: 60 }, count: 1 },
+  tombstone: { n: 'Tombstone', cost: 5, ic: '🪦', u: { hp: 900, dmg: 0, range: 0, spd: 0, cd: 9, r: 15, life: 25, spawn: 3 }, count: 1 }
 };
-const TW_EXTRA = ['creeps', 'ranged', 'catapult', 'sunstrike', 'chrono', 'blackhole'];
+const TW_ZOMBIE = { n: 'Зомби', ic: '🧟', u: { hp: 160, dmg: 30, range: 16, spd: 40, cd: 1.0, r: 8 } };
+const TW_EXTRA = ['creeps', 'ranged', 'catapult', 'sunstrike', 'chrono', 'blackhole', 'kobolds', 'wolves', 'treants', 'spiders', 'mega', 'golem', 'arrow', 'ravage', 'meteor', 'freezing', 'mekansm', 'sentry', 'healward', 'tombstone'];
 
 function migrateTower(st) {
   if (!st.tower || typeof st.tower !== 'object') st.tower = {};
   const t = st.tower;
   if (t.best == null) t.best = 0; if (t.floor == null) t.floor = 1; if (!t.deck) t.deck = null;
   if (!t.day) t.day = { d: '', n: 0 }; if (t.mmr == null) t.mmr = 1000; if (t.w == null) t.w = 0; if (t.l == null) t.l = 0;
+  if (typeof migrateTowerMeta === 'function') migrateTowerMeta(t);
 }
 function TS() { if (!S.tower) migrateTower(S); return S.tower; }
 
@@ -48,7 +65,7 @@ function twDefaultDeck() {
   return ids.map(id => 'h:' + id).concat(['creeps', 'ranged', 'sunstrike', 'catapult']);
 }
 function twDeck() { const T = TS(); const d = T.deck && T.deck.length === 8 ? T.deck : twDefaultDeck(); return d.filter(c => twCardOk(c)).length === 8 ? d : twDefaultDeck(); }
-function twCardOk(c) { return TW_CARDS[c] || (c.startsWith('h:') && HERO_BY_ID[c.slice(2)]); }
+function twCardOk(c) { return (TW_CARDS[c] && (typeof twUnlocked !== 'function' || !S || twUnlocked(c))) || (c.startsWith('h:') && HERO_BY_ID[c.slice(2)]); }
 // полное описание карты для боя: mul — сила (герой игрока, бот этажа, призрак)
 function twCardSpec(c, mul) {
   if (TW_CARDS[c]) { const x = TW_CARDS[c]; return { c, n: x.n, cost: x.cost, ic: x.ic, key: x.key, u: x.u ? Object.assign({}, x.u) : null, count: x.count || 1, spell: x.spell ? Object.assign({}, x.spell) : null, mul }; }
@@ -78,7 +95,8 @@ function twNew(o) {
 function twSpawnUnit(g, side, spec, x, y) {
   const u = spec.u, m = spec.mul || 1;
   const n = { id: g.uid++, side, x, y, hp: u.hp * m, max: u.hp * m, dmg: u.dmg * m, range: u.range, spd: u.spd, rate: u.cd, cd: 0.5, r: u.r, bld: !!u.bld, splash: u.splash || 0, heal: (u.heal || 0) * m,
-    stunFirst: u.stunFirst || 0, hero: spec.hero || null, ic: spec.ic || null, boss: !!spec.boss, ult: spec.ult || null, ultCd: 6, stun: 0, alive: true, lane: x < 180 ? 0 : 1, tgt: 0, hit: 0, buff: 0, shield: 0 };
+    stunFirst: u.stunFirst || 0, hero: spec.hero || null, ic: spec.ic || null, boss: !!spec.boss, ult: spec.ult || null, ultCd: 6, stun: 0, alive: true, lane: x < 180 ? 0 : 1, tgt: 0, hit: 0, buff: 0, shield: 0,
+    life: u.life || 0, spawn: u.spawn || 0, spawnT: 0, slow: 0, still: u.spd === 0, mulSrc: m };
   g.units.push(n);
   return n;
 }
@@ -98,7 +116,7 @@ function twPlay(g, side, slot, x, y) {
   g.hand[side][slot] = g.queue[side].shift(); g.queue[side].push(ci);
   g.acts.push({ t: g.tick, s: side, c: ci, x: Math.round(x), y: Math.round(y) });
   if (sp.spell) g.spells.push({ side, x, y, sp: sp.spell, mul: sp.mul, t: 0, key: sp.c, done: false });
-  else for (let k = 0; k < sp.count; k++) twSpawnUnit(g, side, sp, x + (k - (sp.count - 1) / 2) * 16, y + (k % 2) * 8);
+  else for (let k = 0; k < sp.count; k++) twSpawnUnit(g, side, sp, x + (k - (sp.count - 1) / 2) * (sp.u.r * 2 + 4), y + (k % 2) * (side === 0 ? 10 : -10));   // веером
   return true;
 }
 const twD2 = (a, b) => (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
@@ -135,31 +153,38 @@ function twStep(g, inputs) {
   g.spells.forEach(sp => {
     sp.t += dt;
     const foes = g.units.filter(u => u.alive && u.side !== sp.side && twD2(u, sp) <= (sp.sp.r + u.r) * (sp.sp.r + u.r));
+    if (sp.sp.heal && !sp.done && sp.t >= sp.sp.delay) { sp.done = true; g.units.forEach(u => { if (u.alive && u.side === sp.side && twD2(u, sp) <= sp.sp.r * sp.sp.r) u.hp = Math.min(u.max, u.hp + u.max * sp.sp.heal); }); g.fx.push({ k: 'heal', x: sp.x, y: sp.y, r: sp.sp.r, life: 18 }); }
     if (sp.sp.dmg && !sp.done && sp.t >= sp.sp.delay) {
-      sp.done = true; foes.forEach(u => twDmg(g, u, sp.sp.dmg * sp.mul, sp));
+      sp.done = true; foes.forEach(u => { twDmg(g, u, sp.sp.dmg * sp.mul, sp); if (sp.sp.stun) u.stun = Math.max(u.stun, sp.sp.stun); });
       g.bld.filter(b => b.alive && b.side !== sp.side && twD2(b, sp) <= (sp.sp.r + b.r) * (sp.sp.r + b.r)).forEach(b => twDmg(g, b, sp.sp.dmg * sp.mul * sp.sp.bldMul, sp));
       g.fx.push({ k: 'sun', x: sp.x, y: sp.y, r: sp.sp.r, life: 18 });
     }
     if (sp.sp.freeze && !sp.done) { sp.done = true; foes.forEach(u => { u.stun = Math.max(u.stun, sp.sp.freeze); }); }
-    if (sp.sp.dps && sp.t <= sp.sp.dur) foes.forEach(u => { twDmg(g, u, sp.sp.dps * sp.mul * dt, sp); u.stun = Math.max(u.stun, dt * 2); });
+    if (sp.sp.dps && sp.t <= sp.sp.dur) foes.forEach(u => { twDmg(g, u, sp.sp.dps * sp.mul * dt, sp); if (sp.sp.noStun) u.slow = Math.max(u.slow, dt * 2); else u.stun = Math.max(u.stun, dt * 2); });
   });
   g.spells = g.spells.filter(sp => sp.t < Math.max(sp.sp.freeze || 0, sp.sp.dur || 0, (sp.sp.delay || 0) + 0.4));
   // юниты
   const all = g.units;
   for (const u of all) {
     if (!u.alive) continue;
-    u.cd -= dt; u.ultCd -= dt; if (u.buff > 0) u.buff -= dt; if (u.shield > 0) u.shield -= dt;
+    u.cd -= dt; u.ultCd -= dt; if (u.buff > 0) u.buff -= dt; if (u.shield > 0) u.shield -= dt; if (u.slow > 0) u.slow -= dt;
+    // постройки (Башенка, Healing Ward, Tombstone) живут ограниченное время
+    if (u.life) { u.life -= dt; if (u.life <= 0) { u.alive = false; u.hp = 0; continue; } }
+    if (u.heal && u.still && g.tick % 15 === 0) all.forEach(a => { if (a.alive && a.side === u.side && a !== u && twD2(a, u) < 90 * 90) a.hp = Math.min(a.max, a.hp + u.heal * 0.5); });
+    if (u.spawn) { u.spawnT += dt; if (u.spawnT >= u.spawn) { u.spawnT = 0; twSpawnUnit(g, u.side, Object.assign({}, TW_ZOMBIE, { mul: u.mulSrc }), u.x + (u.id % 2 ? 12 : -12), u.y + (u.side === 0 ? -14 : 14)); } }
     if (u.stun > 0) { u.stun -= dt; continue; }
+    if (u.still && !u.dmg) continue;
     // цель: ближайший враг в радиусе 120 (если юнит не «по зданиям»), иначе здание своей линии
     let tgt = null, best = 120 * 120;
     if (!u.bld) for (const e of all) { if (!e.alive || e.side === u.side) continue; const d = twD2(u, e); if (d < best) { best = d; tgt = e; } }
+    if (u.still) { if (!tgt || best > (u.range + u.r + tgt.r) * (u.range + u.r + tgt.r)) continue; }
     if (!tgt) for (const b of g.bld) { if (!b.alive || b.side === u.side) continue; const d = twD2(u, b); if (d < (u.range + b.r + 40) * (u.range + b.r + 40) && d < best * 4) { tgt = b; best = d; } }
     if (!tgt) tgt = twTargetBld(g, u);
     if (!tgt) continue;
     const reach = u.range + u.r + (tgt.r || 10);
     const d2 = twD2(u, tgt);
     if (d2 > reach * reach) {
-      const d = Math.sqrt(d2), sp = u.spd * dt;
+      const d = Math.sqrt(d2), sp = u.spd * dt * (u.slow > 0 ? 0.5 : 1);
       u.x += (tgt.x - u.x) / d * sp; u.y += (tgt.y - u.y) / d * sp;
     } else if (u.cd <= 0) {
       u.cd = u.rate;
@@ -172,10 +197,11 @@ function twStep(g, inputs) {
       // ульта героя раз в 8 сек в бою
       if (u.ult && u.ultCd <= 0) { u.ultCd = 8; twUlt(g, u, tgt); }
     }
-    if (u.heal && g.tick % 15 === 0) all.forEach(a => { if (a.alive && a.side === u.side && twD2(a, u) < 90 * 90) a.hp = Math.min(a.max, a.hp + u.heal * 0.5); });
+    if (u.heal && !u.still && g.tick % 15 === 0) all.forEach(a => { if (a.alive && a.side === u.side && twD2(a, u) < 90 * 90) a.hp = Math.min(a.max, a.hp + u.heal * 0.5); });
   }
   // мягкое расталкивание своих
-  for (let i = 0; i < all.length; i++) { const a = all[i]; if (!a.alive) continue; for (let j = i + 1; j < all.length; j++) { const b = all[j]; if (!b.alive || b.side !== a.side) continue; const rr = a.r + b.r, d2 = twD2(a, b); if (d2 > 0 && d2 < rr * rr) { const d = Math.sqrt(d2), p = (rr - d) / 2 / d; const dx = (b.x - a.x) * p, dy = (b.y - a.y) * p; a.x -= dx; a.y -= dy; b.x += dx; b.y += dy; } } }
+  // 2.4: расталкивание всех юнитов (свои — сильнее, чужие — слабее), 2 прохода — никто не стоит «в одной точке»
+  for (let it = 0; it < 2; it++) for (let i = 0; i < all.length; i++) { const a = all[i]; if (!a.alive) continue; for (let j = i + 1; j < all.length; j++) { const b = all[j]; if (!b.alive) continue; const rr = a.r + b.r, d2 = twD2(a, b); if (d2 < rr * rr) { let d = Math.sqrt(d2); let dx0 = b.x - a.x, dy0 = b.y - a.y; if (d < 0.01) { dx0 = (a.id % 2 ? 1 : -1); dy0 = 0.5; d = Math.sqrt(dx0 * dx0 + dy0 * dy0); } const k = a.side === b.side ? 0.5 : 0.25, p = (rr - d) * k / d; const dx = dx0 * p, dy = dy0 * p; if (!a.still) { a.x -= dx; a.y -= dy; } if (!b.still) { b.x += dx; b.y += dy; } } } }
   all.forEach(u => { u.x = Math.max(10, Math.min(TW.W - 10, u.x)); u.y = Math.max(10, Math.min(TW.H - 10, u.y)); });
   // здания
   for (const b of g.bld) {
@@ -272,8 +298,9 @@ function twStart(mode, opts) {
   opts = opts || {};
   if (TB) twStop();
   const T = TS(), seed = opts.seed != null ? opts.seed : (Math.floor(Math.random() * 1e9) >>> 0);
-  let deck0 = opts.deck0 || twDeck().map(c => twCardSpec(c, c.startsWith('h:') ? twHeroMul(c.slice(2)) : 1));
-  let deck1 = opts.deck1, bot = null, boss = 0, floor = opts.floor || T.floor, towerMul = 1;
+  const pvp = mode !== 'floor';
+  let deck0 = opts.deck0 || twDeck().map(c => twCardSpec(c, (c.startsWith('h:') ? twHeroMul(c.slice(2)) : 1) * (typeof twCardMul === 'function' ? twCardMul(c, pvp) : 1)));
+  let deck1 = opts.deck1, bot = opts.bot || null, boss = 0, floor = opts.floor || T.floor, towerMul = 1;
   if (mode === 'floor') {
     const m = twBotMul(floor);
     deck1 = twBotDeck(floor, 7).map(c => twCardSpec(c, m));
@@ -284,7 +311,7 @@ function twStart(mode, opts) {
     deck1 = opts.ghost.deck.map(c => twCardSpec(c.c, c.m));
   }
   const g = twNew({ seed, deck0, deck1, bot, boss, towerMul });
-  TB = { g, me: opts.me || 0, mode, floor, bot, ghost: opts.ghost || null, online: opts.online || null, acc: 0, last: 0, sel: -1, drag: null, imgs: {}, pending: [], startedAt: Date.now() };
+  TB = { g, me: opts.me || 0, mode, floor, bot, botName: opts.botName || null, ghost: opts.ghost || null, online: opts.online || null, acc: 0, last: 0, sel: -1, drag: null, imgs: {}, pending: [], startedAt: Date.now() };
   twRenderShell();
   TB.last = performance.now();
   TB.raf = requestAnimationFrame(twFrame);
@@ -300,7 +327,8 @@ function twFrame(now) {
     const inputs = [];
     // мои действия (в живом PvP — по расписанию)
     TB.pending = TB.pending.filter(a => { if (a.t <= g.tick) { inputs.push(a); return false; } return true; });
-    if (TB.mode === 'floor') { const a = twBot(g, 1, TB.bot.lvl) || twBotFollow(g, 1); if (a) inputs.push(a); }
+    if (TB.bot) { const a = twBot(g, 1, TB.bot.lvl) || twBotFollow(g, 1); if (a) inputs.push(a); }
+    else if (TB.mode === 'ghost') { const a = twGhostDefend(g); if (a) inputs.push(a); }
     if (TB.mode === 'ghost') TB.ghost.acts.forEach(a => { if (a.t === g.tick) inputs.push(Object.assign({}, a, { s: 1, slot: g.hand[1].indexOf(a.c), x: a.x, y: TW.H - a.y })); });
     twStep(g, inputs.filter(a => a.slot >= 0).sort((a, b) => a.s - b.s || a.slot - b.slot));
     TB.acc -= dt;
@@ -326,7 +354,7 @@ function twFlash(t) { const f = document.getElementById('tw-msg'); if (!f) retur
 function twRenderShell() {
   const host = document.getElementById('games-host'); if (!host) return;
   host.innerHTML = '<div class="tw-wrap"><div class="tw-top"><span id="tw-crowns">👑 0 : 0</span><span id="tw-time">3:00</span><button class="btn sm ghost" data-click="twQuit()">✕</button></div>' +
-    '<div class="tw-cv-box"><canvas id="tw-cv"></canvas><div class="tw-msg" id="tw-msg"></div></div>' +
+    '<div class="tw-cv-box"><canvas id="tw-cv"></canvas><div class="tw-msg" id="tw-msg"></div></div>' + (typeof twEmoteBar === 'function' ? twEmoteBar() : '') +
     '<div class="tw-mana"><div id="tw-mana-bar"></div><span id="tw-mana-n">5</span></div><div class="tw-hand" id="tw-hand"></div></div>';
   const cv = document.getElementById('tw-cv');
   const box = cv.parentElement;
@@ -376,17 +404,12 @@ function twDraw() {
   c.fillStyle = '#20331b'; c.fillRect(0, 0, TW.W, TW.H);
   if (me === 1) c.setTransform(-k, 0, 0, -k, TW.W * k, TW.H * k);
   // поле
-  c.fillStyle = '#20331b'; c.fillRect(0, 0, TW.W, TW.H);
-  c.fillStyle = '#2a4022'; c.fillRect(0, me === 1 ? 0 : TW.RIVER + 20, TW.W, TW.RIVER - 20);
-  c.fillStyle = '#1d3a52'; c.fillRect(0, TW.RIVER - 14, TW.W, 28);
-  c.fillStyle = '#5a4a32'; c.fillRect(64, TW.RIVER - 16, 32, 32); c.fillRect(264, TW.RIVER - 16, 32, 32);
+  c.drawImage(texTowerField(TW.W, TW.H, TW.RIVER), 0, 0, TW.W, TW.H);   // 2.4: новая текстура поля
   if (TB.sel >= 0 || TB.drag) { const sp = g.deck[me][g.hand[me][TB.sel >= 0 ? TB.sel : TB.drag.slot]]; if (sp && !sp.spell) { c.fillStyle = 'rgba(255,211,106,.08)'; c.fillRect(0, me === 1 ? 0 : TW.RIVER + 20, TW.W, TW.RIVER - 20); } }
   // здания
   g.bld.forEach(b => {
-    c.globalAlpha = b.alive ? 1 : 0.25;
-    c.fillStyle = mine(b.side) ? '#2e6b2a' : '#7a2a20'; c.beginPath(); c.arc(b.x, b.y, b.r, 0, 6.2832); c.fill();
-    c.strokeStyle = '#000'; c.lineWidth = 2; c.stroke();
-    c.fillStyle = '#fff'; c.font = (b.kind === 'throne' ? 22 : 16) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; twText(c, b.kind === 'throne' ? '🏛' : '🗼', b.x, b.y);
+    drawTwBuilding(c, b, mine(b.side));
+    c.globalAlpha = b.alive ? 1 : 0.25; c.textAlign = 'center'; c.textBaseline = 'middle';
     if (b.alive) twBar(c, b.x, b.y - b.r - 7, b.r * 2, b.hp / b.max, mine(b.side) ? 0 : 1);
     c.globalAlpha = 1;
   });
@@ -395,7 +418,8 @@ function twDraw() {
     c.beginPath(); c.arc(u.x, u.y, u.r, 0, 6.2832);
     const im = u.hero ? twImg(u.hero) : null;
     if (im) { c.save(); if (me === 1) { c.setTransform(k, 0, 0, k, (TW.W - u.x) * k, (TW.H - u.y) * k); c.beginPath(); c.arc(0, 0, u.r, 0, 6.2832); c.clip(); c.drawImage(im, -u.r, -u.r, u.r * 2, u.r * 2); } else { c.clip(); c.drawImage(im, u.x - u.r, u.y - u.r, u.r * 2, u.r * 2); } c.restore(); }
-    else { c.fillStyle = mine(u.side) ? '#3f8f3a' : '#a0392a'; c.fill(); if (u.ic) { c.font = (u.r * 1.2) + 'px sans-serif'; twText(c, u.ic, u.x, u.y + 1); } else if (!u.hero) { c.fillStyle = '#fff'; c.font = '9px sans-serif'; twText(c, u.bld ? '🪨' : '•', u.x, u.y); } }
+    else if (u.ic === '🗡' || u.ic === '🏹') { drawCreep(c, u.x, u.y, u.r * 1.05, mine(u.side) ? 0 : 1, u.ic === '🏹'); }
+    else { const gr = c.createRadialGradient(u.x - u.r * 0.3, u.y - u.r * 0.3, 1, u.x, u.y, u.r); gr.addColorStop(0, mine(u.side) ? '#7acf5a' : '#d0604a'); gr.addColorStop(1, mine(u.side) ? '#2a5a1c' : '#5a1810'); c.fillStyle = gr; c.fill(); if (u.ic) { c.font = (u.r * 1.2) + 'px sans-serif'; twText(c, u.ic, u.x, u.y + 1); } else if (!u.hero) { c.fillStyle = '#fff'; c.font = '9px sans-serif'; twText(c, u.bld ? '🪨' : '•', u.x, u.y); } }
     c.beginPath(); c.arc(u.x, u.y, u.r, 0, 6.2832); c.lineWidth = 2; c.strokeStyle = mine(u.side) ? '#6cff7a' : '#ff5a4a'; c.stroke();
     if (u.stun > 0) { c.font = '10px sans-serif'; twText(c, '💫', u.x, u.y - u.r - 10); }
     twBar(c, u.x, u.y - u.r - 4, u.r * 2, u.hp / u.max, mine(u.side) ? 0 : 1);
@@ -407,6 +431,7 @@ function twDraw() {
     if (f.k === 'shot') { c.strokeStyle = mine(f.side) ? '#bfffb0' : '#ffb0a0'; c.lineWidth = f.big ? 2 : 1; c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(f.x2, f.y2); c.stroke(); }
     else if (f.k === 'num') { c.fillStyle = mine(f.side) ? '#ff8a7a' : '#fff'; c.font = 'bold 10px sans-serif'; twText(c, f.v, f.x, f.y - (20 - f.life)); }
     else if (f.k === 'sun' || f.k === 'boom') { c.beginPath(); c.arc(f.x, f.y, (f.r || 40) * (1.2 - f.life / 30), 0, 6.2832); c.fillStyle = f.k === 'sun' ? 'rgba(255,220,80,.5)' : 'rgba(255,120,40,.5)'; c.fill(); }
+    else if (f.k === 'heal') { c.beginPath(); c.arc(f.x, f.y, f.r * (1.2 - f.life / 30), 0, 6.2832); c.fillStyle = 'rgba(90,255,120,.35)'; c.fill(); }
     else if (f.k === 'ult') { c.strokeStyle = '#ffd36a'; c.lineWidth = 3; c.beginPath(); c.arc(f.x, f.y, 30 - f.life, 0, 6.2832); c.stroke(); }
     c.globalAlpha = 1;
   });
@@ -443,11 +468,13 @@ function twFinish() {
   }
   if (mode === 'ghost') msg += twGhostResult(win);
   if (mode === 'live' && typeof twLiveResult === 'function') msg += twLiveResult(win, draw);
+  if (mode === 'cupbot') { msg += ' · против ' + (TB.botName || 'бота') + twCupsChange(win, draw); if (win) T.w++; else if (!draw) T.l++; twBoardPut(); }
+  if (typeof twMetaAfter === 'function') msg += twMetaAfter(mode, win, draw, g, TB.me);
   if (typeof track === 'function') { track('towerGames'); if (win) track('towerWins'); }
   save(); updateTop();
   const host = document.getElementById('games-host');
   const ov = document.createElement('div'); ov.className = 'tw-over';
-  ov.innerHTML = '<div class="cinzel">' + esc(msg) + '</div><div class="rg-row2">' + (mode === 'floor' ? '<button class="btn green" data-click="twAgain()">' + (win ? 'Следующий этаж ➜' : 'Ещё раз') + '</button>' : '') + '<button class="btn" data-click="twQuit()">В меню</button></div>';
+  ov.innerHTML = '<div class="cinzel">' + esc(msg) + '</div><div class="rg-row2">' + (mode === 'floor' ? '<button class="btn green" data-click="twAgain()">' + (win ? 'Следующий этаж ➜' : 'Ещё раз') + '</button>' : mode === 'cupbot' || mode === 'ghost' ? '<button class="btn green" data-click="twStop();twGhostFight()">⚔ Ещё PvP</button>' : '') + '<button class="btn" data-click="twQuit()">В меню</button></div>';
   const box = host && host.querySelector('.tw-cv-box'); if (box) box.appendChild(ov);
   sfx(win ? 'win' : 'lose');
   TB.done = true;
@@ -463,15 +490,19 @@ function confirmQuit() { return TB.g.tick < 90 || window.confirm('Выйти и�
 // ---------- меню «Башни» и колода ----------
 function renderTowerMenu() {
   const host = document.getElementById('tower-menu'); if (!host) return;
-  const T = TS(), deck = twDeck();
+  const T = TS();
+  const sm = twSeasonCheck(); if (sm) { save(); toast('🏯 Башня', sm); }
+  twCheckHits();
+  const body = twMetaBody();
+  if (body != null) { host.innerHTML = '<div class="tw-menu">' + twMetaTabs() + body + '</div>'; return; }
+  const deck = twDeck();
   const f = T.floor;
-  host.innerHTML = '<div class="tw-menu"><div class="tw-floor">Этаж <b>' + f + '</b> / ' + TW.floors + (f % 10 === 0 ? ' · 👑 БОСС: Рошан' : '') + '<div class="muted">Бот: ' + ['простой', 'средний', 'сложный'][twBotLvl(f)] + ' · лучший этаж ' + T.best + ' · наградных боёв сегодня ' + (T.day.d === todayStr() ? T.day.n : 0) + '/' + TW.rewardedPerDay + '</div><div>Награда: ' + fmt(twReward(f, true)) + ' 🔶' + (f % 10 === 0 ? ' + предмет' : '') + '</div></div>' +
+  host.innerHTML = '<div class="tw-menu">' + twMetaTabs() + '<div class="tw-floor">Этаж <b>' + f + '</b> / ' + TW.floors + (f % 10 === 0 ? ' · 👑 БОСС: Рошан' : '') + '<div class="muted">Бот: ' + ['простой', 'средний', 'сложный'][twBotLvl(f)] + ' · лучший этаж ' + T.best + ' · наградных боёв сегодня ' + (T.day.d === todayStr() ? T.day.n : 0) + '/' + TW.rewardedPerDay + '</div><div>Награда: ' + fmt(twReward(f, true)) + ' 🔶' + (f % 10 === 0 ? ' + предмет' : '') + '</div></div>' +
     '<div class="rg-row2"><button class="btn green big" data-click="twStartFloor()">⚔ Бой за этаж ' + f + '</button></div>' +
-    '<div class="rg-row2"><button class="btn" data-click="twGhostFight()">👻 PvP с призраком</button><button class="btn" data-click="twLiveQueue()">⚡ Живой PvP (бета)</button></div>' +
-    '<div class="muted" style="font-size:.75rem">MMR Башни: ' + T.mmr + ' · победы ' + T.w + ' / поражения ' + T.l + '</div>' +
+    '<div class="rg-row2"><button class="btn" data-click="twGhostFight()">👻 PvP на кубки</button><button class="btn" data-click="twLiveQueue()">⚡ Живой PvP</button></div>' +
+    '<div class="muted" style="font-size:.75rem">PvP: победа +' + TWM.cups.win + ' 🏆, поражение −' + TWM.cups.loss + ' (ниже начала своей арены не падаешь) · победы ' + T.w + ' / поражения ' + T.l + '</div>' +
     '<div class="sec-sub">Колода (8 карт) — нажми карту, чтобы заменить</div><div class="tw-deck">' + deck.map((c, i) => { const sp = twCardSpec(c, 1); return '<button class="tw-card" data-click="twDeckSwap(' + i + ')">' + twCardFace(sp) + '<b>' + sp.cost + '</b><small>' + esc(sp.n) + '</small></button>'; }).join('') + '</div>' +
-    '<div class="muted" style="font-size:.75rem">Как играть: перетащи карту (или нажми карту, потом поле) на свою половину. Юниты сами идут по линиям. Сломай Трон или больше башен за 3 минуты. Последняя минута — мана ×2. Уровень героя даёт до +60% силы карты.</div><div id="tw-board" class="muted"></div></div>';
-  twLoadBoard();
+    '<div class="muted" style="font-size:.75rem">Как играть: перетащи карту (или нажми карту, потом поле) на свою половину. Юниты сами идут по линиям. Сломай Трон или больше башен за 3 минуты. Последняя минута — мана ×2. Уровень героя даёт до +60% силы карты, уровень карты — до +56% (в PvP до +40%).</div></div>';
 }
 function twStartFloor() { twStart('floor', { floor: TS().floor }); }
 let twSwapI = -1;
@@ -479,8 +510,8 @@ function twDeckSwap(i) {
   twSwapI = i;
   const deck = twDeck();
   const heroes = HEROES.map(h => h.id).filter(id => !deck.includes('h:' + id)).sort((a, b) => S.heroes[b].level - S.heroes[a].level).slice(0, 40);
-  const extra = TW_EXTRA.filter(c => !deck.includes(c));
-  showModal('🃏', 'Заменить карту', '<div class="tw-deck">' + extra.map(c => '<button class="tw-card" data-click="twDeckSet(\'' + c + '\')">' + twCardFace(twCardSpec(c, 1)) + '<b>' + TW_CARDS[c].cost + '</b><small>' + esc(TW_CARDS[c].n) + '</small></button>').join('') +
+  const extra = TW_EXTRA.filter(c => !deck.includes(c) && twUnlocked(c));
+  showModal('🃏', 'Заменить карту', '<div class="tw-deck">' + extra.map(c => '<button class="tw-card" title="' + esc(TW_CARD_INFO[c] || '') + '" data-click="twDeckSet(\'' + c + '\')">' + twCardFace(twCardSpec(c, 1)) + '<b>' + TW_CARDS[c].cost + '</b><small>' + esc(TW_CARDS[c].n) + ' ур.' + twCard(c).l + '</small></button>').join('') +
     heroes.map(id => { const sp = twCardSpec('h:' + id, 1); return '<button class="tw-card" data-click="twDeckSet(\'h:' + id + '\')">' + twCardFace(sp) + '<b>' + sp.cost + '</b><small>' + esc(sp.n) + ' ур.' + S.heroes[id].level + '</small></button>'; }).join('') + '</div>', '', { html: true });
 }
 function twDeckSet(c) { if (!twCardOk(c) || twSwapI < 0) return; const d = twDeck().slice(); if (d.includes(c)) return; d[twSwapI] = c; TS().deck = d; save(); closeModal(); renderTowerMenu(); }
@@ -493,15 +524,15 @@ async function twSaveGhost(g) {
     const c = typeof cloud === 'function' ? cloud() : null; if (!c) return;
     const acts = g.acts.filter(a => a.s === 0).slice(0, 120).map(a => ({ t: a.t, c: a.c, x: a.x, y: a.y }));
     if (acts.length < 3) return;
-    const deck = g.deck[0].map(sp => ({ c: sp.c, m: Math.round(sp.mul * 100) / 100 }));
+    const deck = g.deck[0].map(sp => ({ c: sp.c, m: Math.max(0.5, Math.min(2, Math.round((sp.hero ? twHeroMul(sp.hero) : 1) * twCardMul(sp.c, true) * 100) / 100)) }));
     const T = TS();
-    await dbMulti({ ['tower_ghosts/' + c.uid]: { n: USER.nick, deck, acts, seed: g.o.seed, at: SV_TIME }, ['tower_board/' + c.uid]: { n: USER.nick, f: Math.min(TW.floors, T.best), mmr: T.mmr, at: SV_TIME } });
+    await dbMulti({ ['tower_ghosts/' + c.uid]: { n: USER.nick, deck, acts, seed: g.o.seed, at: SV_TIME }, ['tower_board/' + c.uid]: { n: USER.nick, f: Math.min(TW.floors, T.best), mmr: Math.min(9000, T.cups), a: twArenaIdx(T.cupsBest), at: SV_TIME } });
   } catch (e) { console.warn('twSaveGhost', e); }
 }
 function twCleanGhost(v) {
   if (!v || !Array.isArray(v.deck) || v.deck.length !== 8 || !Array.isArray(v.acts)) return null;
-  const deck = v.deck.map(x => ({ c: String(x.c), m: Math.max(0.5, Math.min(1.6, +x.m || 1)) }));
-  if (!deck.every(x => twCardOk(x.c))) return null;
+  const deck = v.deck.map(x => ({ c: String(x.c), m: Math.max(0.5, Math.min(2.0, +x.m || 1)) }));
+  if (!deck.every(x => TW_CARDS[x.c] || (x.c.startsWith('h:') && HERO_BY_ID[x.c.slice(2)]))) return null;
   // призрак ходит картами по индексу колоды: действия, которые не совпадут с рукой, просто пропустятся
   const acts = v.acts.filter(a => a && a.t >= 0 && a.c >= 0 && a.c < 8).slice(0, 120).map(a => ({ t: a.t | 0, c: a.c | 0, x: +a.x, y: +a.y }));
   return { n: String(v.n || '???').slice(0, 20), deck, acts, seed: v.seed >>> 0 };
@@ -511,33 +542,40 @@ async function twGhostFight() {
   if (!c) return showModal('☁', 'Нужен онлайн', 'PvP доступен после входа в облачный аккаунт.', '');
   try {
     const T = TS();
-    const part = await db('GET', 'tower_board', undefined, false, { orderBy: 'mmr', startAt: T.mmr - 300, endAt: T.mmr + 300, limitToFirst: 20 }) || {};
-    const ids = Object.keys(part).filter(u => u !== c.uid);
-    if (!ids.length) return showModal('👻', 'Нет соперников', 'Пока никто рядом по рейтингу не оставил призрака. Пройди пару этажей — и твой призрак появится для других.', '');
+    const part = await db('GET', 'tower_board', undefined, false, { orderBy: 'mmr', startAt: T.cups - 300, endAt: T.cups + 300, limitToFirst: 20 }) || {};
+    const ids = Object.keys(part).filter(u => u !== c.uid && !(typeof LIVE !== 'undefined' && LIVE.banned[u]));
+    if (!ids.length) return twCupBotStart();                     // никого рядом по кубкам — бот с похожими кубками
     const uid = ids[Math.floor(Math.random() * ids.length)];
     const gh = twCleanGhost(await db('GET', 'tower_ghosts/' + uid));
     if (!gh) return showModal('👻', 'Призрак повреждён', 'Попробуй ещё раз.', '');
-    gh.uid = uid; gh.mmr = part[uid].mmr || 1000;
+    gh.uid = uid; gh.mmr = part[uid].mmr || 0;
     twStart('ghost', { ghost: gh, seed: gh.seed });
-    twFlash('Против призрака ' + gh.n + ' (MMR ' + gh.mmr + ')');
+    twFlash('Против призрака ' + gh.n + ' (🏆 ' + gh.mmr + ')');
   } catch (e) { showModal('☁', 'Нет связи', 'Не удалось загрузить соперника: ' + e.message, 'bad'); }
 }
 function twGhostResult(win) {
   const T = TS(), gh = TB.ghost;
-  const exp = 1 / (1 + Math.pow(10, (gh.mmr - T.mmr) / 400));
-  const delta = Math.round(30 * ((win ? 1 : 0) - exp));
-  T.mmr = Math.max(0, Math.min(5000, T.mmr + delta)); win ? T.w++ : T.l++;
+  const cupMsg = twCupsChange(win, false); win ? T.w++ : T.l++;
+  if (win && gh.uid) twHit(gh.uid);                        // хозяин призрака теряет кубки
   const d = todayStr(); if (T.day.d !== d) T.day = { d, n: 0 };
   let gems = 0; if (win) { T.day.n++; if (T.day.n <= TW.rewardedPerDay) { gems = Math.round(rewardScale() * TW.reward.pvpWin); addGems(gems); } }
   twBoardPut();
-  return ' · MMR ' + (delta >= 0 ? '+' : '') + delta + (gems ? ' · +' + fmt(gems) + ' 🔶' : '');
+  return cupMsg + (gems ? ' · +' + fmt(gems) + ' 🔶' : '');
 }
-async function twBoardPut() { try { const c = cloud(); if (!c) return; const T = TS(); await db('PATCH', 'tower_board/' + c.uid, { n: USER.nick, f: Math.min(TW.floors, T.best), mmr: T.mmr, at: SV_TIME }); } catch (e) { } }
+// 2.4: призрак защищается — если на его линию идут юниты, отвечает картой (как средний бот)
+function twGhostDefend(g) {
+  const foes = g.units.filter(u => u.side === 0 && u.y < TW.RIVER + 40);
+  if (!foes.length || g.tick % 20) return null;
+  const B = g.bot = g.bot || { next: 0 }; if (g.tick < B.next) return null;
+  const a = twBot(g, 1, 1); return a;
+}
+async function twBoardPut() { try { const c = cloud(); if (!c) return; const T = TS(); await db('PATCH', 'tower_board/' + c.uid, { n: USER.nick, f: Math.min(TW.floors, T.best), mmr: Math.min(9000, T.cups), a: twArenaIdx(T.cupsBest), at: SV_TIME }); } catch (e) { } }
 async function twLoadBoard() {
   const b = document.getElementById('tw-board'); if (!b) return;
   try {
-    const d = await db('GET', 'tower_board', undefined, false, { orderBy: 'f', limitToLast: 15 }) || {};
-    const rows = Object.values(d).filter(x => x && typeof x.f === 'number').sort((x, y) => y.f - x.f || y.mmr - x.mmr);
-    b.innerHTML = rows.length ? '<div class="sec-sub">🏆 Рейтинг Башни</div><table class="rg-tab"><tr><th>#</th><th>Игрок</th><th>Этаж</th><th>MMR</th></tr>' + rows.map((x, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(x.n) + '</td><td>' + x.f + '</td><td>' + x.mmr + '</td></tr>').join('') + '</table>' : '';
+    const d = await db('GET', 'tower_board', undefined, false, { orderBy: 'mmr', limitToLast: 50 }) || {};
+    const rows = Object.entries(d).filter(([u]) => !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([, x]) => x).filter(x => x && typeof x.f === 'number').sort((x, y) => (y.mmr || 0) - (x.mmr || 0) || y.f - x.f);
+    const ar = i => { const a = TWM.arenas[Math.max(0, Math.min(TWM.arenas.length - 1, i | 0))]; return a.ic + ' ' + a.n; };
+    b.innerHTML = rows.length ? '<div class="sec-sub">🏆 Кубки «Защиты башен»</div><table class="rg-tab"><tr><th>#</th><th>Игрок</th><th>🏆</th><th>Лучшая арена</th><th>Этаж</th></tr>' + rows.map((x, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(String(x.n || '?').slice(0, 20)) + '</td><td>' + (x.mmr | 0) + '</td><td>' + ar(x.a) + '</td><td>' + (x.f | 0) + '</td></tr>').join('') + '</table>' : 'Пока пусто';
   } catch (e) { b.textContent = ''; }
 }

@@ -1,7 +1,9 @@
 // ================= LIVE-OPS: управление игрой без перезаливки =================
 // Узел config/ в базе (меняется в admin.html): множители баланса, объявление, техработы,
 // аварийные выключатели (PvP, подарки, слоты, сундуки), события. Без сети — последняя копия или дефолты CONFIG.
-const LIVE = { cfg: {}, banned: {}, me: { banned: false } };
+// 2.4: удалённые/скрытые аккаунты — не показываются в рейтинге и не попадаются соперниками, даже пока их данные лежат в базе
+const HIDDEN_UIDS = ['pODgwM9GYOXGHQEo2P4spRNNAve2', 'j2BMfKqIEZNkBk0jYo6zb1HkvHb2', 'iBWIwXEry0WgooOB6ueWMfvvrZk1', 'SNJf5eDRiyNDHCEXyMROA487PPw1', 'E2KgPbyOPbTeYfgsQhBDvFoCQUB3', '2tUkrW7sjSUFr70kO0eq4mPaBTv2', 'esv1XnoPMjOsXn85JAwa0r9iYfB3'];
+const LIVE = { cfg: {}, banned: Object.fromEntries(HIDDEN_UIDS.map(u => [u, true])), me: { banned: false } };
 const LIVE_KEY = 'd2m_live';
 // чистим то, что пришло из базы: только известные поля и правильные типы
 function cleanBalance(over, base) {

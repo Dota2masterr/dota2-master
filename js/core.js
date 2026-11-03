@@ -154,6 +154,29 @@ function migrate(st) {
   for (const hid in st.loadout) for (const sl in st.loadout[hid]) { const it = st.items.find(x => x.uid === st.loadout[hid][sl]); if (!it || it.heroId !== hid) delete st.loadout[hid][sl]; }
   // 2.3: MMR всех игроков сброшен в 0 (один раз)
   if (st.pvp && st.pvp.reset !== 1) { st.pvp.mmr = 0; st.pvp.peak = 0; st.pvp.reset = 1; }
+  // 2.4: сезонный сброс кристаллов (один раз). Герои, предметы, уровни арены не трогаются.
+  if (!st.season24) {
+    const R = CONFIG.seasonReset, had = Math.floor(st.gems || 0);
+    st.season24 = { had, at: Date.now(), vet: had >= R.vetFrom, shown: false };
+    if (had > R.keep) st.gems = R.keep;
+  }
+}
+// 2.4: окно с объяснением сброса и награда ветеранам
+function season24Modal() {
+  const z = S.season24, R = CONFIG.seasonReset; z.shown = true;
+  let gift = '';
+  if (z.vet && !z.gift) {
+    z.gift = 1;
+    grantTitle({ id: 'veteran-2-3', name: 'Ветеран 2.3', color: '#ff9a3a', icon: '🎖' });
+    const it = addSkin(mainHeroId(), 'rare');
+    gift = '<br><br>🎖 Ты был среди богатых игроков 2.3, поэтому получаешь титул <b style="color:#ff9a3a">«Ветеран 2.3»</b> и скин <b style="color:' + RARITY_COLOR.rare + '">' + esc(it.name) + '</b>.';
+  }
+  save();
+  if (z.had <= R.keep && !gift) return;
+  showModal('🔶', 'Новый сезон 2.4: сброс кристаллов',
+    'В 2.3 кристаллы копились слишком быстро: сундук Arcana окупался за минуту, и цены потеряли смысл. Поэтому в 2.4 у всех кристаллы сброшены до <b>' + fmt(R.keep) + '</b> (у тебя было ' + fmt(z.had) + ').' +
+    '<br><br>✅ Герои, их уровни, таланты, предметы, скины, арена и рекорды — остались как были.' +
+    '<br>📉 Награды теперь меньше, но и копить на хорошую вещь — 2–3 дня, а не минута.' + gift, 'ok', { html: true });
 }
 // перенос прогресса из старой версии (Dota 2 Upgrader) в первый созданный аккаунт
 function importLegacy(st) {
@@ -412,7 +435,7 @@ function profileCardHTML() {
   const st = (i, n, v) => '<div class="pf-st"><span>' + i + '</span><b>' + v + '</b><small>' + n + '</small></div>';
   return '<div class="pf-card"><div class="pf-ava"><img src="' + STEAM + 'heroes/' + (S.avatar || 'invoker') + '.png" referrerpolicy="no-referrer" alt=""></div>' +
     '<div class="pf-main"><div class="pf-nick">' + esc(USER.nick) + '</div>' + (ct ? titleHTML(ct) : '') +
-    '<div class="pf-rank" style="color:' + rk[2] + ';border-color:' + rk[2] + '">' + rk[0] + ' · ' + (pv.mmr || 0) + ' MMR</div></div></div>' +
+    '<div class="pf-rank" style="color:' + rk[2] + ';border-color:' + rk[2] + '">' + (typeof rankName === 'function' ? rankName(pv.mmr || 0) : rk[0]) + ' · ' + (pv.mmr || 0) + ' MMR</div></div></div>' +
     '<div class="pf-stats">' + st('⚔', 'Арена', (S.arena.cleared || 0) + '/100') + st('💪', 'Сила стака', fmtShort(stackPower())) + st('🏆', 'PvP', (pv.w || 0) + '–' + (pv.l || 0)) +
     st('⭐', 'Героев 50 ур.', maxed + '/' + HEROES.length) + st('🎒', 'Предметов', fmt(S.items.length)) + st('🟢', 'Arcana', arc) +
     st('🏅', 'Достижения', ach + '/' + achT) + st('🏰', 'Башня', 'этаж ' + ((S.tower && S.tower.best) || 0)) + st('🌀', 'Путь Древнего', ((S.rogue && S.rogue.wins) || 0) + ' побед') + '</div>' +
@@ -615,5 +638,6 @@ function startGame() {
   switchTab(['home','heroes','slots','collection','upgrade','arena','invoker','quests','chests','games','online'].includes(h) ? h : 'home');
   setTimeout(() => startTutorial(false), 600);
   if (typeof cloud === 'function' && fbOn() && cloud() && !bootSynced) { bootSynced = true; setTimeout(async () => { try { await syncServerTime(); } catch (e) { } try { await ensureNickClaim(); } catch (e) { } try { await cloudSync(); } catch (e) { } checkGifts(); checkPvpHits(); }, 1200); }
+  if (S.season24 && !S.season24.shown) season24Modal();
   if (S._imported) { delete S._imported; save(); showModal('📦', 'Прогресс перенесён', 'Уровни героев, золото (теперь кристаллы) и предметы из старой версии перенесены в этот аккаунт.', 'ok'); }
 }

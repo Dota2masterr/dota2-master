@@ -1,16 +1,31 @@
 // ================= ЛАВКА, ТАЛАНТЫ, СИНЕРГИИ, НАБОРЫ, РОШАН, РЕЖИМЫ =================
+// 2.4: цена предмета лавки растёт вместе с базовой наградой (×rewardScale / shopRef), но не ниже базовой
+function shopCost(id) { const b = CONFIG.shop[id] || 10000; const rs = typeof S !== 'undefined' && S && S.arena && typeof rewardScale === 'function' ? rewardScale() : 0; return Math.max(b, Math.round(b * rs / CONFIG.shopRef / 100) * 100); }
 const ITEM_ICON = n => STEAM + 'items/' + n + '.png';
 const SHOP = [
-  { id: 'black_king_bar', name: 'Black King Bar', cost: CONFIG.shop.black_king_bar, d: 'Главный герой не может быть оглушён', mods: { stunImmune: true } },
-  { id: 'heart', name: 'Heart of Tarrasque', cost: CONFIG.shop.heart, d: '+60% здоровья главному герою', mods: { hp: 1.6 } },
-  { id: 'butterfly', name: 'Butterfly', cost: CONFIG.shop.butterfly, d: 'Уклонение: главный герой получает на 30% меньше урона', mods: { taken: 0.7 } },
-  { id: 'greater_crit', name: 'Daedalus', cost: CONFIG.shop.greater_crit, d: '+20% шанс крита, крит ×2.6', mods: { crit: 0.2, critMul: 2.6 } },
-  { id: 'satanic', name: 'Satanic', cost: CONFIG.shop.satanic, d: 'Вампиризм 15% от нанесённого урона', mods: { lifesteal: 0.15 } },
-  { id: 'assault', name: 'Assault Cuirass', cost: CONFIG.shop.assault, d: 'Аура: вся команда +8% атаки', team: { atk: 1.08 } },
-  { id: 'pipe', name: 'Pipe of Insight', cost: CONFIG.shop.pipe, d: 'Аура: команда получает на 10% меньше урона', team: { taken: 0.9 } },
-  { id: 'ultimate_scepter', name: "Aghanim's Scepter", cost: CONFIG.shop.ultimate_scepter, d: 'Ульта главного героя ×1.5', mods: { ultMul: 1.5 } },
-  { id: 'refresher', name: 'Refresher Orb', cost: CONFIG.shop.refresher, d: 'Первая ульта в бою срабатывает дважды', mods: { refresher: true } },
-  { id: 'rapier', name: 'Divine Rapier', cost: CONFIG.shop.rapier, d: 'Атака главного героя ×1.8. Если он погибнет — рапира выпадет и пропадёт!', mods: { atk: 1.8, rapier: true } }
+  { id: 'black_king_bar', name: 'Black King Bar', get cost() { return shopCost('black_king_bar'); }, d: 'Главный герой не может быть оглушён', mods: { stunImmune: true } },
+  { id: 'heart', name: 'Heart of Tarrasque', get cost() { return shopCost('heart'); }, d: '+60% здоровья главному герою', mods: { hp: 1.6 } },
+  { id: 'butterfly', name: 'Butterfly', get cost() { return shopCost('butterfly'); }, d: 'Уклонение: главный герой получает на 30% меньше урона', mods: { taken: 0.7 } },
+  { id: 'greater_crit', name: 'Daedalus', get cost() { return shopCost('greater_crit'); }, d: '+20% шанс крита, крит ×2.6', mods: { crit: 0.2, critMul: 2.6 } },
+  { id: 'satanic', name: 'Satanic', get cost() { return shopCost('satanic'); }, d: 'Вампиризм 15% от нанесённого урона', mods: { lifesteal: 0.15 } },
+  { id: 'assault', name: 'Assault Cuirass', get cost() { return shopCost('assault'); }, d: 'Аура: вся команда +8% атаки', team: { atk: 1.08 } },
+  { id: 'pipe', name: 'Pipe of Insight', get cost() { return shopCost('pipe'); }, d: 'Аура: команда получает на 10% меньше урона', team: { taken: 0.9 } },
+  { id: 'ultimate_scepter', name: "Aghanim's Scepter", get cost() { return shopCost('ultimate_scepter'); }, d: 'Ульта главного героя ×1.5', mods: { ultMul: 1.5 } },
+  { id: 'refresher', name: 'Refresher Orb', get cost() { return shopCost('refresher'); }, d: 'Первая ульта в бою срабатывает дважды', mods: { refresher: true } },
+  // 2.4: новые предметы Dota
+  { id: 'abyssal_blade', name: 'Abyssal Blade', get cost() { return shopCost('abyssal_blade'); }, d: 'Аура: оглушения команды длятся на 1 ход дольше', team: { stunExtra: 1 } },
+  { id: 'monkey_king_bar', name: 'Monkey King Bar', get cost() { return shopCost('monkey_king_bar'); }, d: '+15% атаки и +10% шанс крита', mods: { atk: 1.15, crit: 0.1 } },
+  { id: 'skadi', name: 'Eye of Skadi', get cost() { return shopCost('skadi'); }, d: '+25% здоровья и +10% атаки', mods: { hp: 1.25, atk: 1.1 } },
+  { id: 'bloodthorn', name: 'Bloodthorn', get cost() { return shopCost('bloodthorn'); }, d: '+12% шанс крита, крит ×2.3, +10% атаки', mods: { crit: 0.12, critMul: 2.3, atk: 1.1 } },
+  { id: 'shivas_guard', name: "Shiva's Guard", get cost() { return shopCost('shivas_guard'); }, d: 'Аура: команда получает на 7% меньше урона', team: { taken: 0.93 } },
+  { id: 'sphere', name: "Linken's Sphere", get cost() { return shopCost('sphere'); }, d: 'Главный герой получает на 15% меньше урона', mods: { taken: 0.85 } },
+  { id: 'manta', name: 'Manta Style', get cost() { return shopCost('manta'); }, d: 'Иллюзии: атака главного героя +25%', mods: { atk: 1.25 } },
+  { id: 'radiance', name: 'Radiance', get cost() { return shopCost('radiance'); }, d: 'Аура: АоЕ-ульты команды +20%', team: { aoe: 1.2 } },
+  { id: 'octarine_core', name: 'Octarine Core', get cost() { return shopCost('octarine_core'); }, d: 'Ульта главного героя ×1.25', mods: { ultMul: 1.25 } },
+  { id: 'aeon_disk', name: 'Aeon Disk', get cost() { return shopCost('aeon_disk'); }, d: '+30% здоровья главному герою', mods: { hp: 1.3 } },
+  { id: 'desolator', name: 'Desolator', get cost() { return shopCost('desolator'); }, d: 'Атака главного героя +20%', mods: { atk: 1.2 } },
+  { id: 'vladmir', name: "Vladmir's Offering", get cost() { return shopCost('vladmir'); }, d: 'Аура: команда +5% атаки; главный герой — вампиризм 6%', team: { atk: 1.05 }, mods: { lifesteal: 0.06 } },
+  { id: 'rapier', name: 'Divine Rapier', get cost() { return shopCost('rapier'); }, d: 'Атака главного героя ×1.8. Если он погибнет — рапира выпадет и пропадёт!', mods: { atk: 1.8, rapier: true } }
 ];
 const CONSUMABLES = {
   aegis: { name: 'Aegis of the Immortal', icon: 'aegis', d: 'В следующем бою главный герой один раз воскреснет' },
@@ -50,9 +65,28 @@ function talentMods(id) {
 }
 function pendingTalents(id) { const h = S.heroes[id]; return TALENT_LEVELS.filter(L => h.level >= L && !(h.talents && h.talents[L] != null)); }
 function pickTalent(id, L, c) { const h = S.heroes[id]; h.talents = h.talents || {}; if (h.level < L || h.talents[L] != null) return; h.talents[L] = c; save(); renderPreview(); }
+// 2.4: сброс талантов — 1 бесплатный в неделю, дальше цена растёт ×2 за каждый сброс (CONFIG.talentReset)
+function talentResetWeek() { const d = new Date(nowMs()); const j = new Date(Date.UTC(d.getUTCFullYear(), 0, 1)); return d.getUTCFullYear() + '-' + Math.floor((d - j) / 6048e5); }
+function talentResetCost() {
+  const T = CONFIG.talentReset, R = S.talentReset = S.talentReset || { week: '', free: 0, n: 0 };
+  if (R.week !== talentResetWeek()) { R.week = talentResetWeek(); R.free = 0; }
+  if (R.free < T.freePerWeek) return 0;
+  return Math.round(rewardScale() * T.baseMul * Math.pow(T.growth, Math.min(10, R.n)));
+}
+function resetTalents(id) {
+  const h = S.heroes[id]; if (!h || !h.talents || !Object.keys(h.talents).length) return;
+  const cost = talentResetCost();
+  confirmBox('Сбросить таланты?', 'Все таланты ' + esc(HERO_BY_ID[id].name) + ' сбросятся, их можно будет выбрать заново. ' + (cost ? 'Цена: ' + gemHTML(cost) : 'Сейчас бесплатно (1 раз в неделю).'), () => {
+    const c = talentResetCost();
+    if (c && !canPay(c)) return showModal('🔶', 'Мало кристаллов', 'Нужно ' + fmt(c), 'bad');
+    if (c) { addGems(-c); S.talentReset.n++; } else S.talentReset.free++;
+    h.talents = {}; save(); renderPreview(); renderHeroList(); updateTop();
+  }, true);
+}
 function renderTalents(id) {
   const h = S.heroes[id];
-  let html = '<div class="talent-tree"><div class="tt-title">Таланты</div>';
+  const any = h.talents && Object.keys(h.talents).length;
+  let html = '<div class="talent-tree"><div class="tt-title">Таланты' + (any ? ' <button class="btn sm ghost tt-reset" data-click="resetTalents(\'' + id + '\')">↺ Сбросить' + (talentResetCost() ? ' · ' + fmt(talentResetCost()) + ' 🔶' : ' · бесплатно') + '</button>' : '') + '</div>';
   TALENT_LEVELS.slice().reverse().forEach(L => {
     const ch = h.talents && h.talents[L];
     const open = h.level >= L;
@@ -115,7 +149,7 @@ function buildTeam(opts) {
         if (S.cons.cheese > 0 && S.useCons.cheese) m.cheese = true;
       }
     }
-    if (id === heroOfDay()) m = mergeMods(m, { atk: CONFIG.heroOfDay.powerMul, hp: CONFIG.heroOfDay.powerMul });
+    if (id === heroOfDay() && CONFIG.heroOfDay.powerMul !== 1) m = mergeMods(m, { atk: CONFIG.heroOfDay.powerMul, hp: CONFIG.heroOfDay.powerMul });
     return { id, p: heroPower(id), mods: m };
   });
   return { team, tm: teamMods(ids), ids };
@@ -183,8 +217,29 @@ function setArenaMode(m) { arenaMode = m; cmBan = -1; renderLevelInfo(); }
 function modeDef(def) {
   const d = JSON.parse(JSON.stringify({ L: def.L, waves: def.waves, R: def.R, K: def.K, reward: def.reward, skin: def.skin, eq: def.eq, mechText: def.mechText }));
   d.loc = def.loc;
+  counterPickWaves(d, getStack());
   if (arenaMode === 'turbo') { d.waves.forEach(w => w.power = Math.round(w.power * 0.85)); d.reward = Math.round(d.reward * 0.5); d.skin = d.eq = false; d.turbo = true; }
   if (arenaMode === 'cm' && cmBan >= 0 && d.waves[cmBan]) { const w = d.waves[cmBan]; w.power = Math.round(w.power * 0.4); w.name = 'Крипы (бан: ' + w.name + ')'; w.id = 'creeps'; w.boss = false; if (w.mech) { delete w.mech; d.mechText = ''; } d.reward = Math.round(d.reward * 0.85); }
+  return d;
+}
+// 2.4: с 30-го уровня часть врагов (15%→60% к 100-му) подбирается против самой частой роли в твоём стаке.
+// Подбор детерминирован (одинаков в подсказке и в бою), сила волны не меняется — меняется только кто.
+function counterPickWaves(d, ids) {
+  const C = CONFIG.combat; if (!d.L || d.L < C.counterFrom || !ids || !ids.length) return d;
+  const cnt = {}; ids.forEach(id => { const r = heroRole(id); cnt[r] = (cnt[r] || 0) + 1; });
+  const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
+  const want = roleWeakTo(top);
+  const pool = HEROES.map(h => h.id).filter(id => want.includes(heroRole(id)));
+  if (!pool.length) return d;
+  const ch = C.counterChanceMin + (C.counterChanceMax - C.counterChanceMin) * Math.min(1, (d.L - C.counterFrom) / (100 - C.counterFrom));
+  const r = seeded(d.L * 4099 + ids.join('').length * 31 + top.length);
+  const used = new Set(d.waves.map(w => w.id));
+  d.waves.forEach(w => {
+    if (w.boss || w.mech || w.id === 'creeps' || r() >= ch) return;
+    let id, k = 0; do { id = pool[Math.floor(r() * pool.length)]; } while (used.has(id) && ++k < 20);
+    used.add(id); w.id = id; w.name = HERO_BY_ID[id].name; w.counter = true;
+  });
+  d.counterRole = top;
   return d;
 }
 function survivalDef() {

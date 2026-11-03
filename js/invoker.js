@@ -113,7 +113,7 @@ function invPress(k) {
   const cast = INV_SPELLS.find(x => x.orbs.split('').sort().join('') === got);
   if (cast) { invInvoked = [cast].concat(invInvoked.filter(x => x !== cast)).slice(0, 2); }
   if (got === need) {
-    invOk++; invIdx++; invOrbs = []; fb.textContent = '✓ ' + sp.name; fb.style.color = 'var(--ok)'; invCastFx(sp, true); sfx('hit');
+    invOk++; invIdx++; invOrbs = []; fb.textContent = '✓ ' + sp.name; fb.style.color = 'var(--ok)'; sfx('hit');   // 2.4: без всплывающей картинки
     if (invMode === 'survival') invDeadline = Date.now() + Math.max(1200, 4000 - invOk * 110);
     if (invIdx >= invOrder.length) {
       invStop();

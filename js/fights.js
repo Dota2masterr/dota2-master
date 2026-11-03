@@ -37,7 +37,7 @@ function endFightBattle(def, result, st) {
     if (f.boss === 'tormentor') { S.shards = Math.min(5, (S.shards || 0) + 1); msg += ' · Aghanim\'s Shard (' + S.shards + '/5)'; }
     if (f.rosh) { S.cons = S.cons || { aegis: 0, cheese: 0 }; S.cons.aegis++; msg += ' · Aegis'; }
     if (f.xp) { const ids = getStack().slice(0, 3).filter(x => S.heroes[x].level < CONFIG.maxLevel); if (ids.length) { const h = pick(ids); S.heroes[h].level++; msg += ' · ' + HERO_BY_ID[h].name + ' +1 ур.'; } }
-    track('fightsWon');
+    track('fightsWon'); msg += hodWin(BT.team.map(t => t.id));
   } else if (result.win) msg += ' · награда за этот файт сегодня уже получена';
   arenaLog(result.win ? 'win' : 'lose', msg); feed(msg, result.win ? 'var(--ok)' : 'var(--danger)');
   save(); updateTop();

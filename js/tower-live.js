@@ -13,7 +13,7 @@ function twLiveQueue() {
   if (TWQ) return;
   TWQ = { uid: c.uid, t0: Date.now(), timer: null };
   showModal('⚡', 'Поиск соперника…', 'Ждём второго игрока (до 60 секунд). Колода — твоя текущая колода Башни.', '', { buttons: [{ t: 'Отмена', f: () => { twLiveCancel(); closeModal(); } }] });
-  db('PUT', 'tower_queue/' + c.uid, { n: USER.nick, mmr: TS().mmr, at: SV_TIME }).catch(() => { });
+  db('PUT', 'tower_queue/' + c.uid, { n: USER.nick, mmr: Math.min(5000, TS().cups), at: SV_TIME }).catch(() => { });
   TWQ.timer = setInterval(twLivePoll, 1500);
 }
 async function twLiveCancel() {
@@ -22,7 +22,7 @@ async function twLiveCancel() {
 }
 async function twLivePoll() {
   if (!TWQ || TWQ.busy) return;
-  if (Date.now() - TWQ.t0 > 60000) { await twLiveCancel(); return showModal('⚡', 'Никого нет', 'Сейчас нет соперников онлайн. Сыграй с призраком — это тоже PvP.', ''); }
+  if (Date.now() - TWQ.t0 > TWM.cups.botAfterSec * 1000) { await twLiveCancel(); closeModal(); return twCupBotStart(); }   // 2.4: нет соперника 25 с — бот с похожими кубками
   TWQ.busy = true;
   try {
     const me = TWQ.uid;
@@ -32,7 +32,7 @@ async function twLivePoll() {
     if (rid) return twLiveJoin(rid, rooms[rid], 'a');
     // соперник в очереди?
     const q = await db('GET', 'tower_queue', undefined, false, { orderBy: 'at', startAt: Date.now() - 60000, limitToLast: 10 }) || {};
-    const opp = Object.keys(q).filter(u => u !== me).sort((x, y) => Math.abs(q[x].mmr - TS().mmr) - Math.abs(q[y].mmr - TS().mmr))[0];
+    const opp = Object.keys(q).filter(u => u !== me).sort((x, y) => Math.abs(q[x].mmr - TS().cups) - Math.abs(q[y].mmr - TS().cups))[0];
     if (opp && me > opp) {
       const id = me.slice(0, 8) + opp.slice(0, 8) + Date.now().toString(36);
       const room = { a: opp, b: me, na: String(q[opp].n || '???').slice(0, 20), nb: USER.nick, seed: Math.floor(Math.random() * 1e9), at: SV_TIME };
@@ -46,7 +46,7 @@ async function twLiveJoin(id, room, role) {
   const uid = TWQ.uid; clearInterval(TWQ.timer); TWQ = null;
   db('DELETE', 'tower_queue/' + uid).catch(() => { });
   closeModal();
-  const deck = twDeck().map(c => ({ c, m: Math.round((c.startsWith('h:') ? twHeroMul(c.slice(2)) : 1) * 100) / 100 }));
+  const deck = twDeck().map(c => ({ c, m: Math.min(2, Math.round((c.startsWith('h:') ? twHeroMul(c.slice(2)) : 1) * twCardMul(c, true) * 100) / 100) }));
   try { await db('PUT', 'tower_rooms/' + id + '/d/' + uid, deck); } catch (e) { return showModal('☁', 'Ошибка', 'Не удалось войти в комнату.', 'bad'); }
   showModal('⚡', 'Соперник найден!', 'Ждём колоду соперника…', '');
   const opp = role === 'a' ? room.b : room.a;
@@ -89,6 +89,8 @@ async function twLiveSync() {
         TB.pending.push({ t: a.t | 0, s: 1 - TB.me, slot: a.slot | 0, x: +a.x, y: +a.y });
       });
       if (r.left && r.left[o.opp]) o.gone = 'left';
+      o.emoSeen = o.emoSeen || {};
+      Object.keys(r.emo || {}).forEach(k => { const e = r.emo[k]; if (o.emoSeen[k] || !e || e.u !== o.opp) return; o.emoSeen[k] = 1; const em = TWM.emotes[e.e | 0]; if (em) twShowEmote(1 - TB.me, em); });
     }
     if (!o.gone && Date.now() - o.lastOpp > 15000) o.gone = 'timeout';
     if (o.gone && !TB.g.over) { twEnd(TB.g, TB.me); twFlash(o.gone === 'left' ? 'Соперник вышел — победа!' : 'Соперник пропал — победа!'); }
@@ -97,11 +99,10 @@ async function twLiveSync() {
 function twLiveLeave() { const o = TB && TB.online; if (!o) return; db('PUT', 'tower_rooms/' + o.id + '/left/' + o.uid, true).catch(() => { }); }
 function twLiveResult(win, draw) {
   const T = TS(); const o = TB.online;
-  const delta = draw ? 0 : win ? 25 : -25;
-  T.mmr = Math.max(0, Math.min(5000, T.mmr + delta)); if (!draw) win ? T.w++ : T.l++;
+  const cupMsg = twCupsChange(win, draw); if (!draw) win ? T.w++ : T.l++;
   const d = todayStr(); if (T.day.d !== d) T.day = { d, n: 0 };
   let gems = 0; if (win && !o.gone) { T.day.n++; if (T.day.n <= TW.rewardedPerDay) { gems = Math.round(rewardScale() * TW.reward.pvpWin); addGems(gems); } }
   twBoardPut();
   clearInterval(o.timer);
-  return ' · против ' + o.oppName + ' · MMR ' + (delta >= 0 ? '+' : '') + delta + (gems ? ' · +' + fmt(gems) + ' 🔶' : '');
+  return ' · против ' + o.oppName + cupMsg + (gems ? ' · +' + fmt(gems) + ' 🔶' : '');
 }

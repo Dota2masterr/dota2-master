@@ -6,9 +6,28 @@ function heroOfDay() {
   return HEROES[Math.floor(r() * HEROES.length)].id;
 }
 function heroSpinCost(id) { const c = spinCost(S.heroes[id].level); return id === heroOfDay() ? Math.round(c * CONFIG.heroOfDay.spinMul) : c; }
+// 2.4: «Испытание дня» — выиграй бои с героем дня в стаке, получи его скин и кристаллы
+function hodState() { const d = todayStr(); if (!S.hod || S.hod.d !== d) S.hod = { d, n: 0, done: false }; return S.hod; }
+function hodWin(ids) {
+  const id = heroOfDay(), st = hodState();
+  if (st.done || !ids || !ids.includes(id)) return '';
+  st.n++;
+  if (st.n < CONFIG.heroOfDay.wins) return ' · ☀ Испытание дня ' + st.n + '/' + CONFIG.heroOfDay.wins;
+  st.done = true;
+  const g = Math.round(rewardScale() * CONFIG.heroOfDay.rewardMul); addGems(g);
+  const sk = addSkin(id, weightedRarity({ rare: 50, mythical: 32, immortal: 15, arcana: 3 }));
+  if (typeof toast === 'function') toast('☀ Испытание дня выполнено', HERO_BY_ID[id].name + ': ' + sk.name + ' (' + RARITY_NAMES[sk.rarity] + ') + ' + fmt(g) + ' кристаллов');
+  return ' · ☀ Испытание дня выполнено: ' + sk.name + ' + ' + fmt(g) + ' 🔶';
+}
+function hodTake() {
+  const id = heroOfDay(); const cs = getStack();
+  if (cs.includes(id)) return showModal('☀', 'Уже в стаке', HERO_BY_ID[id].name + ' уже в твоей команде. Выигрывай бои!', 'ok', { auto: true });
+  cs[cs.length - 1] = id; S.customStack = cs; save(); if (currentTab === 'arena') renderArena(); else switchTab('arena');
+  showModal('☀', 'Герой дня в стаке', HERO_BY_ID[id].name + ' заменил последнего героя команды. Состав можно поменять кнопкой «Свой стак».', 'ok', { auto: true });
+}
 function hodBanner(compact) {
-  const id = heroOfDay(), h = HERO_BY_ID[id];
-  return '<div class="hod' + (compact ? ' compact' : '') + '" data-click="goHero(\'' + id + '\')"><img src="' + heroImg(id) + '" referrerpolicy="no-referrer"><div><div class="hod-t">☀ Герой дня: <b>' + esc(h.name) + '</b></div><div class="hod-d">Крутки за полцены · +20% силы в бою · ур. ' + S.heroes[id].level + '</div></div></div>';
+  const id = heroOfDay(), h = HERO_BY_ID[id], st = hodState(), need = CONFIG.heroOfDay.wins;
+  return '<div class="hod' + (compact ? ' compact' : '') + '"><img src="' + heroImg(id) + '" referrerpolicy="no-referrer" data-click="goHero(\'' + id + '\')"><div style="flex:1"><div class="hod-t">☀ Испытание дня: <b>' + esc(h.name) + '</b></div><div class="hod-d">' + (st.done ? '✓ Выполнено — приходи завтра за новым героем' : 'Выиграй ' + need + ' боя с ним в стаке (арена, файты, PvP) · ' + st.n + '/' + need + ' · награда: его скин + ' + fmt(Math.round(rewardScale() * CONFIG.heroOfDay.rewardMul)) + ' 🔶') + '</div></div>' + (st.done ? '' : '<button class="btn sm gold" data-click="hodTake()">В стак</button>') + '</div>';
 }
 
 // ---------- Автоспин в слотах ----------
@@ -48,7 +67,7 @@ function updateAutoUI() {
 const ACH_COLORS = ['#e8c77a', '#ade55c', '#7ad3ff', '#ff8a3a', '#c8a4ff'];
 // Особые титулы по нику (ключ — ник в нижнем регистре). «ГОМО» — титул разработчиков и выданный лично.
 const GOMO = { id: 'gomo', name: 'ГОМО', color: '#ff4ae0', icon: '🛠' };
-const GRANTED_TITLES = { dranik: [GOMO], wowchess: [GOMO], 'доза героина': [GOMO] };
+const GRANTED_TITLES = { dranik: [GOMO], wowchess: [GOMO] };
 function grantedTitles() { return (USER && GRANTED_TITLES[USER.key]) || []; }
 function titleOptions() {
   const res = grantedTitles().map(t => ({ id: t.id, name: t.name, color: t.color, special: true }));

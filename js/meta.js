@@ -43,10 +43,12 @@ function announce(text, opts) {
 }
 
 // ---------- СУНДУКИ ----------
+// 2.4: цена сундука растёт вместе с базовой наградой (rewardScale × scaleMul), но не ниже cost
+function chestCost(id) { const x = CONFIG.chests[id]; const rs = typeof rewardScale === 'function' && typeof S !== 'undefined' && S && S.arena ? rewardScale() : 0; return Math.max(x.cost, Math.round(rs * (x.scaleMul || 0) / 100) * 100); }
 const CHESTS = [
-  { id: 'ancient', name: 'Treasure of the Ancients', cost: CONFIG.chests.ancient.cost, color: '#5e98d9', w: CONFIG.chests.ancient.w },
-  { id: 'immortal', name: 'Immortal Treasure', cost: CONFIG.chests.immortal.cost, color: '#e4ae39', w: CONFIG.chests.immortal.w },
-  { id: 'arcana', name: 'Arcana Treasure', cost: CONFIG.chests.arcana.cost, color: '#ade55c', w: CONFIG.chests.arcana.w }
+  { id: 'ancient', name: 'Treasure of the Ancients', get cost() { return chestCost('ancient'); }, color: '#5e98d9', w: CONFIG.chests.ancient.w },
+  { id: 'immortal', name: 'Immortal Treasure', get cost() { return chestCost('immortal'); }, color: '#e4ae39', w: CONFIG.chests.immortal.w },
+  { id: 'arcana', name: 'Arcana Treasure', get cost() { return chestCost('arcana'); }, color: '#ade55c', w: CONFIG.chests.arcana.w }
 ];
 function chestPool(rarity) {
   return CS_ITEMS.filter(x => x.rarity === rarity).map(x => ({ kind: 'eq', c: x }))

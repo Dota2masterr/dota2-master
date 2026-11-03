@@ -766,3 +766,69 @@ label.chk input{width:20px;height:20px}
 .pf-st span{font-size:1.1rem}.pf-st b{color:var(--gold2);font-size:.95rem}.pf-st small{font-size:.62rem;color:var(--muted)}
 .pf-top{display:grid;gap:4px;margin-bottom:8px}.pf-hero{display:flex;gap:8px;align-items:center}.pf-hero img{width:56px;height:32px;object-fit:cover;border-radius:3px}.pf-hero small{display:block;color:var(--muted);font-size:.68rem}
 .pf-edit{border-top:1px solid var(--line);padding-top:6px}.pf-edit summary{cursor:pointer;min-height:44px;display:flex;align-items:center;color:var(--gold2)}
+/* 2.4: линии боя, задний враг, тайминг ульты */
+.bt-side.left .unit.front{margin-left:34px}
+.bt-side.left .unit.back{margin-left:0;opacity:.95}
+.bt-side.right .unit.back{width:110px;opacity:.82;filter:saturate(.8);margin-right:-4px;order:2}
+.bt-side.right .unit.back .uimg{width:110px;height:46px}
+.bt-side.right .unit.back .uult{width:18px;height:18px}
+.bt-side.right .unit.back::before{content:'задняя линия';position:absolute;bottom:-13px;right:0;font-size:.58rem;color:#ffb0a0;text-shadow:0 1px 2px #000}
+.unit.ult-good .uimg{box-shadow:0 0 0 2px #ffe36a,0 0 22px #ffe36a!important;animation:ultgood .7s ease-in-out infinite alternate}
+@keyframes ultgood{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+.unit.enemy.eult-soon .ucharge>div{background:linear-gradient(90deg,#c0301e,#ff8a5a);animation:ultgood .5s infinite alternate}
+.role-b{display:inline-block;min-width:1.2em;text-align:center}
+.role-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;font-size:.78rem}
+.role-row .rt{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:3px;padding:1px 5px}
+.role-row .rt.good{border-color:var(--ok);color:#bff5c0}.role-row .rt.bad{border-color:var(--danger);color:#ffc0b8}
+@media (max-width:700px){.bt-side.right .unit.back{width:80px}.bt-side.right .unit.back .uimg{width:80px;height:34px}.bt-side.left .unit.front{margin-left:18px}}
+.wave-strip .w.counter{outline:2px solid #ff6a4a}
+.bot-tag{font-size:.62rem;background:#2a3440;color:#9fc4e8;border:1px solid #4a6a8a;border-radius:3px;padding:0 4px;margin-left:4px}
+/* 2.4: Защита башен — мета */
+.tw-arena{display:flex;gap:10px;align-items:center;background:linear-gradient(90deg,rgba(255,211,106,.12),transparent);border:1px solid rgba(255,211,106,.25);border-radius:6px;padding:8px 10px;margin-bottom:8px}
+.tw-aic{font-size:2rem}
+.tw-tabs{flex-wrap:wrap;margin-bottom:8px}.tw-tabs button{min-height:44px}
+.tw-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px;margin-top:6px}
+.tw-ccard{display:flex;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px}
+.tw-ccard.lock{opacity:.5}.tw-ccard .tw-card{pointer-events:none;flex:0 0 auto}
+.tw-cinfo{flex:1;font-size:.78rem}.tw-cinfo .muted{font-size:.7rem}
+.tw-prog{position:relative;height:12px;background:#111;border:1px solid #000;border-radius:3px;margin:4px 0;overflow:hidden}
+.tw-prog>div{height:100%;background:linear-gradient(90deg,#3a7ad0,#7ad3ff)}.tw-prog span{position:absolute;inset:0;font-size:.6rem;text-align:center;line-height:12px}
+.tw-slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
+.tw-slot{min-height:96px;border:1px dashed rgba(255,255,255,.2);border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(0,0,0,.25);color:inherit;font:inherit}
+.tw-slot.empty{color:#666;font-size:.75rem}.tw-slot.ready{border:2px solid var(--ok);box-shadow:0 0 14px rgba(108,197,63,.5)}.tw-slot.opening{border-color:var(--gold2)}
+.tw-sic{font-size:1.8rem}.tw-slot small{font-size:.68rem;color:var(--muted)}
+.tw-odds{font-size:.74rem;margin:3px 0;color:#cfc6b0}
+.tw-shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-top:6px}
+.tw-shopi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:4px;font-size:.8rem}
+.tw-shopi .muted{font-size:.7rem}
+.tw-road{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.tw-rstep,.tw-quest{display:flex;gap:8px;align-items:center;justify-content:space-between;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:4px 8px;font-size:.8rem;min-height:44px}
+.tw-rstep.ok{border-color:var(--gold2)}.tw-rstep.got,.tw-quest.got{opacity:.6}
+.tw-emobar{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin:4px 0}
+.tw-emob{min-width:44px;min-height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.4);font-size:1.1rem;color:#fff;cursor:pointer}
+.tw-emo{position:absolute;left:50%;transform:translateX(-50%);font-size:2.2rem;padding:4px 12px;background:rgba(0,0,0,.55);border-radius:20px;animation:twemo 2.2s ease forwards;pointer-events:none;z-index:5}
+.tw-emo.me{bottom:18%}.tw-emo.opp{top:12%}
+@keyframes twemo{0%{opacity:0;transform:translateX(-50%) scale(.5)}15%{opacity:1;transform:translateX(-50%) scale(1.15)}25%{transform:translateX(-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
+@media (max-width:520px){.tw-slots{grid-template-columns:repeat(2,1fr)}}
+/* 2.4: кооп-боссы */
+.coop-list{display:flex;flex-direction:column;gap:6px}
+.coop-b{display:flex;gap:10px;align-items:flex-start;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:8px;cursor:pointer;background:rgba(255,255,255,.03);font-size:.82rem}
+.coop-b.sel{border-color:var(--gold2);background:rgba(232,199,122,.08)}.coop-b .muted{font-size:.72rem}
+.coop-ic{font-size:1.9rem}
+.coop-act{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.coop-act input{flex:1;min-width:120px;min-height:44px}
+.coop-act .btn{min-height:44px}
+.coop-invrow{margin-top:6px;padding:6px;border:1px solid var(--gold3);border-radius:4px;font-size:.8rem}
+.bt-side.left.six{gap:3px}
+.bt-side.left.six .unit{width:118px}.bt-side.left.six .unit .uimg{width:118px;height:44px}
+.unit.coop.mine .uimg{border-color:var(--gold2)}.unit.coop.mate{opacity:.9}
+.unit.coop.mate .uimg{border-color:#6aa8e0}
+.unit.aggro::after{content:'🛡 агро';position:absolute;left:-2px;bottom:-12px;font-size:.58rem;color:#ffd36a;text-shadow:0 1px 2px #000}
+.bt-coop-st{position:absolute;left:50%;top:8px;transform:translateX(-50%);font-size:.9rem;color:#ffd36a;text-shadow:0 1px 3px #000;z-index:6}
+@media (max-width:700px){.bt-side.left.six .unit{width:86px}.bt-side.left.six .unit .uimg{width:86px;height:32px}}
+/* 2.4: окно «Что нового» */
+.wn{text-align:left;max-height:62vh;overflow:auto;font-size:.85rem}
+.wn-h{font-family:Cinzel;color:var(--gold2);margin:10px 0 4px;letter-spacing:1px}
+.wn-t{width:100%;border-collapse:collapse;font-size:.78rem}
+.wn-t th,.wn-t td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left}
+.wn-t th{color:var(--muted);font-weight:400}.wn-t td.was{color:#d88;text-decoration:line-through;text-decoration-color:rgba(255,120,120,.4)}.wn-t td.now{color:#9fe89a;font-weight:700}
+.wn ul{margin:4px 0 0 18px}

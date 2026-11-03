@@ -21,14 +21,9 @@ function simTrackGems(book) {
 function simSlotEV(machineId, spins) {
   const m = MACHINES.find(x => x.id === machineId); let gems = 0, items = 0;
   for (let k = 0; k < spins; k++) {
-    const res = []; for (let r = 0; r < m.reels; r++) res.push(pickSlotSym(m.kind));
-    const cnt = {}; res.forEach(s => cnt[s.rarity] = (cnt[s.rarity] || 0) + 1);
-    const best = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || rarityIdx(b) - rarityIdx(a))[0]; const n = cnt[best];
-    let mult = 0, drops = 0;
-    if (n === m.reels) { mult = m.full[best]; drops = m.kind === 'eq' && m.reels === 5 ? 2 : 1; }
-    else if (n >= 2) { mult = m.multi[n] || 0; if (mult) drops = n >= 4 && m.kind === 'eq' ? 2 : (n >= 3 || (m.reels === 3 && CONFIG.slotPairDropsItem) ? 1 : 0); }
-    if (!mult && m.arcAny && cnt.arcana) { mult = m.arcAny; drops = 0; }
-    gems += mult; items += drops * CONFIG.sell[best] * (m.kind === 'eq' ? CONFIG.sellEqMul : 1);
+    const wins = slotLineWins(m, rollGrid(m));
+    gems += wins.reduce((a, w) => a + w.mult, 0);
+    wins.filter(w => w.drop).slice(0, 2).forEach(w => { items += (m.kind === 'eq' && w.n === 5 ? 2 : 1) * CONFIG.sell[w.rarity] * (m.kind === 'eq' ? CONFIG.sellEqMul : 1); });
   }
   return { gemsPerBet: gems / spins, itemValuePerBet: items / spins };
 }
@@ -52,7 +47,7 @@ function simPlayer(o) {
     if (r.win) {
       addGems(replay ? Math.round(def.reward * CONFIG.arena.replayMul * replayFactor()) : def.reward); S.arena.wins++; track('arenaWins');
       if (!replay) { S.arena.cleared = L; const ri = Math.max(0, Math.min(5, Math.floor(L / 17))); if (def.eq) addEquipment(bt.team[0].id, RARITIES[ri]); if (def.skin) addSkin(def.waves[def.waves.length - 1].id, RARITIES[Math.min(5, ri + 1)]); }
-    } else { tag('арена: утешение'); addGems(Math.round(def.reward * 0.08)); S.arena.losses++; }
+    } else { tag('арена: утешение'); const pd = todayStr(); if (!S.pityDay || S.pityDay.d !== pd) S.pityDay = { d: pd, n: 0 }; addGems(S.pityDay.n++ < CONFIG.arena.pityPerDay ? Math.round(def.reward * CONFIG.arena.pity) : 0); S.arena.losses++; }
     return r.win;
   };
   for (let d = 0; d < o.days; d++) {
@@ -104,7 +99,7 @@ function simPlayer(o) {
       tag('сезонный пропуск'); if (typeof ensureSeason === 'function') { const s2 = ensureSeason(), lv = seasonLevel(); for (let L = s2.claimed + 1; L <= lv; L++) { const r = seasonLevelReward(L); addGems(r.gems); if (r.item) addEquipment(mainHeroId(), r.item); } s2.claimed = lv; }
             tag('достижения'); ACHIEVEMENTS.forEach(a => { if (!S.ach[a.id] && safeOk(a)) { S.ach[a.id] = Date.now(); addGems(a.r); if (a.item) addEquipment(mainHeroId(), a.item); } });
     }
-    timeline.push({ day: d + 1, arena: S.arena.cleared, gems: S.gems, stack: stackPower(), hours: +(t / 3600).toFixed(1) });
+    timeline.push({ day: d + 1, arena: S.arena.cleared, gems: S.gems, stack: stackPower(), hours: +(t / 3600).toFixed(1), inc: Object.values(book).reduce((a, v) => a + v.in, 0) });
   }
   SRV_OFF = 0;
   return { book, timeline, milestones };
@@ -118,5 +113,5 @@ function simSetup(over) {
   return true;
 }
 // доступ к внутренним переменным игры для tests.html (const/let не видны снаружи окна)
-function simEnv() { return { CONFIG, S, SEGMENTS, CHESTS, RARITIES, EVENTS, SAVE_VERSION, APP_VERSION: self.APP_VERSION }; }
+function simEnv() { return { CONFIG, S, SEGMENTS, CHESTS, RARITIES, EVENTS, SAVE_VERSION, APP_VERSION: self.APP_VERSION, HEROES, ROLE_INFO, SHOP, TW_EXTRA, TW_CARDS, TW_CARD_INFO }; }
 function simSetUg(main, fuel) { ugMain = main; ugFuel = fuel || []; }

@@ -7,7 +7,7 @@ const SAVE_LIMITS = {
   items: 200000,       // предметов в коллекции (защита от мусора; честно столько не набрать)
   heroLevel: CONFIG.maxLevel,
   arena: 100,
-  mmr: 5000,
+  mmr: 9000,
   bytes: 2.5e6         // ~2.5 МБ — больше в облако не отправляем
 };
 const PATH_RE = /^[A-Za-z0-9_\-\/.]{1,200}$/;

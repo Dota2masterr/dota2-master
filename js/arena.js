@@ -19,7 +19,8 @@ const LOCS = [
 ];
 function locOf(L) { return LOCS.find(l => L >= l.from && L <= l.to); }
 function reqPower(L) { const A = CONFIG.arena; return Math.round(A.reqBase * Math.pow(A.reqGrowth, L - 1)); }
-function lvlReward(L) { const A = CONFIG.arena; return Math.round(A.rewardBase * Math.pow(A.rewardGrowth, L - 1)); }
+// 2.4: после уровня rewardCapLevel награда растёт медленно (rewardGrowthAfter), а не ×1.085 за уровень
+function lvlReward(L) { const A = CONFIG.arena, c = A.rewardCapLevel || 1e9; return Math.round(A.rewardBase * Math.pow(A.rewardGrowth, Math.min(L, c) - 1) * Math.pow(A.rewardGrowthAfter || A.rewardGrowth, Math.max(0, L - c))); }
 function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function levelDef(L) {
   const loc = locOf(L), r = seeded(L * 7919 + 13);
@@ -86,7 +87,7 @@ function renderArena() {
     d.appendChild(n); d.onclick = openStackPicker; d.style.cursor = 'pointer'; pr.appendChild(d);
   });
   document.getElementById('stack-power').textContent = fmt(stackPower());
-  renderShopPanel(); renderSynergyBox(); renderRoshan(); if (typeof renderFights === 'function') renderFights();
+  renderShopPanel(); renderSynergyBox(); renderRoshan(); if (typeof renderCoop === 'function') renderCoop(); if (typeof renderFights === 'function') renderFights();
   const cur = Math.min(100, S.arena.cleared + 1);
   if (!arenaLoc) arenaLoc = locOf(cur).id;
   if (!arenaSel) arenaSel = cur;
@@ -120,6 +121,17 @@ function winChanceEstimate(def) {
   for (let i = 0; i < N; i++) if (simulateBattle(bt.team, d, r).win) w++;
   return w / N;
 }
+// 2.4: панель перед боем — роли врагов, кого контрит твой стак и кто контрит тебя
+function rolePanelHTML(def) {
+  const mine = getStack().map(heroRole), foes = def.waves.map(w => heroRole(w.id));
+  const tag = (r, cls) => '<span class="rt ' + (cls || '') + '" title="' + ROLE_INFO[r].d + '">' + ROLE_INFO[r].i + ' ' + ROLE_INFO[r].n + '</span>';
+  const uniq = a => [...new Set(a)];
+  const good = uniq(foes.filter(f => mine.some(m => roleMul(m, f) > 1)));
+  const bad = uniq(foes.filter(f => mine.some(m => roleMul(f, m) > 1)));
+  return '<div class="role-row"><span class="muted">Враги:</span>' + uniq(foes).map(r => tag(r, good.includes(r) && !bad.includes(r) ? 'good' : bad.includes(r) && !good.includes(r) ? 'bad' : '')).join('') + '</div>' +
+    (def.counterRole ? '<div class="muted" style="font-size:.74rem">⚠ Часть врагов подобрана против твоих «' + ROLE_INFO[def.counterRole].n + '». Смени стак, чтобы контрить их.</div>' : '') +
+    '<details style="font-size:.74rem"><summary class="muted" style="cursor:pointer">Как работают роли</summary>' + Object.keys(ROLE_INFO).map(r => '<div>' + ROLE_INFO[r].i + ' <b>' + ROLE_INFO[r].n + '</b> (' + (roleLine(r) === 'front' ? 'перед' : 'зад') + ') — ' + ROLE_INFO[r].d + '. Сильнее против: ' + roleBeats(r).map(x => ROLE_INFO[x].i).join(' ') + ' (+15%)</div>').join('') + '<div class="muted">Зелёная роль — у тебя есть ответ, красная — она контрит кого-то в твоём стаке.</div></details>';
+}
 function renderLevelInfo() {
   const L = arenaSel, def = modeDef(levelDef(L));
   const replay = L <= S.arena.cleared;
@@ -133,7 +145,7 @@ function renderLevelInfo() {
   const box = document.getElementById('level-info');
   box.innerHTML = modeRow + '<div style="min-width:170px"><div class="cinzel" style="font-size:1.2rem;color:#fff;font-weight:700">Уровень ' + L + '</div><div class="muted" style="font-size:.8rem">' + def.loc.name + ' · ' + def.waves.length + ' волн подряд</div>' + (def.mechText ? '<div class="boss-mech">⚠ ' + esc(def.mechText) + '</div>' : '') +
     '<div style="font-size:.85rem;margin-top:4px">Сила врагов: <b style="color:var(--dire)">' + fmt(def.R) + '</b> · твой стак: <b style="color:var(--radiant)">' + fmt(stackPower()) + '</b></div>' +
-    '<div style="font-size:.85rem">Шанс победы ≈ <b style="color:' + chCol + '">' + Math.round(ch * 100) + '%</b></div></div>' +
+    '<div style="font-size:.85rem">Шанс победы ≈ <b style="color:' + chCol + '">' + Math.round(ch * 100) + '%</b></div>' + rolePanelHTML(def) + '</div>' +
     '<div class="wave-strip" id="wave-strip"></div>' +
     '<div style="flex:1;min-width:180px;font-size:.82rem"><div>Награда: ' + gemHTML(replay ? Math.round(def.reward * CONFIG.arena.replayMul) : def.reward) + (replay ? ' <span class="muted">(повтор, без предметов)</span>' : '') + '</div>' +
     (!replay ? '<div>' + (def.skin ? '🎨 Скин за босса' : '') + (def.skin && def.eq ? ' + ' : '') + (def.eq ? '🛡 Снаряжение' : '') + (!def.skin && !def.eq ? '<span class="muted">Скин — каждый 4-й босс, снаряжение — каждый 2-й</span>' : '') + '</div>' : '') + '</div>' +
@@ -146,7 +158,8 @@ function renderLevelInfo() {
     if (arenaMode === 'cm') d.onclick = () => { cmBan = cmBan === i ? -1 : i; renderLevelInfo(); };
     d.appendChild(mkImg(unitImgChain(w.id), w.name));
     const s = document.createElement('span'); s.textContent = (w.boss ? '👑 ' : '') + fmtShort(w.power); d.appendChild(s);
-    d.title = w.name + ' · ⚔ ' + fmt(w.power);
+    d.title = w.name + ' · ' + ROLE_INFO[heroRole(w.id)].n + ' · ⚔ ' + fmt(w.power) + (w.counter ? ' · подобран против твоего стака' : '');
+    if (w.counter) d.classList.add('counter');
     ws.appendChild(d);
   });
 }
@@ -161,25 +174,29 @@ let BT = null;
 function startBattle(L, chain, customDef) {
   if (busy.battle) return;
   const def = customDef || modeDef(levelDef(L));
-  const bt = buildTeam({ noCons: !!def.roshan, size: def.teamSize });
+  const bt = def.coop ? { team: def.coopTeam, tm: {}, ids: def.coopTeam.map(t => t.id) } : buildTeam({ noCons: !!def.roshan, size: def.teamSize });
   def.team = bt.tm;
   const team = bt.team;
-  const engine = createBattle(team, def, null, { maxTicks: def.roshan ? 14 : 400, manualUlt: !!S.manualUlt });
+  // 2.4 античит PvP: бой идёт от сида, все действия пишутся в лог — в конце бой переигрывается и сверяется
+  const pvpSeed = def.pvp ? (Math.floor(Math.random() * 4294967295) >>> 0) : null;
+  const engine = def.coop ? createBattle(team, def, seeded(def.coopNet.seed), { maxTicks: COOP.maxTicks, manualUlt: true }) : createBattle(team, def, def.pvp ? seeded(pvpSeed) : null, { maxTicks: def.roshan ? 14 : 400, manualUlt: !!S.manualUlt });
   busy.battle = true;
-  BT = { L, def, team, engine, result: null, chain, tick: 0, skip: false, timer: null, wave: 0, prevSpeed: speed, inputs: [], mult: S.btMult || 1 };
+  BT = { L, def, team, engine, result: null, chain, tick: 0, skip: false, timer: null, wave: 0, prevSpeed: speed, inputs: [], mult: S.btMult || 1, focus: 'auto', back: null };
+  if (def.coop) coopInit(def);
+  if (def.pvp) { BT.seed = pvpSeed; BT.log = []; BT.man0 = !!S.manualUlt; }
   if (def.turbo) speed = 'fast';
   sfx('start');
   const stage = document.getElementById('bt-stage');
   document.getElementById('bt-ground').className = 'ground ' + def.loc.g;
-  document.getElementById('bt-title').textContent = def.pvp ? 'PvP · против ' + def.pvp.nick : def.roshan ? 'Логово Рошана' : def.survival ? 'Выживание · ' + def.loc.name : 'Уровень ' + L + ' · ' + def.loc.name + (def.turbo ? ' · TURBO' : '');
+  document.getElementById('bt-title').textContent = def.coop ? 'Кооп · ' + COOP_BOSSES[def.coop.bi].n + ' · ' + def.coopNet.names.join(' + ') : def.pvp ? 'PvP · против ' + def.pvp.nick : def.roshan ? 'Логово Рошана' : def.survival ? 'Выживание · ' + def.loc.name : 'Уровень ' + L + ' · ' + def.loc.name + (def.turbo ? ' · TURBO' : '');
   document.getElementById('bt-sub').textContent = 'Сила стака ' + fmt(stackPower()) + ' vs ' + fmt(def.R) + ' · ' + def.waves.length + ' волн';
   document.getElementById('bt-status').textContent = '⚔';
   document.getElementById('bt-status').style.color = '';
   document.getElementById('bt-feed').innerHTML = '';
   document.getElementById('bt-log').innerHTML = '';
   renderBtControls();
-  document.getElementById('bt-skip').textContent = 'Пропустить ⏩';
-  document.getElementById('bt-skip').onclick = battleSkip;
+  document.getElementById('bt-skip').textContent = def.coop ? 'Выйти' : 'Пропустить ⏩';
+  document.getElementById('bt-skip').onclick = def.coop ? () => { if (BT && !BT.ended && window.confirm('Выйти из кооп-боя? Напарника заменит бот.')) { coopLeave(); BT.skip = true; clearTimeout(BT.timer); BT.result = { win: false, ticks: [], alive: 0, used: {}, wavesCleared: 0, dmgDealt: 0 }; endBattle(); } } : battleSkip;
   // towers
   stage.querySelectorAll('.tower').forEach(t => t.remove());
   [['8%', '#3fbf4f'], ['88%', '#d0402e']].forEach(([x, c]) => {
@@ -188,13 +205,14 @@ function startBattle(L, chain, customDef) {
     stage.appendChild(t);
   });
   const left = document.getElementById('bt-left'); left.innerHTML = '';
-  team.forEach((t, i) => { const u = unitEl(t.id, HERO_BY_ID[t.id].name, t.p, i === 0 ? 'main' : '', false, true); u.dataset.i = i; u.onclick = () => queueUlt(i); left.appendChild(u); });
+  team.forEach((t, i) => { const mine = !BT.coop || BT.coop.myIdx.includes(i); const u = unitEl(t.id, HERO_BY_ID[t.id].name, t.p, (i === 0 && !BT.coop ? 'main ' : '') + roleLine(heroRole(t.id)) + (BT.coop ? ' coop p' + (t.owner || 0) + (mine ? ' mine' : ' mate') : ''), false, mine); u.dataset.i = i; u.onclick = () => queueUlt(i); left.appendChild(u); });
+  if (BT.coop) { left.classList.add('six'); const s = document.createElement('div'); s.id = 'bt-coop-st'; s.className = 'bt-coop-st'; stage.appendChild(s); } else { left.classList.remove('six'); const s = document.getElementById('bt-coop-st'); if (s) s.remove(); }
   const right = document.getElementById('bt-right'); right.innerHTML = '';
   showWave(0, false);
   renderQueue(0);
   document.getElementById('battle').classList.add('show');
   const syn = activeSynergies(bt.ids);
-  feed(def.roshan ? 'Рошан проснулся! У тебя 14 ходов.' : def.survival ? 'Выживание: держись как можно дольше!' : 'Бой начинается! Против тебя ' + def.waves.length + ' противников подряд.' + (syn.length ? ' Синергии: ' + syn.map(x => x.name).join(', ') : ''));
+  feed(def.coop ? COOP_BOSSES[def.coop.bi].d + ' Твои герои — с золотой рамкой.' : def.roshan ? 'Рошан проснулся! У тебя 14 ходов.' : def.survival ? 'Выживание: держись как можно дольше!' : 'Бой начинается! Против тебя ' + def.waves.length + ' противников подряд.' + (syn.length ? ' Синергии: ' + syn.map(x => x.name).join(', ') : ''));
   BT.timer = setTimeout(playTick, btDelay(speed === 'fast' ? 300 : 700));
 }
 // ---------- управление боем: скорость x1/x2/x4, ручная ульта, лог ----------
@@ -202,17 +220,29 @@ function btDelay(ms) { return Math.round(ms / ((BT && BT.mult) || 1)); }
 function renderBtControls() {
   const box = document.getElementById('bt-ctrl'); if (!box) return;
   const m = (BT && BT.mult) || S.btMult || 1;
+  if (BT && BT.coop) { box.innerHTML = '<button class="btn sm gold" data-click="coopTaunt()" title="Босс бьёт того, у кого агро. Твои герои получают меньше урона, но и бьют слабее — второй игрок бьёт в спину ×' + CONFIG.combat.coop.backstab + '">🛡 Забрать агро</button><button class="btn sm ' + (BT.focus !== 'auto' ? 'gold' : 'ghost') + '" data-click="coopFocus()">🎯 ' + FOCUS_NAME[BT.focus || 'auto'] + '</button><span class="muted" style="font-size:.72rem;align-self:center">Ульты — нажатием на своего героя</span>'; return; }
   box.innerHTML = [1, 2, 4].map(x => '<button class="btn sm ' + (m === x ? 'gold' : 'ghost') + '" data-click="setBtMult(' + x + ')">x' + x + '</button>').join('') +
-    '<button class="btn sm ' + (S.manualUlt ? 'gold' : 'ghost') + '" data-click="toggleManualUlt()" title="Ульта срабатывает по нажатию на героя, когда шкала полная">' + (S.manualUlt ? '✋ Ульты вручную' : '🤖 Ульты сами') + '</button>';
+    '<button class="btn sm ' + (S.manualUlt ? 'gold' : 'ghost') + '" data-click="toggleManualUlt()" title="Вручную: нажми на героя в удачный момент (он светится золотом) — ульта сильнее ×' + CONFIG.combat.ultTiming + '. Сами: без бонуса, для лёгких боёв">' + (S.manualUlt ? '✋ Ульты вручную' : '🤖 Ульты сами') + '</button>' +
+    '<button class="btn sm ' + (BT && BT.focus !== 'auto' ? 'gold' : 'ghost') + '" data-click="cycleFocus()" title="Кого бить: авто — прыгуны бьют заднего, остальные переднего; передний — все по переднему; задний — все по заднему (не прыгуны слабее)">🎯 ' + FOCUS_NAME[(BT && BT.focus) || 'auto'] + '</button>';
+}
+const FOCUS_NAME = { auto: 'Фокус: авто', front: 'Фокус: передний', back: 'Фокус: задний' };
+function cycleFocus() {
+  if (!BT || !BT.engine || BT.engine.done) return;
+  const order = ['auto', 'front', 'back'];
+  BT.focus = order[(order.indexOf(BT.focus || 'auto') + 1) % 3];
+  BT.engine.setFocus(BT.focus); renderBtControls();
+  feed('🎯 ' + FOCUS_NAME[BT.focus], 'var(--gold2)');
 }
 function setBtMult(x) { x = [1, 2, 4].includes(+x) ? +x : 1; S.btMult = x; if (BT) BT.mult = x; save(); renderBtControls(); }
 function toggleManualUlt() {
+  if (BT && BT.coop) return;
   S.manualUlt = !S.manualUlt; save(); renderBtControls();
   if (BT && BT.engine && !BT.engine.done) { BT.engine.setManual(S.manualUlt); }
   if (BT) feed(S.manualUlt ? '✋ Ульты вручную: нажми на героя, когда его шкала светится' : '🤖 Ульты срабатывают сами', 'var(--gold2)');
 }
 function queueUlt(i) {
-  if (!BT || !BT.engine || BT.engine.done || !S.manualUlt) return;
+  if (!BT || !BT.engine || BT.engine.done || !(S.manualUlt || BT.coop)) return;
+  if (BT.coop && !BT.coop.myIdx.includes(i)) return;
   const u = document.getElementById('bt-left').children[i];
   if (!u || !u.classList.contains('ult-ready')) return;
   if (!BT.inputs.includes(i)) BT.inputs.push(i);
@@ -240,7 +270,7 @@ function heroLookChain(id) { const sk = heroSkin(id); return sk && sk.path ? [it
 function unitEl(id, name, p, cls, enemy, mine) {
   const u = document.createElement('div'); u.className = 'unit ' + (enemy ? 'enemy ' : '') + cls;
   u.appendChild(mkImg(mine ? heroLookChain(id) : unitImgChain(id), name, 'uimg'));
-  const nm = document.createElement('div'); nm.className = 'uname'; nm.textContent = name + ' ⚔' + fmtShort(p); u.appendChild(nm);
+  const nm = document.createElement('div'); nm.className = 'uname'; nm.textContent = (HERO_BY_ID[id] || id === 'roshan' ? ROLE_INFO[heroRole(id)].i + ' ' : '') + name + ' ⚔' + fmtShort(p); u.appendChild(nm);
   const ul = ultOf(id);
   const ic = mkImg(ultIconChain(id), ul.name, 'uult'); ic.title = ul.name + ' — ' + EFFECT_NAME[ul.type]; u.appendChild(ic);
   const b = document.createElement('div'); b.className = 'ubar'; b.innerHTML = '<div style="width:100%"></div>'; u.appendChild(b);
@@ -254,10 +284,30 @@ function showWave(i, animate, hp) {
   const w = BT.def.waves[i];
   const right = document.getElementById('bt-right'); right.innerHTML = '';
   const u = unitEl(w.id, w.name, w.power, w.boss ? 'boss' : '', true);
+  u.dataset.w = i;
   if (hp != null) u.querySelector('.ubar div').style.width = (hp * 100) + '%';
   if (animate) u.classList.add('enter');
   right.appendChild(u);
+  BT.back = null;
+  let bi = -1; const E = BT.engine && BT.engine.E;
+  if (E && !BT.def.roshan) for (let j = i + 1; j < E.length; j++) if (E[j].alive) { bi = j; break; }
+  showBack(bi, E && bi >= 0 ? E[bi].hp / E[bi].max : 1);
 }
+// 2.4: задний враг (вторая линия) — виден справа сзади и бьёт издалека
+function showBack(bi, hp) {
+  if (!BT) return;
+  const right = document.getElementById('bt-right');
+  const old = right.querySelector('.unit.back'); if (old) old.remove();
+  BT.back = bi; if (bi == null || bi < 0) return;
+  const w = BT.def.waves[bi]; if (!w) return;
+  const u = unitEl(w.id, w.name, w.power, 'back' + (w.boss ? ' boss' : ''), true);
+  u.dataset.w = bi; u.title = 'Задняя линия: бьёт издалека слабее. Фокус «по заднему» — бить его';
+  setBar(u, '.ubar div', hp);
+  right.appendChild(u);
+}
+function enemyElFor(w) { const r = document.getElementById('bt-right'); return (w != null && r.querySelector('.unit[data-w="' + w + '"]')) || r.firstChild; }
+// роль героя значком
+function roleBadge(id) { const r = ROLE_INFO[heroRole(id)]; return '<span class="role-b" title="' + r.n + ': ' + r.d + '">' + r.i + '</span>'; }
 function renderQueue(cur) {
   if (!BT) return;
   const q = document.getElementById('bt-queue'); q.innerHTML = '<span>Волны:</span>';
@@ -319,7 +369,7 @@ function ultiFlash(id, enemy) {
   const ic = mkImg(ultIconChain(id), ul.name); ic.style.cssText = 'height:64px;width:64px;border-radius:4px;border:2px solid ' + col + ';box-shadow:0 0 20px ' + col;
   ub.appendChild(ic);
   const t = document.createElement('div'); t.style.textAlign = enemy ? 'right' : 'left';
-  t.innerHTML = '<div>' + esc(ul.name.toUpperCase()) + '</div><div style="font-family:Roboto Condensed;font-size:.8rem;letter-spacing:1px;color:#fff">' + esc(hero.name) + ' · ' + EFFECT_NAME[ul.type] + '</div>';
+  t.innerHTML = '<div>' + esc(ul.name.toUpperCase()) + '</div><div style="font-family:Roboto Condensed;font-size:.8rem;letter-spacing:1px;color:#fff">' + esc(hero ? hero.name : (BT && BT.def.waves[BT.wave] ? BT.def.waves[BT.wave].name : id)) + ' · ' + EFFECT_NAME[ul.type] + '</div>';
   ub.appendChild(t);
   st.appendChild(u); setTimeout(() => u.remove(), 1000);
 }
@@ -334,7 +384,10 @@ function setBar(el, sel, v) { if (el) { const b = el.querySelector(sel); if (b) 
 function playTick() {
   if (!BT || BT.ended) return;
   if (BT.engine.done) { BT.result = BT.engine.result(); return endBattle(); }
-  const ev = BT.engine.step(BT.inputs.splice(0));
+  const inp = BT.coop ? coopTickInputs() : BT.inputs.splice(0);
+  if (inp === null) { BT.timer = setTimeout(playTick, 250); return; }   // кооп: ждём ход напарника
+  if (BT.log) BT.log.push([BT.tick, inp.slice(), !!S.manualUlt, BT.focus || 'auto']);
+  const ev = BT.engine.step(inp);
   BT.tick++;
   if (!ev) { BT.result = BT.engine.result(); return endBattle(); }
   const left = document.getElementById('bt-left').children;
@@ -344,7 +397,7 @@ function playTick() {
   ev.forEach(e => {
     setTimeout(() => {
       if (!BT || BT.skip) return;
-      const enemyEl = document.getElementById('bt-right').firstChild;
+      const enemyEl = enemyElFor(e.wave);
       if (e.k === 'hit' || e.k === 'ult') {
         const id = BT.team[e.from].id, hero = HERO_BY_ID[id];
         if (e.log) btLog('⚡ ' + e.log, EFFECT_COLOR[e.type]);
@@ -364,6 +417,8 @@ function playTick() {
         }
         if (enemyEl && e.dmg > 0) heroFx(left[e.from], enemyEl, hero, { crit: e.crit || e.type === 'crit', ulti: e.k === 'ult', dmg: e.dmg });
         setTimeout(() => setBar(enemyEl, '.ubar div', e.hp), late);
+        if (e.timing) { floatDmg(left[e.from], '✨ ИДЕАЛЬНО ×' + CONFIG.combat.ultTiming, 'crit', '#ffe36a'); feed('✨ Идеальный момент для ульты: ×' + CONFIG.combat.ultTiming, '#ffe36a'); }
+        if (e.splash) e.splash.forEach(j => { const be = enemyElFor(j); if (be && be !== enemyEl && BT.engine) { const x = BT.engine.E[j]; setBar(be, '.ubar div', x.hp / x.max); } });
       } else if (e.k === 'skill') {
         const id = BT.team[e.from].id, hero = HERO_BY_ID[id], k = SKILL_KIND[e.kind] || SKILL_KIND.dmg;
         btLog(k.i + ' ' + e.log, k.c);
@@ -391,8 +446,11 @@ function playTick() {
       } else if (e.k === 'log') {
         btLog(e.text);
       } else if (e.k === 'st') {
-        e.m.forEach((v, i) => { const u = left[i]; if (!u) return; setBar(u, '.umana div', v); setBar(u, '.ucharge div', e.c[i]); setStatus(u, e.s[i]); u.classList.toggle('ult-ready', !!e.r[i]); u.classList.toggle('manual', !!S.manualUlt); if (!e.r[i]) u.classList.remove('ult-queued'); });
-        if (enemyEl) setStatus(enemyEl, e.es);
+        e.m.forEach((v, i) => { const u = left[i]; if (!u) return; setBar(u, '.umana div', v); setBar(u, '.ucharge div', e.c[i]); setStatus(u, e.s[i]); u.classList.toggle('ult-ready', !!e.r[i]); u.classList.toggle('ult-good', !!((S.manualUlt || BT.coop) && e.g && e.g[i])); if (e.co) u.classList.toggle('aggro', (BT.team[i].owner || 0) === e.co.a && (e.co.m.includes('aggro') || e.co.m.includes('swap'))); u.classList.toggle('manual', !!S.manualUlt); if (!e.r[i]) u.classList.remove('ult-queued'); });
+        const fr = document.getElementById('bt-right').firstChild;
+        if (fr) { setStatus(fr, e.es); setBar(fr, '.ucharge div', e.eu); fr.classList.toggle('eult-soon', e.eu >= 0.99); }
+        if (e.bi !== undefined && e.bi !== BT.back) showBack(e.bi, e.bhp);
+        else if (e.bi >= 0) { const be = enemyElFor(e.bi); if (be && be.classList.contains('back')) setBar(be, '.ubar div', e.bhp); }
       } else if (e.k === 'mech') {
         setTimeout(() => { feed(e.text, '#ffb84a'); if (e.ehp != null) { const en = document.getElementById('bt-right').firstChild; if (en) setBar(en, '.ubar div', e.ehp); } }, 0);
       } else if (e.k === 'stunned') {
@@ -411,6 +469,7 @@ function playTick() {
         else if (e.hits.length > 1) feed('💥 ' + ultOf(w.id).name + ' бьёт по всей команде', '#ff9a8a');
       } else if (e.k === 'ehit') {
         const t = left[e.to];
+        if (e.back) { const be = enemyElFor(e.wave); if (be) { be.classList.remove('lunge-l'); void be.offsetWidth; be.classList.add('lunge-l'); } setTimeout(() => { if (!t) return; t.classList.remove('hit'); void t.offsetWidth; t.classList.add('hit'); setBar(t, '.ubar div', e.hp); floatDmg(t, '🏹-' + fmtShort(e.dmg), '', '#ff9a6a'); }, 150); return; }
         if (enemyEl) { enemyEl.classList.remove('lunge-l'); void enemyEl.offsetWidth; enemyEl.classList.add('lunge-l'); }
         setTimeout(() => { t.classList.remove('hit'); void t.offsetWidth; t.classList.add('hit'); setBar(t, '.ubar div', e.hp); floatDmg(t, e.miss ? 'уклон' : '-' + fmtShort(e.dmg), '', e.miss ? '#aaa' : '#ff7a6a'); }, 150);
       } else if (e.k === 'aegis') {
@@ -421,7 +480,7 @@ function playTick() {
         feed('⚔ Divine Rapier выпала!', 'var(--danger)');
       } else if (e.k === 'ekill') {
         btLog('☠ ' + BT.def.waves[e.wave].name + ' повержен', 'var(--ok)');
-        setTimeout(() => { if (!BT) return; if (enemyEl) enemyEl.classList.add('dead'); feed('☠ ' + BT.def.waves[e.wave].name + ' повержен!', 'var(--ok)'); }, 250);
+        setTimeout(() => { if (!BT) return; const de = enemyElFor(e.wave); if (de) de.classList.add('dead'); feed('☠ ' + BT.def.waves[e.wave].name + ' повержен!', 'var(--ok)'); }, 250);
       } else if (e.k === 'tkill') {
         btLog('💀 ' + HERO_BY_ID[BT.team[e.to].id].name + ' погиб', 'var(--danger)');
         setTimeout(() => { if (!BT || !left[e.to]) return; left[e.to].classList.add('dead'); feed('💀 ' + HERO_BY_ID[BT.team[e.to].id].name + ' погиб', 'var(--danger)'); }, 300);
@@ -434,7 +493,7 @@ function playTick() {
   });
   BT.timer = setTimeout(playTick, delay + btDelay(speed === 'fast' ? 240 : 460));
 }
-function battleSkip() { if (!BT) return; BT.skip = true; clearTimeout(BT.timer); BT.result = BT.engine.finish(); endBattle(); }
+function battleSkip() { if (!BT) return; if (BT.log) BT.log.skip = BT.tick; BT.skip = true; clearTimeout(BT.timer); BT.result = BT.engine.finish(); endBattle(); }
 // всплывающая иконка навыка над героем
 function skillPop(el, key, heroId, name, col) {
   if (!el) return;
@@ -454,7 +513,7 @@ function endBattle() {
   speed = BT.prevSpeed;
   consumeAfterBattle(result.used);
   if (def.fight) { endFightBattle(def, result, st); return; }
-  if (def.roshan || def.survival || def.pvp) { endSpecialBattle(def, result, st); return; }
+  if (def.roshan || def.survival || def.pvp || def.coop) { endSpecialBattle(def, result, st); return; }
   if (result.win) {
     st.textContent = '🏆 ПОБЕДА'; st.style.color = 'var(--ok)';
     const right = document.getElementById('bt-right').firstChild; if (right) right.classList.add('dead');
@@ -470,12 +529,13 @@ function endBattle() {
       if (L % 10 === 0 && Math.random() < 0.5) { S.cons = S.cons || { aegis: 0, cheese: 0 }; S.cons.cheese++; got.push({ name: 'Cheese', rarity: 'immortal' }); }
       if (def.skin) got.push(addSkin(def.waves[def.waves.length - 1].id, RARITIES[Math.min(5, ri + 1)]));
     } else S.arena.replays++;
-    msg = 'Уровень ' + L + ' пройден! +' + fmt(g) + ' 🔶' + (got.length ? ' · ' + got.map(x => x.name + ' (' + RARITY_NAMES[x.rarity] + ')').join(', ') : '');
+    msg = 'Уровень ' + L + ' пройден! +' + fmt(g) + ' 🔶' + (got.length ? ' · ' + got.map(x => x.name + ' (' + RARITY_NAMES[x.rarity] + ')').join(', ') : '') + hodWin(BT.team.map(t => t.id));
     arenaLog('win', '🏆 ' + msg);
     feed(msg, 'var(--ok)');
   } else {
     st.textContent = '💀 ПОРАЖЕНИЕ'; st.style.color = 'var(--danger)'; sfx('lose'); S.winStreak = 0;
-    const pity = Math.round(def.reward * 0.08);
+    const pd = todayStr(); if (!S.pityDay || S.pityDay.d !== pd) S.pityDay = { d: pd, n: 0 };
+    const pity = S.pityDay.n++ < CONFIG.arena.pityPerDay ? Math.round(def.reward * CONFIG.arena.pity) : 0;
     addGems(pity); S.arena.losses++;
     msg = 'Поражение на уровне ' + L + ' (дошёл до волны ' + (Math.min(def.waves.length, result.ticks.filter(t => t.some(e => e.k === 'wave')).length + 1)) + '/' + def.waves.length + '). Утешение +' + fmt(pity) + ' 🔶';
     arenaLog('lose', '💀 ' + msg); feed(msg, 'var(--danger)');
@@ -495,7 +555,8 @@ function endBattle() {
 }
 function endSpecialBattle(def, result, st) {
   let msg;
-  if (def.pvp) {
+  if (def.coop) msg = coopResult(def, result, st);
+  else if (def.pvp) {
     msg = pvpResult(def, result);
     st.textContent = result.win ? '🏆 ПОБЕДА' : '💀 ПОРАЖЕНИЕ'; st.style.color = result.win ? 'var(--ok)' : 'var(--danger)'; sfx(result.win ? 'win' : 'lose');
   } else if (def.roshan) {

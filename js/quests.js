@@ -3,7 +3,7 @@ function todayStr() { return dayStrOf(nowMs()); }
 // новый день наступил? (если часы телефона перевели назад — день не «откатывается»)
 function isNewDay(stored, today) { return stored !== today && !(stored && stored > today); }
 function dayDiff(a, b) { return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000); }
-function rewardScale() { return Math.max(CONFIG.rewardScale.min, Math.round(lvlReward(Math.min(100, S.arena.cleared + 1)) * CONFIG.rewardScale.mul)); }
+function rewardScale() { return Math.max(CONFIG.rewardScale.min, Math.round(lvlReward(Math.min(CONFIG.rewardScale.capLevel || 100, S.arena.cleared + 1)) * CONFIG.rewardScale.mul)); }
 const QUEST_POOL = [
   { id: 'heroSpins', t: 'Сделай {n} круток в рулетке героев', n: [10, 20, 30], icon: '🎯', mult: 1 },
   { id: 'slotSpins', t: 'Прокрути слоты {n} раз', n: [15, 30, 50], icon: '🎰', mult: 1 },
@@ -25,8 +25,8 @@ const ACHIEVEMENTS = [
   { id: 'arena10', icon: '🛤', name: 'Лайнер', d: 'Пройди 10 уровней арены', ok: () => S.arena.cleared >= 10, r: 2000 },
   { id: 'arena25', icon: '🗼', name: 'Хозяин топа', d: 'Захвати верхний лайн (25)', ok: () => S.arena.cleared >= 25, r: 6000, item: 'mythical' },
   { id: 'arena50', icon: '🗼', name: 'Хозяин бота', d: 'Захвати нижний лайн (50)', ok: () => S.arena.cleared >= 50, r: 30000, item: 'immortal' },
-  { id: 'arena75', icon: '🌲', name: 'Властелин леса', d: 'Пройди лес (75)', ok: () => S.arena.cleared >= 75, r: 150000, item: 'immortal' },
-  { id: 'arena100', icon: '🏛', name: 'Древний пал', d: 'Пройди все 100 уровней', ok: () => S.arena.cleared >= 100, r: 1000000, item: 'arcana' },
+  { id: 'arena75', icon: '🌲', name: 'Властелин леса', d: 'Пройди лес (75)', ok: () => S.arena.cleared >= 75, r: 60000, item: 'immortal' },
+  { id: 'arena100', icon: '🏛', name: 'Древний пал', d: 'Пройди все 100 уровней', ok: () => S.arena.cleared >= 100, r: 250000, item: 'arcana' },
   { id: 'lvl25', icon: '⭐', name: 'Опытный', d: 'Подними героя до 25 уровня', ok: () => HEROES.some(h => S.heroes[h.id].level >= 25), r: 5000 },
   { id: 'lvl50', icon: '🌟', name: 'Максимум', d: 'Подними героя до 50 уровня', ok: () => HEROES.some(h => S.heroes[h.id].level >= 50), r: 50000, item: 'immortal' },
   { id: 'all10', icon: '👥', name: 'Весь пул', d: 'Все герои 10+ уровня', ok: () => HEROES.every(h => S.heroes[h.id].level >= 10), r: 40000 },
