@@ -9,7 +9,7 @@ function freshState() {
   const heroes = {};
   HEROES.forEach(h => heroes[h.id] = { level: 1, bonus: 0 });
   return { version: SAVE_VERSION, gems: CONFIG.startGems, spins: 0, heroes, items: [], uid: 1, loadout: {}, mainHero: null,
-    arena: { cleared: 0, replays: 0, wins: 0, losses: 0 }, invBest: null, avatar: 'invoker', created: Date.now(), freeAt: 0 };
+    arena: { cleared: 0, replays: 0, wins: 0, losses: 0 }, invBest: null, avatar: 'invoker', created: Date.now(), freeAt: 0, wipe: CONFIG.wipe.id };
 }
 
 // ---------- storage helpers ----------
@@ -154,6 +154,18 @@ function migrate(st) {
   for (const hid in st.loadout) for (const sl in st.loadout[hid]) { const it = st.items.find(x => x.uid === st.loadout[hid][sl]); if (!it || it.heroId !== hid) delete st.loadout[hid][sl]; }
   // 2.3: MMR всех игроков сброшен в 0 (один раз)
   if (st.pvp && st.pvp.reset !== 1) { st.pvp.mmr = 0; st.pvp.peak = 0; st.pvp.reset = 1; }
+  // 2.4: релизный сброс прогресса у всех. Остаются только титулы ГОМО (они выдаются по нику, в сейве их нет).
+  // Старый сейв кладётся в резервную копию на этом устройстве (d2m_prewipe_<ник>).
+  if (st.wipe !== CONFIG.wipe.id && !st._newer) {
+    const had = { arena: st.arena ? st.arena.cleared : 0, items: (st.items || []).length, gems: Math.floor(st.gems || 0) };
+    const fresh = freshState(); fresh.created = st.created || Date.now();
+    const backup = JSON.stringify(st);
+    Object.keys(st).forEach(k => delete st[k]);
+    Object.assign(st, fresh, { wipe: CONFIG.wipe.id, tutDone: true, season24: { had: 0, at: Date.now(), vet: false, shown: true, gift: 1 }, pvp: { mmr: 0, w: 0, l: 0, day: '', fights: 0, reset: 1, peak: 0 }, _wiped: had, _wipeBackup: backup });
+    if (!st.heroes) st.heroes = {}; HEROES.forEach(h => { if (!st.heroes[h.id]) st.heroes[h.id] = { level: 1, bonus: 0 }; });
+    if (typeof migrateRogue === 'function') migrateRogue(st);
+    if (typeof migrateTower === 'function') migrateTower(st);
+  }
   // 2.4: сезонный сброс кристаллов (один раз). Герои, предметы, уровни арены не трогаются.
   if (!st.season24) {
     const R = CONFIG.seasonReset, had = Math.floor(st.gems || 0);
@@ -638,6 +650,10 @@ function startGame() {
   switchTab(['home','heroes','slots','collection','upgrade','arena','invoker','quests','chests','games','online'].includes(h) ? h : 'home');
   setTimeout(() => startTutorial(false), 600);
   if (typeof cloud === 'function' && fbOn() && cloud() && !bootSynced) { bootSynced = true; setTimeout(async () => { try { await syncServerTime(); } catch (e) { } try { await ensureNickClaim(); } catch (e) { } try { await cloudSync(); } catch (e) { } checkGifts(); checkPvpHits(); }, 1200); }
+  if (S._wipeBackup) { try { if (USER) localStorage.setItem('d2m_prewipe_' + USER.key, S._wipeBackup); } catch (e) { } delete S._wipeBackup; }
+  if (S._wiped) { const w = S._wiped; delete S._wiped; save(); if (typeof schedulePush === 'function') schedulePush();
+    if (w.arena || w.items || w.gems > CONFIG.startGems)
+    showModal('🚀', 'Релиз 2.4: новый старт для всех', 'В честь выхода 2.4 прогресс всех игроков сброшен: герои, предметы, кристаллы, арена, MMR, Башня, рекорды и таблицы лидеров начинаются с нуля. Все стартуют на равных.<br><br>У тебя было: арена ' + w.arena + '/100, предметов ' + w.items + ', кристаллов ' + fmt(w.gems) + '.<br>Титулы ГОМО сохранены.', 'ok', { html: true }); }
   if (S.season24 && !S.season24.shown) season24Modal();
   if (S._imported) { delete S._imported; save(); showModal('📦', 'Прогресс перенесён', 'Уровни героев, золото (теперь кристаллы) и предметы из старой версии перенесены в этот аккаунт.', 'ok'); }
 }

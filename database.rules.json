@@ -340,7 +340,8 @@
     "abyss": {
       ".read": "auth != null",
       ".indexOn": [
-        "m"
+        "m",
+        "at"
       ],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid && !root.child('banned/' + auth.uid).exists()",
@@ -368,7 +369,8 @@
       ".read": "auth != null",
       ".indexOn": [
         "f",
-        "mmr"
+        "mmr",
+        "at"
       ],
       "$uid": {
         ".write": "auth != null && auth.uid === $uid && !root.child('banned/' + auth.uid).exists()",

@@ -543,7 +543,7 @@ async function twGhostFight() {
   try {
     const T = TS();
     const part = await db('GET', 'tower_board', undefined, false, { orderBy: 'mmr', startAt: T.cups - 300, endAt: T.cups + 300, limitToFirst: 20 }) || {};
-    const ids = Object.keys(part).filter(u => u !== c.uid && !(typeof LIVE !== 'undefined' && LIVE.banned[u]));
+    const ids = Object.keys(part).filter(u => u !== c.uid && part[u] && (part[u].at || 0) >= CONFIG.wipe.at && !(typeof LIVE !== 'undefined' && LIVE.banned[u]));
     if (!ids.length) return twCupBotStart();                     // никого рядом по кубкам — бот с похожими кубками
     const uid = ids[Math.floor(Math.random() * ids.length)];
     const gh = twCleanGhost(await db('GET', 'tower_ghosts/' + uid));
@@ -573,8 +573,8 @@ async function twBoardPut() { try { const c = cloud(); if (!c) return; const T =
 async function twLoadBoard() {
   const b = document.getElementById('tw-board'); if (!b) return;
   try {
-    const d = await db('GET', 'tower_board', undefined, false, { orderBy: 'mmr', limitToLast: 50 }) || {};
-    const rows = Object.entries(d).filter(([u]) => !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([, x]) => x).filter(x => x && typeof x.f === 'number').sort((x, y) => (y.mmr || 0) - (x.mmr || 0) || y.f - x.f);
+    const d = await db('GET', 'tower_board', undefined, false, { orderBy: 'at', startAt: CONFIG.wipe.at, limitToLast: 300 }) || {};
+    const rows = Object.entries(d).filter(([u, x]) => x && (x.at || 0) >= CONFIG.wipe.at && !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([, x]) => x).filter(x => x && typeof x.f === 'number').sort((x, y) => (y.mmr || 0) - (x.mmr || 0) || y.f - x.f);
     const ar = i => { const a = TWM.arenas[Math.max(0, Math.min(TWM.arenas.length - 1, i | 0))]; return a.ic + ' ' + a.n; };
     b.innerHTML = rows.length ? '<div class="sec-sub">🏆 Кубки «Защиты башен»</div><table class="rg-tab"><tr><th>#</th><th>Игрок</th><th>🏆</th><th>Лучшая арена</th><th>Этаж</th></tr>' + rows.map((x, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(String(x.n || '?').slice(0, 20)) + '</td><td>' + (x.mmr | 0) + '</td><td>' + ar(x.a) + '</td><td>' + (x.f | 0) + '</td></tr>').join('') + '</table>' : 'Пока пусто';
   } catch (e) { b.textContent = ''; }

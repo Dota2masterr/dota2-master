@@ -24,8 +24,8 @@ function whenModalClosed(fn) { const t = setInterval(() => { if (!document.getEl
 function checkWhatsNew() {
   const seen = lsGet('d2m_seen_ver', null);
   lsSet('d2m_seen_ver', APP_VERSION);
-  if (seen && seen !== APP_VERSION && APP_VERSION === '2.4.0') setTimeout(() => whenModalClosed(openWhatsNew24), 1500);
-  else if (seen && seen !== APP_VERSION && CHANGELOG[0] && CHANGELOG[0].v === APP_VERSION) setTimeout(openChangelog, 1200);
+  if (seen && !/^2\.4/.test(seen) && /^2\.4/.test(APP_VERSION)) setTimeout(() => whenModalClosed(openWhatsNew24), 1500);
+  else if (seen && seen !== APP_VERSION && CHANGELOG[0] && CHANGELOG[0].v === APP_VERSION) setTimeout(() => whenModalClosed(openChangelog), 1200);
   const v = document.getElementById('app-ver'); if (v) v.textContent = 'версия ' + APP_VERSION;
 }
 

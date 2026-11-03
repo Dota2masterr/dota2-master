@@ -240,7 +240,7 @@ async function pvpFight() {
   let opps = [];
   for (const span of [150, 400, CONFIG.bots.window]) {
     const part = await db('GET', 'stacks', undefined, false, { orderBy: 'mmr', startAt: S.pvp.mmr - span, endAt: S.pvp.mmr + span, limitToFirst: 20 }) || {};
-    opps = Object.entries(part).filter(([uid, v]) => uid !== c.uid && v && (v.at || 0) > fresh && !(LIVE.banned && LIVE.banned[uid])).map(([uid, v]) => [uid, cleanStack(v)]).filter(x => x[1]);
+    opps = Object.entries(part).filter(([uid, v]) => uid !== c.uid && v && (v.at || 0) > Math.max(fresh, CONFIG.wipe.at) && !(LIVE.banned && LIVE.banned[uid])).map(([uid, v]) => [uid, cleanStack(v)]).filter(x => x[1]);
     if (opps.filter(x => pvpEligible(x[1])).length >= 3) break;
   }
   // защита новичков: только соперники сопоставимой силы и MMR в окне ±1000; иначе — рейтинговый бот из bots/
@@ -537,14 +537,15 @@ async function renderOnline(force) {
     if (force || !boardCache || boardCache._sort !== boardSort || Date.now() - boardAt > CONFIG.cloud.boardCacheMs) {
       await cloudPush();
       // топ-100 по выбранной колонке (индексы arena/stack/mmr/inv), а не вся таблица
-      const q = boardSort === 'inv' ? { orderBy: 'inv', startAt: 0.01, limitToFirst: 100 } : { orderBy: boardSort, limitToLast: 100 };
+      // 2.4: после релизного сброса — только записи новее CONFIG.wipe.at (сортировка уже у нас)
+      const q = { orderBy: 'at', startAt: CONFIG.wipe.at, limitToLast: 400 };
       boardCache = await db('GET', 'board', undefined, false, q) || {};
       const mine = await db('GET', 'board/' + c.uid).catch(() => null);
       Object.defineProperty(boardCache, '_sort', { value: boardSort, enumerable: false });
       Object.defineProperty(boardCache, '_mine', { value: mine, enumerable: false });
       boardAt = Date.now();
     }
-    const rows = Object.entries(boardCache).filter(([u, r]) => isObj(r) && !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, arena: Math.floor(num(r.arena, 0, 100, 0)), stack: num(r.stack, 0, 1e12, 0), mmr: Math.round(num(r.mmr, 0, CONFIG.bots.mmrMax, 0)), inv: r.inv > 0 ? num(r.inv, 0, 1e6, 0) : null }));
+    const rows = Object.entries(boardCache).filter(([u, r]) => isObj(r) && (r.at || 0) >= CONFIG.wipe.at && !(boardSort === 'inv' && !(r.inv > 0)) && !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, arena: Math.floor(num(r.arena, 0, 100, 0)), stack: num(r.stack, 0, 1e12, 0), mmr: Math.round(num(r.mmr, 0, CONFIG.bots.mmrMax, 0)), inv: r.inv > 0 ? num(r.inv, 0, 1e6, 0) : null }));
     if (boardSort === 'mmr') { try { (await loadBots()).forEach(b => rows.push({ uid: b.id, nick: '🤖 ' + b.nick, bot: true, title: null, arena: 0, stack: 0, mmr: b.mmr, inv: null })); } catch (e) { } }
     const inTop = rows.some(r => r.uid === c.uid);
     const key = { arena: r => -r.arena * 1e9 - r.stack, stack: r => -r.stack, mmr: r => -r.mmr, inv: r => r.inv || 1e9 }[boardSort];

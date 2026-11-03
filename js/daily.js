@@ -67,7 +67,8 @@ function updateAutoUI() {
 const ACH_COLORS = ['#e8c77a', '#ade55c', '#7ad3ff', '#ff8a3a', '#c8a4ff'];
 // Особые титулы по нику (ключ — ник в нижнем регистре). «ГОМО» — титул разработчиков и выданный лично.
 const GOMO = { id: 'gomo', name: 'ГОМО', color: '#ff4ae0', icon: '🛠' };
-const GRANTED_TITLES = { dranik: [GOMO], wowchess: [GOMO] };
+const PIRATE = { id: 'pirate', name: 'Серега Пират', color: '#3ad0ff', icon: '🏴‍☠️' };
+const GRANTED_TITLES = { dranik: [GOMO], wowchess: [GOMO], fwaeh: [PIRATE] };
 function grantedTitles() { return (USER && GRANTED_TITLES[USER.key]) || []; }
 function titleOptions() {
   const res = grantedTitles().map(t => ({ id: t.id, name: t.name, color: t.color, special: true }));
