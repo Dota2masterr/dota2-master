@@ -3850,7 +3850,7 @@ document.addEventListener('keydown', e => { if (currentTab === 'games' && curGam
 })();
 // ================= ОНЛАЙН (Firebase Auth + Realtime Database через REST) =================
 // Сервер задаётся в FB_DEFAULT или во вкладке «Онлайн» (сохраняется в браузере).
-const FB_DEFAULT = { apiKey: '', dbUrl: '' };
+const FB_DEFAULT = { apiKey: 'AIzaSyB6ZBeX-OYMukmfN_QpqF0PH40rHRBW1SY', dbUrl: 'https://dota2-master-default-rtdb.europe-west1.firebasedatabase.app' };
 let FB = Object.assign({}, FB_DEFAULT, lsGet('d2m_fb', {}));
 function fbOn() { return !!(FB.apiKey && FB.dbUrl); }
 const CLOUD_KEY = 'd2m_cloud';           // { [nickKey]: { uid, refresh, id, exp } }
