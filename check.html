@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dota 2 Master — проверка сервера</title>
+<style>
+body{margin:0;background:#0b0e12;color:#d8dde3;font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif;padding:16px}
+.box{max-width:640px;margin:0 auto}
+h1{font-size:1.25rem;color:#e8c77a;margin:0 0 4px}
+p.m{color:#8a96a3;margin:0 0 14px;font-size:.9rem}
+.row{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #232b35;background:#121820;margin-bottom:6px;border-radius:6px}
+.ic{width:24px;flex:none;text-align:center;font-size:1.1rem}
+.t{flex:1}.d{color:#8a96a3;font-size:.82rem}
+.ok{border-color:#2f6b3a}.bad{border-color:#8a2f2f}.warn{border-color:#8a6a2f}
+input{width:100%;box-sizing:border-box;background:#05070a;border:1px solid #2a3440;color:#fff;padding:10px;border-radius:6px;font-size:16px;margin:4px 0 8px}
+button{background:#3a7a2a;color:#fff;border:0;border-radius:6px;padding:12px 16px;font-size:15px;font-weight:700;width:100%;min-height:44px}
+button:disabled{opacity:.5}
+.sum{padding:12px;border-radius:6px;margin:14px 0;font-weight:700}
+h2{font-size:1rem;color:#e8c77a;margin:22px 0 6px}
+</style>
+</head>
+<body><div class="box">
+<h1>🔍 Проверка сайта и сервера</h1>
+<p class="m">Страница ничего не меняет в игре и в базе. Сделай скриншот результата и пришли его.</p>
+<div id="out"></div><div id="sum"></div>
+<h2>Проверка своего аккаунта (по желанию)</h2>
+<p class="m">Нужны ник и пароль облачного аккаунта. Пароль никуда, кроме Firebase, не уходит.</p>
+<input id="nick" placeholder="Ник" autocomplete="username">
+<input id="pass" type="password" placeholder="Пароль" autocomplete="current-password">
+<button id="go">Проверить аккаунт</button>
+<div id="out2" style="margin-top:10px"></div>
+</div>
+<script>
+const FB = Object.assign({ apiKey: 'AIzaSyB6ZBeX-OYMukmfN_QpqF0PH40rHRBW1SY', dbUrl: 'https://dota2-master-default-rtdb.europe-west1.firebasedatabase.app' }, JSON.parse(localStorage.getItem('d2m_fb') || '{}'));
+const base = FB.dbUrl.replace(/\/$/, '');
+function row(host, st, title, det) {
+  const d = document.createElement('div'); d.className = 'row ' + st;
+  d.innerHTML = '<div class="ic">' + (st === 'ok' ? '✅' : st === 'bad' ? '❌' : '⚠️') + '</div><div class="t"><div></div><div class="d"></div></div>';
+  d.querySelector('.t div').textContent = title; d.querySelector('.d').textContent = det || '';
+  document.getElementById(host).appendChild(d); return st;
+}
+async function code(path, opts, auth) {
+  try { const r = await fetch(base + '/' + path + '.json' + (auth ? '?auth=' + auth : ''), Object.assign({ cache: 'no-store' }, opts || {})); return { s: r.status, j: r.ok ? await r.json().catch(() => null) : null }; }
+  catch (e) { return { s: 0, err: e.message }; }
+}
+async function main() {
+  const res = [];
+  // 1. версия игры на сайте
+  try {
+    const vt = await fetch('js/version.js', { cache: 'no-store' }).then(r => r.ok ? r.text() : '');
+    const v = (vt.match(/APP_VERSION\s*=\s*'([^']+)'/) || [])[1];
+    if (v) res.push(row('out', 'ok', 'Игра на сайте: версия ' + v, 'Файлы этапов 2–3 загружены (папка js/ на месте)'));
+    else {
+      const t = await fetch('index.html', { cache: 'no-store' }).then(r => r.text());
+      res.push(/function validateSave/.test(t) ? row('out', 'warn', 'На сайте версия этапа 1', 'Для этапов 2–3 загрузи index.html и папки js/, css/')
+        : row('out', 'bad', 'На сайте старая версия игры', 'Загрузи новые файлы на GitHub и подожди 1–2 минуты'));
+    }
+  } catch (e) { res.push(row('out', 'warn', 'Не удалось прочитать файлы игры', e.message)); }
+  try {
+    const t = await fetch('sw.js', { cache: 'no-store' }).then(r => r.text());
+    res.push(/importScripts\('js\/version\.js'\)/.test(t) ? row('out', 'ok', 'sw.js новый: кэш по версии игры', 'Игроки увидят плашку «Доступно обновление»')
+      : row('out', 'bad', 'sw.js старый', 'Загрузи новый sw.js — иначе телефоны не узнают об обновлениях'));
+  } catch (e) { res.push(row('out', 'warn', 'Не удалось прочитать sw.js', e.message)); }
+  // 2. правила базы — только чтение, без записи
+  const ping = await code('login/__check__');
+  if (ping.s === 0) { res.push(row('out', 'bad', 'Сервер Firebase недоступен', 'Проверь интернет. ' + (ping.err || ''))); return summary(res); }
+  res.push(ping.s === 200 ? row('out', 'ok', 'Новые правила базы опубликованы', 'узел login/ открыт для чтения — он есть только в новых правилах')
+    : row('out', 'bad', 'Похоже, правила базы старые', 'Firebase → Realtime Database → Правила → вставить database.rules.json → Опубликовать (ответ ' + ping.s + ')'));
+  const closed = [['saves', 'Чужие сохранения закрыты'], ['nicks', 'Список всех ников закрыт'], ['recov', 'Коды восстановления не выкачать'], ['board', 'Рейтинг без входа не читается'], ['gifts', 'Чужие подарки закрыты']];
+  for (const [p, t] of closed) { const r = await code(p); res.push(r.s === 401 || r.s === 403 ? row('out', 'ok', t) : row('out', 'bad', t + ' — НЕТ', 'Ответ ' + r.s + ': правила не применены')); }
+  summary(res);
+}
+function summary(res) {
+  const bad = res.filter(x => x === 'bad').length;
+  const s = document.getElementById('sum');
+  s.className = 'sum'; s.style.background = bad ? '#3a1414' : '#143a1c';
+  s.textContent = bad ? '❌ Проблем: ' + bad + '. Смотри красные строки.' : '✅ Сайт и правила базы в порядке.';
+}
+function nickKey(n) { return n.trim().toLowerCase(); }
+function nickEmail(n) { let h = ''; for (const ch of unescape(encodeURIComponent(nickKey(n)))) h += ch.charCodeAt(0).toString(16).padStart(2, '0'); return 'p' + h + '@dota2master.game'; }
+const dbKey = k => encodeURIComponent(k.replace(/\./g, ','));
+document.getElementById('go').onclick = async () => {
+  const out = document.getElementById('out2'); out.innerHTML = '';
+  const nick = document.getElementById('nick').value, pass = document.getElementById('pass').value;
+  const btn = document.getElementById('go'); btn.disabled = true;
+  try {
+    const k = nickKey(nick);
+    const al = await code('login/' + dbKey(k));
+    const email = (al.j && al.j.email) || nickEmail(nick);
+    const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + FB.apiKey, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: pass, returnSecureToken: true }) });
+    const j = await r.json();
+    if (!r.ok) { row('out2', 'bad', 'Вход в облако не удался', (j.error && j.error.message) || r.status); return; }
+    row('out2', 'ok', 'Вход в облако работает');
+    const uid = j.localId, tok = j.idToken;
+    const own = await code('nicks/' + dbKey(k));
+    row('out2', own.j === uid ? 'ok' : 'bad', own.j === uid ? 'Ник закреплён за тобой' : 'Ник не закреплён', own.j === uid ? '' : 'Зайди в игру этим аккаунтом — ник закрепится автоматически');
+    row('out2', al.j && al.j.uid === uid ? 'ok' : 'warn', al.j ? 'Запись для смены ника есть' : 'Записи для смены ника пока нет', al.j ? '' : 'Появится после входа в новую версию игры');
+    const t = await code('time/' + uid, { method: 'PUT', body: JSON.stringify({ '.sv': 'timestamp' }) }, tok);
+    row('out2', typeof t.j === 'number' ? 'ok' : 'bad', typeof t.j === 'number' ? 'Серверное время работает' : 'Серверное время не работает', typeof t.j === 'number' ? 'Часы телефона отличаются от сервера на ' + Math.round((t.j - Date.now()) / 1000) + ' с' : 'Ответ ' + t.s);
+    const fake = await code('time/' + uid, { method: 'PUT', body: '1' }, tok);
+    row('out2', fake.s === 401 || fake.s === 403 ? 'ok' : 'bad', fake.s === 401 || fake.s === 403 ? 'Подделка времени отклоняется' : 'Подделка времени ПРОШЛА', 'Ответ ' + fake.s);
+    const sv = await code('saves/' + uid + '/at', null, tok);
+    row('out2', sv.s === 200 && sv.j ? 'ok' : 'warn', sv.j ? 'Облачное сохранение есть' : 'Облачного сохранения пока нет', sv.j ? 'последнее: ' + new Date(sv.j).toLocaleString('ru-RU') : 'Зайди в игру и нажми «Сохранить сейчас»');
+    const b = await code('board/' + uid, null, tok);
+    row('out2', b.j ? 'ok' : 'warn', b.j ? 'Строка в рейтинге есть (арена ' + b.j.arena + ', MMR ' + b.j.mmr + ')' : 'Строки в рейтинге пока нет', b.j ? '' : 'Появится после сохранения в новой версии');
+    const rc = await code('recovIdx/' + uid, null, tok);
+    row('out2', rc.j ? 'ok' : 'warn', rc.j ? 'Код восстановления создан' : 'Кода восстановления нет', rc.j ? '' : 'Создай: вкладка «Онлайн» → 🔑 Код восстановления');
+  } catch (e) { row('out2', 'bad', 'Ошибка проверки', e.message); }
+  finally { btn.disabled = false; }
+};
+main();
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+const results = [];
+function T(name, fn) { try { const r = fn(); results.push({ name, ok: r === true, info: r === true ? '' : String(r) }); } catch (e) { results.push({ name, ok: false, info: 'ошибка: ' + e.message }); } }
+const f = document.getElementById('game');
+f.onload = () => {
+  const w = f.contentWindow, s = w.document.createElement('script'); s.src = 'tools/econ-sim.js';
+  s.onload = () => { w.simSetup(); run(w); show(); };
+  w.document.body.appendChild(s);
+};
+f.src = '../index.html?sim=1';
+function run(w) {
+  const E = w.simEnv(), C = E.CONFIG;
+  // формулы
+  T('calcPower(1) = 15, растёт с уровнем', () => w.calcPower(1) === 15 && w.calcPower(10) > w.calcPower(9) && w.calcPower(50) > 10000 || 'calcPower(1)=' + w.calcPower(1));
+  T('spinCost(1) = 128 и растёт', () => w.spinCost(1) === 128 && w.spinCost(30) > w.spinCost(29) || 'spinCost(1)=' + w.spinCost(1));
+  T('reqPower(1) = 55, lvlReward(1) = 70', () => w.reqPower(1) === 55 && w.lvlReward(1) === 70);
+  T('награда арены растёт монотонно 1…100', () => { for (let L = 2; L <= 100; L++) if (w.lvlReward(L) <= w.lvlReward(L - 1)) return 'L' + L; return true; });
+  T('rewardScale не меньше минимума', () => w.rewardScale() >= C.rewardScale.min);
+  T('freeAmount ≥ 500', () => w.freeAmount() >= 500);
+  T('цена продажи: снаряжение дороже скина в sellEqMul раз', () => w.sellPrice({ rarity: 'rare', type: 'eq' }) === Math.round(C.sell.rare * C.sellEqMul));
+  // апгрейдер
+  T('ugChance: база по редкости и потолок 85%', () => {
+    E.S.items = [{ uid: 1, type: 'skin', heroId: 'pudge', rarity: 'common', name: 'a' }]; for (let i = 2; i < 8; i++) E.S.items.push({ uid: i, type: 'skin', heroId: 'pudge', rarity: 'immortal', name: 'b' });
+    w.simSetUg(1, []); const base = w.ugChance(); w.simSetUg(1, [2, 3, 4, 5, 6, 7]); const max = w.ugChance(); w.simSetUg(null, []);
+    return (Math.abs(base - C.upgrade.base.common) < 1e-9 && max <= C.upgrade.maxChance) || base + ' / ' + max;
+  });
+  // шансы
+  T('рулетка героя: сумма весов 100', () => E.SEGMENTS.reduce((a, s) => a + s.weight, 0) === 100);
+  T('сундуки: шансы суммируются в 100%', () => E.CHESTS.every(c => Object.values(c.w).reduce((a, b) => a + b, 0) === 100));
+  T('слоты: возврат самоцветами < 100% ставки (без предметов)', () => { const ev = ['imm3', 'arc5', 'cos3', 'cos5'].map(id => w.simSlotEV(id, 40000).gemsPerBet); return ev.every(x => x > 0.4 && x < 1) || ev.join(', '); });
+  T('weightedRarity выдаёт только известные редкости', () => { for (let i = 0; i < 500; i++) if (!E.RARITIES.includes(w.weightedRarity())) return false; return true; });
+  // миграции и проверка сейва
+  T('миграция v2 → v3 без потерь', () => { const st = { v: 2, gems: 777, spins: 5, heroes: {}, items: [] }; w.migrate(st); return (st.version === E.SAVE_VERSION && st.v === undefined && st.gems === 777 && st.firstSpinDone === true) || JSON.stringify(st).slice(0, 80); });
+  T('сейв из будущей версии не трогается', () => { const st = { version: 999, gems: 1, heroes: {}, items: [] }; w.migrate(st); return st._newer === true && st.version === 999; });
+  T('validateSave: чинит подделку и выбрасывает мусор', () => { const r = w.validateSave({ heroes: { pudge: { level: 9999 } }, items: [{ uid: 1, rarity: 'arcana', heroId: 'pudge', name: 'x' }, 'junk', { uid: 2, rarity: 'god', heroId: 'pudge', name: 'y' }], gems: -5, arena: { cleared: 300 } }); return (r.ok && r.st.heroes.pudge.level === C.maxLevel && r.st.items.length === 1 && r.st.gems === 0 && r.st.arena.cleared === 100) || JSON.stringify(r).slice(0, 120); });
+  T('validateSave: нормальный сейв не меняется', () => { const st = w.freshState(); w.migrate(st); return w.validateSave(st).fixes.length === 0 || w.validateSave(st).fixes.join(','); });
+  T('validateSave отвергает мусор', () => w.validateSave('hello').ok === false && w.validateSave(null).ok === false);
+  // время и дни
+  T('weekKey: 2 ноября 2026 — неделя 45', () => w.weekKey('2026-11-02') === '2026-W45' || w.weekKey('2026-11-02'));
+  T('isNewDay: перевод часов назад не даёт новый день', () => w.isNewDay('2026-11-02', '2026-11-03') === true && w.isNewDay('2026-11-05', '2026-11-03') === false);
+  // кнопки без eval
+  T('parseCall разбирает аргументы', () => { const c = w.parseCall("fn('a b',-3,true,this.value,null)"); return c.name === 'fn' && c.args[0].v === 'a b' && c.args[1].v === -3 && c.args[2].v === true && c.args[3].t === 'prop' && c.args[4].v === null; });
+  T('parseCall не выполняет произвольный код', () => { try { w.parseCall('fn(alert(1))'); return 'разобрал опасный вызов'; } catch (e) { return true; } });
+  // фильтр ников
+  T('фильтр ников: нормальные проходят', () => ['Dendi', 'Dranik', 'Миракл', 'Pudge_228', 'Solo Mid'].every(n => w.nickProblem(n) === '') || ['Dendi', 'Dranik', 'Миракл', 'Pudge_228', 'Solo Mid'].map(n => n + ':' + w.nickProblem(n)).join('; '));
+  T('фильтр ников: мат и обходы ловятся', () => ['хуй228', 'xуй', 'п1здец', 'fuck_you', 'f.u.c.k', 'cyka'].every(n => w.nickProblem(n) !== '') || ['хуй228', 'xуй', 'п1здец', 'fuck_you', 'f.u.c.k', 'cyka'].filter(n => !w.nickProblem(n)).join(', '));
+  T('фильтр ников: «админ» запрещён', () => ['Admin', 'Модератор', 'Valve_Official'].every(n => w.nickProblem(n) !== ''));
+  // онлайн-данные
+  T('cleanStack отбрасывает мусор', () => w.cleanStack({ team: [{ id: 'not_hero', p: 1 }] }) === null && w.cleanStack({ nick: 'a', mmr: 1000, team: [{ id: 'pudge', p: 100 }] }).team.length === 1);
+  T('titleHTML не пропускает HTML в цвете', () => !/onerror/.test(w.titleHTML({ name: 'x', color: 'red"><img src=x onerror=1>' })));
+  T('cleanBalance пропускает только известные числа', () => { const r = w.cleanBalance({ startGems: 5, hack: 1, arena: { replayMul: 'x', kBase: 2 } }, C); return r.startGems === 5 && r.hack === undefined && r.arena.replayMul === undefined && r.arena.kBase === 2; });
+  // прогресс и события
+  T('сезон: 30-й уровень даёт Arcana и титул', () => { w.ensureSeason(); const r = w.seasonLevelReward(30); return r.item === 'arcana' && !!r.title; });
+  T('Новый год активен 20 декабря, не активен 3 ноября', () => { const ev = E.EVENTS.find(e => e.id === 'newyear'); return w.eventActive(ev, '2026-12-20') && w.eventActive(ev, '2027-01-10') && !w.eventActive(ev, '2026-11-03'); });
+  T('коллекция редкостей: 6 редкостей = +5% силы', () => { E.S.items = E.RARITIES.map((r, i) => ({ uid: 100 + i, type: 'skin', heroId: 'axe', rarity: r, name: r })); E.S.uid = 200; return w.collectionMul('axe') === 1 + C.social.collectionBonus && w.collectionMul('pudge') === 1; });
+  T('боссы 25/50/75/100 имеют механики', () => [25, 50, 75, 100].every(L => { const d = w.levelDef(L); return d.waves[d.waves.length - 1].mech && d.mechText; }));
+  T('бой детерминирован при одинаковом генераторе', () => { const def = w.levelDef(10), team = [{ id: 'axe', p: def.R }]; const g = () => { let a = 1; return () => (a = (a * 16807) % 2147483647) / 2147483647; }; return JSON.stringify(w.simulateBattle(team, def, g(), {}).win) === JSON.stringify(w.simulateBattle(team, def, g(), {}).win); });
+  T('версия игры задана', () => /^\d+\.\d+\.\d+$/.test(E.APP_VERSION) || E.APP_VERSION);
+}
+function show() {
+  const ok = results.filter(r => r.ok).length;
+  document.getElementById('sum').innerHTML = (ok === results.length ? '<b class="ok">✅ Все тесты пройдены: ' : '<b class="bad">❌ Пройдено ') + ok + ' из ' + results.length + '</b>';
+  document.getElementById('list').innerHTML = results.map(r => '<div class="t"><span class="' + (r.ok ? 'ok' : 'bad') + '">' + (r.ok ? '✔' : '✘') + '</span> ' + r.name + (r.info ? ' <span class="muted">— ' + r.info.replace(/</g, '&lt;') + '</span>' : '') + '</div>').join('');
+  window.TEST_RESULTS = results;
+}

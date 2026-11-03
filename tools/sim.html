@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Симуляция экономики — Dota 2 Master</title><meta name="robots" content="noindex"><link rel="stylesheet" href="../css/page.css">
+<style>.box{max-width:980px}label{display:inline-block;margin:4px 10px 4px 0}input,select,textarea{background:#05070a;color:#fff;border:1px solid #2a3440;padding:6px;border-radius:4px;font-size:15px}
+canvas{width:100%;background:#0e1217;border:1px solid #232b35;border-radius:6px;margin:8px 0}button{background:#3a7a2a;color:#fff;border:0;padding:12px 18px;border-radius:6px;font-weight:700;min-height:44px;cursor:pointer}
+#game{position:absolute;left:-9999px;width:800px;height:600px}</style></head>
+<body><div class="box">
+<h1>📈 Симуляция экономики</h1>
+<p class="muted">Игра запускается невидимо в тестовом режиме (без входа, ничего не сохраняет) и «играет» сессиями по модели живого игрока, используя настоящие функции игры. По умолчанию: 10 игроков × 50 дней × 2 сессии = <b>1000 сессий по 30 минут</b>.</p>
+<div class="card">
+<label>Игроков <input id="np" type="number" value="10" min="1" max="50" style="width:70px"></label>
+<label>Дней <input id="nd" type="number" value="50" min="1" max="120" style="width:70px"></label>
+<label>Сессий в день <input id="ns" type="number" value="2" min="1" max="8" style="width:60px"></label>
+<label>Минут в сессии <input id="nm" type="number" value="30" min="5" max="180" style="width:70px"></label>
+<label>Раундов мини-игр в день <input id="ng" type="number" value="5" min="0" max="15" style="width:60px"></label>
+<div style="margin-top:6px"><label style="display:block">Изменения CONFIG для проверки баланса (JSON, необязательно), например <code>{"arena":{"rewardGrowth":1.075},"spin":{"growth":1.11}}</code></label>
+<textarea id="over" style="width:100%;height:60px"></textarea></div>
+<button id="run">▶ Запустить</button> <span id="st" class="muted"></span></div>
+<div id="out"></div>
+</div>
+<iframe id="game" title="Игра в тестовом режиме"></iframe>
+<script src="sim-page.js"></script>
+</body></html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebasedatabase.app https://*.firebaseio.com">
+<meta name="robots" content="noindex,nofollow">
+<title>Админка — Dota 2 Master</title><link rel="stylesheet" href="css/page.css">
+<style>.box{max-width:1000px}input,select,textarea{background:#05070a;color:#fff;border:1px solid #2a3440;padding:8px;border-radius:4px;font-size:15px;box-sizing:border-box}
+button{background:#3a5f8a;color:#fff;border:0;padding:10px 14px;border-radius:5px;font-weight:700;min-height:42px;cursor:pointer;margin:2px}button.red{background:#8a2f2f}button.green{background:#3a7a2a}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}.hide{display:none}pre{white-space:pre-wrap;word-break:break-all;background:#05070a;padding:8px;border-radius:4px;max-height:300px;overflow:auto;font-size:.8rem}
+.log{font-size:.85rem;color:#9fd8a8;min-height:1.2em}.err{color:#ff8a8a}</style></head>
+<body><div class="box">
+<h1>🛠 Админка Dota 2 Master</h1>
+<div id="login" class="card"><p class="muted">Вход тем же ником и паролем, что в игре. Доступ есть, только если твой uid записан в узле <code>admins</code> базы.</p>
+<div class="row"><input id="a-nick" placeholder="Ник" autocomplete="username"><input id="a-pass" type="password" placeholder="Пароль" autocomplete="current-password"><button id="a-go" class="green">Войти</button></div><div id="a-msg" class="log"></div></div>
+<div id="panel" class="hide">
+<div class="card"><b>Игрок</b><div class="row"><input id="p-nick" placeholder="Ник игрока"><button id="p-find">Найти</button></div><div id="p-info"></div>
+<div id="p-acts" class="hide"><div class="row"><input id="p-amount" type="number" placeholder="± самоцветы" style="width:150px"><input id="p-note" placeholder="Сообщение игроку" style="flex:1;min-width:160px"><button id="p-gift" class="green">Выдать / забрать</button></div>
+<div class="row"><input id="p-reason" placeholder="Причина бана" style="flex:1;min-width:160px"><button id="p-ban" class="red">Забанить</button><button id="p-unban">Разбанить</button><button id="p-resetnick" class="red">Сбросить ник</button><button id="p-save">Показать сейв</button></div>
+<pre id="p-json" class="hide"></pre></div><div id="p-log" class="log"></div></div>
+
+<div class="card"><b>Подарок всем</b><div class="row"><input id="b-amount" type="number" placeholder="самоцветы" style="width:150px"><input id="b-note" placeholder="Сообщение (например: С Новым годом!)" style="flex:1;min-width:160px"><button id="b-send" class="green">Разослать всем из рейтинга</button></div><div id="b-log" class="log"></div></div>
+
+<div class="card"><b>Настройки игры (config/)</b> <span class="muted">— применяются у игроков в течение 10 минут без перезаливки сайта</span>
+<div class="row"><label><input type="checkbox" id="c-maint"> Техработы</label><input id="c-maint-text" placeholder="Текст техработ" style="flex:1;min-width:200px"></div>
+<div class="row"><input id="c-ann" placeholder="Объявление на главной (пусто — нет)" style="flex:1;min-width:200px"></div>
+<div class="row">Выключить: <label><input type="checkbox" id="c-k-pvp"> PvP</label><label><input type="checkbox" id="c-k-gifts"> Подарки</label><label><input type="checkbox" id="c-k-slots"> Слоты</label><label><input type="checkbox" id="c-k-chests"> Сундуки</label></div>
+<div class="row">События: <label><input type="checkbox" id="c-e-newyear"> Новый год (15.12–14.01)</label><label><input type="checkbox" id="c-e-halloween"> Хэллоуин (25.10–05.11)</label></div>
+<div class="row"><label><input type="checkbox" id="c-analytics" checked> Обезличенная статистика</label></div>
+<div><span class="muted">Множители баланса (JSON — те же ключи, что в js/config.js), например <code>{"arena":{"replayMul":0.3},"free":{"min":800}}</code></span><textarea id="c-bal" style="width:100%;height:70px"></textarea></div>
+<div class="row"><button id="c-load">Загрузить</button><button id="c-save" class="green">Сохранить</button></div><div id="c-log" class="log"></div></div>
+
+<div class="card"><b>Чистка</b> <span class="muted">— стаки и строки рейтинга игроков, не заходивших 30+ дней (их сейвы не трогаются)</span><div class="row"><button id="cl-run" class="red">Удалить неактивные</button></div><div id="cl-log" class="log"></div></div>
+
+<div class="card"><b>Жалобы и баг-репорты</b><div class="row"><button id="r-load">Показать последние 100</button></div><div id="r-list"></div></div>
+
+<div class="card"><b>Статистика (обезличенная)</b><div class="row"><button id="s-load">Последние 14 дней</button></div><div id="s-list"></div></div>
+</div></div>
+<script src="js/admin.js"></script>
+</body></html>
