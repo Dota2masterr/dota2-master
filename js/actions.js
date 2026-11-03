@@ -69,4 +69,11 @@ function restartTutorial() { closeModal(); startTutorial(true); }
 function tutSkip() { tutStep = -1; showTutStep(); }
 function tutNext() { tutStep++; showTutStep(); }
 function pickAccount(el) { document.getElementById('auth-nick').value = el.dataset.nick; authMode('login'); }
-function startSurvival() { startBattle(0, false, survivalDef()); }
+// 2.4.4: выживание — 1 попытка в день
+function survivalLeft() { return S.survDay === todayStr() ? 0 : 1; }
+function startSurvival() {
+  if (busy.battle) return;
+  if (!survivalLeft()) return showModal('🌊', 'Попытка на сегодня использована', 'В выживании одна попытка в день. Возвращайся завтра!', '');
+  S.survDay = todayStr(); save();
+  startBattle(0, false, survivalDef());
+}
