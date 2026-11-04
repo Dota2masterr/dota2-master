@@ -832,3 +832,66 @@ label.chk input{width:20px;height:20px}
 .wn-t th,.wn-t td{padding:3px 6px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left}
 .wn-t th{color:var(--muted);font-weight:400}.wn-t td.was{color:#d88;text-decoration:line-through;text-decoration-color:rgba(255,120,120,.4)}.wn-t td.now{color:#9fe89a;font-weight:700}
 .wn ul{margin:4px 0 0 18px}
+
+/* ===== 2.4.6: фоны вкладок и картинки кнопок главной (из папки «Редизайн») ===== */
+body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,8,11,.5),rgba(6,8,11,.68) 45%,rgba(6,8,11,.85)),var(--tab-bg,none) center/cover no-repeat;transition:opacity .3s}
+body[data-tab="home"]{--tab-bg:url('../assets/bg/forest.webp')}
+body[data-tab="heroes"]{--tab-bg:url('../assets/bg/temple.webp')}
+body[data-tab="slots"],body[data-tab="collection"],body[data-tab="chests"]{--tab-bg:url('../assets/bg/treasure.webp')}
+body[data-tab="upgrade"]{--tab-bg:url('../assets/bg/forge.webp')}
+body[data-tab="arena"],body[data-tab="rogue"]{--tab-bg:url('../assets/bg/battle.webp')}
+body[data-tab="invoker"],body[data-tab="online"]{--tab-bg:url('../assets/bg/arcane.webp')}
+body[data-tab="quests"]{--tab-bg:url('../assets/bg/scroll.webp')}
+body[data-tab="games"]{--tab-bg:url('../assets/bg/games.webp')}
+/* кнопки главной: фон-картинка, без значков */
+.home-card{position:relative;isolation:isolate;overflow:hidden;min-height:154px;display:flex;flex-direction:column;justify-content:flex-end;padding:18px 20px;
+  border:1px solid rgba(205,158,83,.42);border-radius:8px;background-color:#101116;background-position:center;background-size:cover;background-repeat:no-repeat;
+  box-shadow:0 7px 20px rgba(0,0,0,.34);transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+.home-card::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(5,7,10,.88),rgba(5,7,10,.48) 68%,rgba(5,7,10,.2)),linear-gradient(0deg,rgba(0,0,0,.5),transparent 78%);transition:opacity .22s ease}
+.home-card:hover{transform:translateY(-4px) scale(1.012);border-color:rgba(232,199,122,.9);box-shadow:0 12px 28px rgba(0,0,0,.5),0 0 18px rgba(201,145,64,.15)}
+.home-card:hover::before{opacity:.82}
+.home-card .ic{display:none!important}
+.home-card h3{position:relative;z-index:1;margin:0 0 7px;color:#f1d18e;font-size:1.08rem;letter-spacing:2px;text-shadow:0 2px 8px #000}
+.home-card p{position:relative;z-index:1;margin:0;max-width:42ch;color:#e0e3e8;font-size:.86rem;line-height:1.45;text-shadow:0 2px 6px #000}
+.home-card[data-click*="'heroes'"]{background-image:url('../assets/home-heroes.webp')}
+.home-card[data-click*="'slots'"]{background-image:url('../assets/home-slots.webp')}
+.home-card[data-click*="'collection'"]{background-image:url('../assets/home-collection.webp')}
+.home-card[data-click*="'upgrade'"]{background-image:url('../assets/home-upgrade.webp')}
+.home-card[data-click*="'arena'"]{background-image:url('../assets/home-arena.webp')}
+.home-card[data-click*="'quests'"]{background-image:url('../assets/home-quests.webp')}
+.home-card[data-click*="'invoker'"]{background-image:url('../assets/home-invoker.webp')}
+@media (max-width:600px){.home-card{min-height:138px;padding:15px 16px}.home-card p{font-size:.82rem}}
+/* ===== 2.4.6: верхняя панель в стиле Dota (по скриншотам клиента) ===== */
+.topnav{background:linear-gradient(180deg,#545a63 0%,#3c4149 40%,#2a2e34 100%);border-bottom:2px solid #0d0f12;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 6px 18px rgba(0,0,0,.65)}
+.topnav .wrap{padding-top:0;gap:0}
+@media (min-width:1800px){.topnav .wrap>.nav{order:2;flex:1 1 auto;border-top:none;margin-left:10px}.topnav .wrap>.userbox{order:3}}
+.topnav .wrap>.logo,.topnav .wrap>.userbox{padding:6px 0}
+.logo-mark{background:radial-gradient(circle at 45% 40%,#ff9a3a,#c2361a 60%,#6a1408);box-shadow:0 0 18px rgba(255,120,40,.55),inset 0 0 6px rgba(0,0,0,.6);border:1px solid #2a0a04}
+.nav{gap:0;align-items:stretch}
+.nav button{font-family:'Cinzel',serif;font-size:.86rem;letter-spacing:.5px;color:#c3c9d0;height:54px;padding:0 20px;text-shadow:0 1px 2px #000;z-index:0}
+.nav button::before{content:'';position:absolute;inset:0 -4px;transform:skewX(-18deg);border-right:1px solid rgba(0,0,0,.55);box-shadow:1px 0 0 rgba(255,255,255,.07);z-index:-1;transition:background .15s}
+.nav button:hover::before{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02))}
+.nav button.active{color:#fff;text-shadow:0 0 10px rgba(255,255,255,.35),0 1px 2px #000}
+.nav button.active::before{background:linear-gradient(180deg,#6c7480,#4b525c 60%,#3a4048);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),1px 0 0 rgba(255,255,255,.07)}
+.nav button.active::after{display:none}
+.cur-chip{background:linear-gradient(180deg,#2a2e34,#1b1e22);border:1px solid #0d0f12;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.cur-chip b,.cur-chip{color:#f3d58a}
+.subbar{background:linear-gradient(180deg,#22262c,#171a1e);border-bottom:1px solid #0b0d10}
+@media (max-width:700px){.nav button{height:44px;padding:0 12px;font-size:.74rem}}
+/* ===== 2.4.6: сокровищницы как в арсенале Dota ===== */
+.tr-head{display:flex;align-items:baseline;gap:12px;margin:6px 0 10px}.tr-head h2{font-size:1.6rem;letter-spacing:2px;color:#e8ecf0;text-transform:uppercase}
+.tr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.tr-card{background:linear-gradient(180deg,#3a414b,#2a3038);border:1px solid #14181d;border-bottom:3px solid var(--cc);box-shadow:0 6px 16px rgba(0,0,0,.45);display:flex;flex-direction:column;align-items:stretch;padding-bottom:10px;transition:transform .18s,box-shadow .18s}
+.tr-card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(0,0,0,.6),0 0 16px color-mix(in srgb,var(--cc) 40%,transparent)}
+.tr-art{cursor:pointer;background:radial-gradient(ellipse at 50% 40%,color-mix(in srgb,var(--cc) 35%,#1a1e24),#14171c 75%);aspect-ratio:200/130;overflow:hidden}
+.tr-svg{width:100%;height:100%;display:block;transition:transform .3s}.tr-card:hover .tr-svg{transform:scale(1.05)}
+.tr-name{text-align:center;color:#e6e9ee;font-size:1rem;margin-top:8px;padding:0 8px}
+.tr-sub{text-align:center;color:#8d96a0;font-size:.7rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.tr-card .odds{text-align:center;font-size:.72rem;padding:0 8px;margin-bottom:8px}
+.tr-buy{margin:0 14px;min-height:44px;border:1px solid #2a3a22;border-radius:2px;background:linear-gradient(180deg,#7d9a6a,#5c7a4c);color:#eef6e6;font-size:1rem;letter-spacing:1px;cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.tr-buy:hover:not(:disabled){background:linear-gradient(180deg,#8fb07a,#6a8c58)}
+.tr-buy:disabled{filter:grayscale(.8) brightness(.7);cursor:not-allowed}
+.tr-look{margin:6px 14px 0;background:none;border:none;color:#9aa6b2;font-size:.72rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;min-height:32px}
+.tr-look:hover{color:#fff}
+.tr-head{flex-wrap:wrap}

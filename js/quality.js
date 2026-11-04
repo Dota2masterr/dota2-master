@@ -110,7 +110,7 @@ const I18N_TEXT = {
   'ИГРАТЬ': 'PLAY', 'СОЗДАТЬ АККАУНТ': 'CREATE ACCOUNT', '🔑 Забыл пароль? Восстановить по коду': '🔑 Forgot password? Recover with code', 'Конфиденциальность': 'Privacy',
   'Неофициальная некоммерческая фан-игра. Dota 2 — собственность Valve.': 'Unofficial non-commercial fan game. Dota 2 is owned by Valve.',
   'Прогресс хранится в браузере и (если пароль от 6 символов) в облаке. Пароль хранится только в виде хэша.': 'Progress is stored in your browser and (with a 6+ character password) in the cloud. Passwords are stored only as a hash.',
-  'Главная': 'Home', 'Герои': 'Heroes', 'Слоты': 'Slots', 'Коллекция': 'Collection', 'Апгрейдер': 'Upgrader', 'Арена': 'Arena', 'Задания': 'Quests', 'Сундуки': 'Treasures', 'Мини-игры': 'Mini-games', 'Онлайн': 'Online',
+  'Главная': 'Home', 'Герои': 'Heroes', 'Слоты': 'Slots', 'Коллекция': 'Collection', 'Арсенал': 'Armory', 'Апгрейдер': 'Upgrader', 'Арена': 'Arena', 'Задания': 'Quests', 'Сундуки': 'Treasures', 'Мини-игры': 'Mini-games', 'Онлайн': 'Online',
   'Кристаллы': 'Gems', 'Профиль': 'Profile', 'профиль': 'profile', '⚔ Сила стака': '⚔ Stack power', 'Σ Сила всех': 'Σ Total power', '🎨 Предметов': '🎨 Items', '🎰 Круток': '🎰 Spins', '🏟 Арена': '🏟 Arena',
   'Скорость анимаций': 'Animation speed', '🐢 Медленно': '🐢 Slow', '⚡ Быстро': '⚡ Fast', 'Все герои +1 уровень': 'All heroes +1 level', '⬆ Улучшить всех': '⬆ Upgrade all', 'Обновить': 'Refresh', 'Установить как приложение': 'Install as app', 'Настройки': 'Settings',
   'Качай героев на рулетке, выбивай скины и снаряжение в четырёх слот-машинах, улучшай предметы и проведи свою команду через': 'Level heroes on the wheel, win skins and gear in four slot machines, upgrade items and lead your team through',

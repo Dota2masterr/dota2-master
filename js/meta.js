@@ -60,12 +60,33 @@ function giveChestItem(x) {
   const it = { uid: S.uid++, type: 'skin', heroId: x.c.hero, rarity: x.c.rarity, name: x.c.name, path: x.c.path, ts: Date.now() };
   S.items.unshift(it); noteDrop(it); return it;
 }
+// 2.4.6: сокровищницы в стиле арсенала Dota — карточка с картинкой, название, «сокровищница», зелёная кнопка цены
+function chestArt(c, id) {
+  const gem = id === 'arcana' ? '#b6ff6a' : id === 'immortal' ? '#ffcf5a' : '#8ec8ff';
+  return '<svg viewBox="0 0 200 130" class="tr-svg" aria-hidden="true"><defs>' +
+    '<radialGradient id="g' + id + '" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="' + c + '" stop-opacity=".75"/><stop offset="1" stop-color="#0b0d12" stop-opacity="0"/></radialGradient>' +
+    '<linearGradient id="w' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a4a26"/><stop offset="1" stop-color="#3a2010"/></linearGradient>' +
+    '<linearGradient id="m' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3c0"/><stop offset=".5" stop-color="' + c + '"/><stop offset="1" stop-color="#6a4a10"/></linearGradient></defs>' +
+    '<rect width="200" height="130" fill="url(#g' + id + ')"/>' +
+    Array.from({ length: 14 }, (_, k) => '<circle cx="' + (20 + (k * 53) % 165) + '" cy="' + (12 + (k * 37) % 100) + '" r="' + (1 + k % 3 * 0.6) + '" fill="' + gem + '" opacity=".7"/>').join('') +
+    '<ellipse cx="100" cy="114" rx="62" ry="8" fill="#000" opacity=".45"/>' +
+    '<path d="M48 64 h104 v44 a6 6 0 0 1 -6 6 h-92 a6 6 0 0 1 -6 -6z" fill="url(#w' + id + ')" stroke="#1a0c04" stroke-width="2"/>' +
+    '<path d="M44 64 q56 -46 112 0 z" fill="url(#w' + id + ')" stroke="#1a0c04" stroke-width="2"/>' +
+    '<path d="M44 64 q56 -46 112 0" fill="none" stroke="url(#m' + id + ')" stroke-width="5"/>' +
+    '<rect x="44" y="62" width="112" height="7" fill="url(#m' + id + ')"/>' +
+    '<rect x="62" y="40" width="9" height="74" fill="url(#m' + id + ')" opacity=".9"/><rect x="129" y="40" width="9" height="74" fill="url(#m' + id + ')" opacity=".9"/>' +
+    '<rect x="48" y="104" width="104" height="5" fill="url(#m' + id + ')"/>' +
+    '<path d="M100 70 l14 12 -14 16 -14 -16z" fill="' + gem + '" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px ' + gem + ')"/>' +
+    '<path d="M100 70 l6 12 -6 16" fill="#fff" opacity=".35"/></svg>';
+}
 function renderChests() {
   const host = document.getElementById('chests-host');
-  host.innerHTML = '<div class="chest-row">' + CHESTS.map(ch =>
-    '<div class="chest panel" style="--cc:' + ch.color + '"><div class="chest-ic"><div class="lid"></div><div class="box"></div></div><h3>' + esc(ch.name) + '</h3>' +
+  host.innerHTML = '<div class="tr-head"><h2 class="cinzel">Сокровищницы</h2><span class="muted">Шансы выпадения указаны на каждой</span></div><div class="tr-grid">' + CHESTS.map(ch =>
+    '<div class="tr-card" style="--cc:' + ch.color + '"><div class="tr-art" data-click="previewChest(\'' + ch.id + '\')" title="Содержимое">' + chestArt(ch.color, ch.id) + '</div>' +
+    '<div class="tr-name">' + esc(ch.name) + '</div><div class="tr-sub">сокровищница</div>' +
     '<div class="odds">' + Object.keys(ch.w).reverse().map(r => '<span style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + ' ' + ch.w[r] + '%</span>').join(' · ') + '</div>' +
-    '<div style="display:flex;gap:6px;justify-content:center;margin-top:8px"><button class="btn green" ' + (canPay(ch.cost) ? '' : 'disabled') + ' data-click="openChest(\'' + ch.id + '\')">Открыть · ' + fmt(ch.cost) + ' 🔶</button><button class="btn ghost sm" data-click="previewChest(\'' + ch.id + '\')">Содержимое</button></div></div>').join('') + '</div>' +
+    '<button class="tr-buy" ' + (canPay(ch.cost) ? '' : 'disabled') + ' data-click="openChest(\'' + ch.id + '\')">' + fmt(ch.cost) + ' 🔶</button>' +
+    '<button class="tr-look" data-click="previewChest(\'' + ch.id + '\')">Содержимое сокровищницы</button></div>').join('') + '</div>' +
     '<div id="chest-stage"></div><div class="sec-title">Крафт · 10 → 1</div><div class="panel panel-b" id="craft-box"></div>';
   renderCraft();
 }
@@ -107,7 +128,7 @@ function openChest(id) {
     chestBusy = false; renderChestsButtons();
   }, ms + 80);
 }
-function renderChestsButtons() { document.querySelectorAll('.chest .btn.green').forEach((b, i) => b.disabled = !canPay(CHESTS[i].cost)); }
+function renderChestsButtons() { document.querySelectorAll('.tr-card .tr-buy').forEach((b, i) => b.disabled = !canPay(CHESTS[i].cost)); }
 
 // ---------- КРАФТ ----------
 let craftR = 'common';

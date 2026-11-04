@@ -353,6 +353,7 @@ function updateProfileChip() {
 function switchTab(t) {
   if (busy.battle) return;
   currentTab = t;
+  document.body.dataset.tab = t;                         // 2.4.6: фон вкладки
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + t));
   try { if (location.hash !== '#' + t) history.replaceState(null, '', '#' + t); } catch (e) {}
@@ -677,3 +678,10 @@ function startGame() {
   if (S.season24 && !S.season24.shown) season24Modal();
   if (S._imported) { delete S._imported; save(); showModal('📦', 'Прогресс перенесён', 'Уровни героев, золото (теперь кристаллы) и предметы из старой версии перенесены в этот аккаунт.', 'ok'); }
 }
+
+// 2.4.6: вкладки не помещаются в окно — листаем колесом мыши (как в Dota), активную вкладку прокручиваем в зону видимости
+(function () {
+  const nav = document.getElementById('nav'); if (!nav) return;
+  nav.addEventListener('wheel', e => { if (nav.scrollWidth <= nav.clientWidth) return; if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { nav.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+  nav.addEventListener('click', e => { const b = e.target.closest('button'); if (b) try { b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); } catch (x) { } });
+})();
