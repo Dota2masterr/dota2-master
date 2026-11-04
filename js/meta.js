@@ -43,74 +43,60 @@ function announce(text, opts) {
 }
 
 // ---------- СУНДУКИ ----------
-// 2.4: цена сундука растёт вместе с базовой наградой (rewardScale × scaleMul), но не ниже cost
-function chestCost(id) { const x = CONFIG.chests[id]; const rs = typeof rewardScale === 'function' && typeof S !== 'undefined' && S && S.arena ? rewardScale() : 0; return Math.max(x.cost, Math.round(rs * (x.scaleMul || 0) / 100) * 100); }
-const CHESTS = [
-  { id: 'ancient', name: 'Treasure of the Ancients', get cost() { return chestCost('ancient'); }, color: '#5e98d9', w: CONFIG.chests.ancient.w },
-  { id: 'immortal', name: 'Immortal Treasure', get cost() { return chestCost('immortal'); }, color: '#e4ae39', w: CONFIG.chests.immortal.w },
-  { id: 'arcana', name: 'Arcana Treasure', get cost() { return chestCost('arcana'); }, color: '#ade55c', w: CONFIG.chests.arcana.w }
-];
-function chestPool(rarity) {
-  return CS_ITEMS.filter(x => x.rarity === rarity).map(x => ({ kind: 'eq', c: x }))
-    .concat(CS_SETS.filter(x => x.rarity === rarity).map(x => ({ kind: 'set', c: x })));
-}
-function chestRoll(ch) { const r = weightedRarity(ch.w); const pool = chestPool(r); return pool.length ? pick(pool) : { kind: 'eq', c: pickCatalog(r) }; }
+// 2.4.9: сокровищницы — настоящие сокровищницы Dota (TREASURES в cosmetics.js)
 function giveChestItem(x) {
   if (x.kind === 'eq') { const it = eqFromCatalog(x.c, S.uid++); S.items.unshift(it); autoEquip(it, it.heroId); noteDrop(it); return it; }
   const it = { uid: S.uid++, type: 'skin', heroId: x.c.hero, rarity: x.c.rarity, name: x.c.name, path: x.c.path, ts: Date.now() };
   S.items.unshift(it); noteDrop(it); return it;
 }
-// 2.4.6: сокровищницы в стиле арсенала Dota — карточка с картинкой, название, «сокровищница», зелёная кнопка цены
-function chestArt(c, id) {
-  const gem = id === 'arcana' ? '#b6ff6a' : id === 'immortal' ? '#ffcf5a' : '#8ec8ff';
-  return '<svg viewBox="0 0 200 130" class="tr-svg" aria-hidden="true"><defs>' +
-    '<radialGradient id="g' + id + '" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="' + c + '" stop-opacity=".75"/><stop offset="1" stop-color="#0b0d12" stop-opacity="0"/></radialGradient>' +
-    '<linearGradient id="w' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a4a26"/><stop offset="1" stop-color="#3a2010"/></linearGradient>' +
-    '<linearGradient id="m' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3c0"/><stop offset=".5" stop-color="' + c + '"/><stop offset="1" stop-color="#6a4a10"/></linearGradient></defs>' +
-    '<rect width="200" height="130" fill="url(#g' + id + ')"/>' +
-    Array.from({ length: 14 }, (_, k) => '<circle cx="' + (20 + (k * 53) % 165) + '" cy="' + (12 + (k * 37) % 100) + '" r="' + (1 + k % 3 * 0.6) + '" fill="' + gem + '" opacity=".7"/>').join('') +
-    '<ellipse cx="100" cy="114" rx="62" ry="8" fill="#000" opacity=".45"/>' +
-    '<path d="M48 64 h104 v44 a6 6 0 0 1 -6 6 h-92 a6 6 0 0 1 -6 -6z" fill="url(#w' + id + ')" stroke="#1a0c04" stroke-width="2"/>' +
-    '<path d="M44 64 q56 -46 112 0 z" fill="url(#w' + id + ')" stroke="#1a0c04" stroke-width="2"/>' +
-    '<path d="M44 64 q56 -46 112 0" fill="none" stroke="url(#m' + id + ')" stroke-width="5"/>' +
-    '<rect x="44" y="62" width="112" height="7" fill="url(#m' + id + ')"/>' +
-    '<rect x="62" y="40" width="9" height="74" fill="url(#m' + id + ')" opacity=".9"/><rect x="129" y="40" width="9" height="74" fill="url(#m' + id + ')" opacity=".9"/>' +
-    '<rect x="48" y="104" width="104" height="5" fill="url(#m' + id + ')"/>' +
-    '<path d="M100 70 l14 12 -14 16 -14 -16z" fill="' + gem + '" stroke="#fff" stroke-width="1.5" style="filter:drop-shadow(0 0 6px ' + gem + ')"/>' +
-    '<path d="M100 70 l6 12 -6 16" fill="#fff" opacity=".35"/></svg>';
+const TR_TIER_NAME = { i: 'Immortal', m: 'Mythical', r: 'Rare' };
+let trFilter = 'all';
+function setTrFilter(v) { trFilter = v; renderChests(); }
+function trCard(t) {
+  const st = trState(t.id), x = TR_TIER[t.tier], ch = trBonusChance(t);
+  const own = t.items.filter(i => trOwned(t, i.c)).length;
+  return '<div class="tr-card" style="--cc:' + t.color + '"><div class="tr-art" data-click="previewChest(\'' + t.id + '\')" title="Содержимое">' +
+    '<img class="tr-img" src="' + itemImg(t.img) + '" referrerpolicy="no-referrer" alt="" loading="lazy" draggable="false"></div>' +
+    '<div class="tr-name">' + esc(t.name) + '</div><div class="tr-sub" style="color:' + t.color + '">' + TR_TIER_NAME[t.tier] + ' · сокровищница</div>' +
+    '<div class="tr-imgs">' + t.items.slice(0, 6).map(i => '<img src="' + itemImg(i.c.path) + '" referrerpolicy="no-referrer" loading="lazy" title="' + esc(i.c.name) + '" class="' + (trOwned(t, i.c) ? 'own' : '') + '" style="border-color:' + RARITY_COLOR[i.c.rarity] + '">').join('') + '</div>' +
+    '<div class="odds">Собрано ' + own + '/' + t.items.length + ' · <span style="color:#ade55c">✦ Редкий бонус ' + (Math.round(ch * 10) / 10) + '%</span>' + (st.miss ? ' <span class="muted">(гарантия через ' + Math.max(1, x.guar - st.miss) + ')</span>' : '') + '</div>' +
+    '<button class="tr-buy" ' + (canPay(trCost(t)) ? '' : 'disabled') + ' data-cost="' + trCost(t) + '" data-click="openChest(\'' + t.id + '\')">' + fmt(trCost(t)) + ' 🔶</button>' +
+    '<button class="tr-look" data-click="previewChest(\'' + t.id + '\')">Содержимое сокровищницы</button></div>';
 }
 function renderChests() {
   const host = document.getElementById('chests-host');
-  host.innerHTML = '<div class="tr-head"><h2 class="cinzel">Сокровищницы</h2><span class="muted">Шансы выпадения указаны на каждой</span></div><div class="tr-grid">' + CHESTS.map(ch =>
-    '<div class="tr-card" style="--cc:' + ch.color + '"><div class="tr-art" data-click="previewChest(\'' + ch.id + '\')" title="Содержимое">' + chestArt(ch.color, ch.id) + '</div>' +
-    '<div class="tr-name">' + esc(ch.name) + '</div><div class="tr-sub">сокровищница</div>' +
-    '<div class="odds">' + Object.keys(ch.w).reverse().map(r => '<span style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + ' ' + ch.w[r] + '%</span>').join(' · ') + '</div>' +
-    '<button class="tr-buy" ' + (canPay(ch.cost) ? '' : 'disabled') + ' data-click="openChest(\'' + ch.id + '\')">' + fmt(ch.cost) + ' 🔶</button>' +
-    '<button class="tr-look" data-click="previewChest(\'' + ch.id + '\')">Содержимое сокровищницы</button></div>').join('') + '</div>' +
+  const list = TREASURES.filter(t => trFilter === 'all' || t.tier === trFilter);
+  host.innerHTML = '<div class="tr-head"><h2 class="cinzel">Сокровищницы</h2><span class="muted">' + TREASURES.length + ' сокровищниц Dota · обычные предметы без повторов · шанс редкого бонуса растёт с каждым открытием</span></div>' +
+    '<div class="tr-tabs">' + [['all', 'Все'], ['i', 'Immortal'], ['m', 'Mythical'], ['r', 'Rare']].map(([v, n]) => '<button class="chip' + (trFilter === v ? ' active' : '') + '" data-click="setTrFilter(\'' + v + '\')">' + n + '</button>').join('') + '</div>' +
+    '<div class="tr-grid">' + list.map(trCard).join('') + '</div>' +
     '<div id="chest-stage"></div><div class="sec-title">Крафт · 10 → 1</div><div class="panel panel-b" id="craft-box"></div>';
   renderCraft();
 }
 function previewChest(id) {
-  const ch = CHESTS.find(x => x.id === id);
-  const parts = Object.keys(ch.w).reverse().map(r => {
-    const pool = chestPool(r);
-    return '<div style="margin:6px 0"><b style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + ' — ' + ch.w[r] + '%</b> <span class="muted">(' + pool.length + ' предм.)</span><div class="prev-row">' +
-      pool.slice(0, 14).map(x => '<img title="' + esc(x.c.name) + '" src="' + itemImg(x.c.path) + '" referrerpolicy="no-referrer" style="border-color:' + RARITY_COLOR[r] + '">').join('') + '</div></div>';
-  }).join('');
-  showModal('🎁', ch.name, '<div style="text-align:left;max-height:60vh;overflow:auto">' + parts + '</div>', '', { html: true, buttons: [{ t: 'Закрыть', c: 'ghost', f: closeModal }] });
+  const t = TREASURES.find(x => x.id === id); if (!t) return;
+  const x = TR_TIER[t.tier], ch = trBonusChance(t), bonus = trBonus(t);
+  const row = (arr, own) => '<div class="prev-row">' + arr.map(i => '<img title="' + esc(i.name + ' — ' + (HERO_BY_ID[i.hero] ? HERO_BY_ID[i.hero].name : '')) + '" src="' + itemImg(i.path) + '" referrerpolicy="no-referrer" loading="lazy" class="' + (own && own(i) ? 'own' : '') + '" style="border-color:' + RARITY_COLOR[i.rarity] + '">').join('') + '</div>';
+  const body = '<div style="text-align:left;max-height:60vh;overflow:auto">' +
+    '<div class="tr-pv-top"><img src="' + itemImg(t.img) + '" referrerpolicy="no-referrer"><div><b style="color:' + t.color + '">' + TR_TIER_NAME[t.tier] + '</b> · ' + esc(t.date || '') + '<br><span class="muted">Каждое открытие даёт 1 предмет. Обычные предметы — без повторов, пока не соберёшь все.</span></div></div>' +
+    '<div style="margin:8px 0 2px"><b>Обычные предметы</b> <span class="muted">(' + t.items.length + ', поровну)</span></div>' + row(t.items.map(i => i.c), i => trOwned(t, i)) +
+    '<div style="margin:10px 0 2px"><b style="color:#ade55c">✦ Редкий бонус</b> <span class="muted">— сейчас ' + (Math.round(ch * 10) / 10) + '%: начинается с ' + x.base + '%, +' + x.step + '% за каждое открытие без бонуса, гарантия на ' + x.guar + '-м · ' + x.bonus.map(r => RARITY_NAMES[r]).join('/') + '</span></div>' + row(bonus.slice(0, 24)) +
+    (bonus.length > 24 ? '<div class="muted">…и ещё ' + (bonus.length - 24) + '</div>' : '') + '</div>';
+  showModal('🎁', t.name, body, '', { html: true, buttons: [{ t: 'Закрыть', c: 'ghost', f: closeModal }] });
 }
 let chestBusy = false;
 function openChest(id) {
-  const ch = CHESTS.find(x => x.id === id);
-  if (chestBusy || !canPay(ch.cost)) return;
-  chestBusy = true; addGems(-ch.cost); track('chests');
-  const win = chestRoll(ch);
+  const t = TREASURES.find(x => x.id === id);
+  if (!t || chestBusy || !canPay(trCost(t))) return;
+  chestBusy = true; addGems(-trCost(t)); track('chests');
+  const st = trState(t.id); st.n++;
+  const win = trRoll(t, true);
   const stage = document.getElementById('chest-stage');
   const N = 46, WIN = 40;
   const cards = [];
-  for (let i = 0; i < N; i++) cards.push(i === WIN ? win : chestRoll(ch));
+  for (let i = 0; i < N; i++) cards.push(i === WIN ? win : (Math.random() < 0.08 ? { kind: 'eq', c: pick(trBonus(t)) || pick(t.items).c, bonus: 1 } : pick(t.items)));
   stage.innerHTML = '<div class="case-wrap panel"><div class="case-line"></div><div class="case-strip" id="case-strip">' +
-    cards.map(x => '<div class="case-card" style="--rc:' + RARITY_COLOR[x.c.rarity] + '"><img src="' + itemImg(x.c.path) + '" referrerpolicy="no-referrer"><span>' + esc(x.c.name) + '</span></div>').join('') + '</div></div>';
+    cards.map(x => '<div class="case-card' + (x.bonus ? ' bonus' : '') + '" style="--rc:' + RARITY_COLOR[x.c.rarity] + '"><img src="' + itemImg(x.c.path) + '" referrerpolicy="no-referrer"><span>' + esc(x.c.name) + '</span></div>').join('') + '</div></div>';
+  stage.scrollIntoView({ behavior: 'smooth', block: 'center' });
   const strip = document.getElementById('case-strip');
   const cw = 132;
   const wrapW = strip.parentNode.clientWidth;
@@ -119,16 +105,16 @@ function openChest(id) {
   strip.style.transition = 'none'; strip.style.transform = 'translateX(0)'; void strip.offsetWidth;
   strip.style.transition = 'transform ' + ms + 'ms cubic-bezier(.08,.6,.12,1)';
   strip.style.transform = 'translateX(' + (-target) + 'px)';
-  let t = 0; const iv = setInterval(() => { t += 110; sfx('tick'); if (t > ms * 0.8) clearInterval(iv); }, 110);
+  let tk = 0; const iv = setInterval(() => { tk += 110; sfx('tick'); if (tk > ms * 0.8) clearInterval(iv); }, 110);
   setTimeout(() => {
-    const it = giveChestItem(win); save(); updateTop(); sfx('open');
-    if (it.rarity === 'arcana') hype('НИШТЯК'); else if (rarityIdx(it.rarity) >= 4) announce('Godlike!');
+    const it = giveChestItem(win); if (win.bonus) st.got.push(it.name); save(); updateTop(); sfx('open');
+    if (it.rarity === 'arcana') hype('НИШТЯК'); else if (win.bonus || rarityIdx(it.rarity) >= 4) announce('Godlike!');
     strip.children[WIN].classList.add('won');
-    showModal('🎁', RARITY_NAMES[it.rarity] + '!', it.name + ' (' + (HERO_BY_ID[it.heroId] ? HERO_BY_ID[it.heroId].name : '') + ')', 'ok', { auto: true });
-    chestBusy = false; renderChestsButtons();
+    showModal('🎁', (win.bonus ? '✦ РЕДКИЙ БОНУС! ' : '') + RARITY_NAMES[it.rarity] + '!', it.name + ' (' + (HERO_BY_ID[it.heroId] ? HERO_BY_ID[it.heroId].name : '') + ')', 'ok', { auto: true });
+    chestBusy = false; renderChests();
   }, ms + 80);
 }
-function renderChestsButtons() { document.querySelectorAll('.tr-card .tr-buy').forEach((b, i) => b.disabled = !canPay(CHESTS[i].cost)); }
+function renderChestsButtons() { document.querySelectorAll('.tr-card .tr-buy').forEach(b => b.disabled = !canPay(+b.dataset.cost)); }
 
 // ---------- КРАФТ ----------
 let craftR = 'common';

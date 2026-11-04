@@ -939,3 +939,16 @@ body[data-tab="games"][data-game="tower"]{--tab-bg:url('../assets/tower/bg-menu.
 .rg-pic img.rg-foeimg{height:72px;object-fit:contain;border-radius:0}
 .rg-unit.boss .rg-pic img.rg-foeimg{height:110px}
 .rg-bossintro{text-align:center;margin-bottom:6px}.rg-bossimg{width:220px;height:220px;object-fit:contain;filter:drop-shadow(0 0 24px rgba(255,80,40,.5))}
+/* ===== 2.4.9: сокровищницы Dota, шмотки, моделька героя ===== */
+.tr-img{width:100%;height:100%;object-fit:contain;display:block;transition:transform .3s;filter:drop-shadow(0 8px 14px rgba(0,0,0,.6))}
+.tr-card:hover .tr-img{transform:scale(1.06)}
+.tr-imgs{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:0 8px 6px}
+.tr-imgs img{width:34px;height:23px;object-fit:cover;border:1px solid #444;border-radius:2px;background:#11151a;opacity:.85}
+.tr-imgs img.own,.prev-row img.own{opacity:.35;filter:grayscale(.7)}
+.tr-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.tr-pv-top{display:flex;gap:10px;align-items:center;margin-bottom:6px}.tr-pv-top img{width:110px;height:72px;object-fit:contain}
+.case-card.bonus{box-shadow:inset 0 0 0 2px #ade55c,0 0 14px rgba(173,229,92,.45)}
+.hero-visual.skinned img{object-fit:contain;background:radial-gradient(ellipse at 50% 60%,#2a3038,#0d1015)}
+.hero-visual .skin-lbl{position:absolute;left:6px;right:6px;bottom:6px;font-size:.72rem;text-align:center;background:rgba(0,0,0,.6);padding:3px 6px;border-radius:3px;text-shadow:0 1px 2px #000}
+.hero-visual{position:relative}
+.lo-model{width:150px;height:190px;object-fit:contain;border:1px solid var(--gold3);background:radial-gradient(ellipse at 50% 70%,#2a3038,#0d1015);border-radius:3px}

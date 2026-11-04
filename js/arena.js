@@ -80,7 +80,7 @@ function renderArena() {
   const pr = document.getElementById('pick-row'); pr.innerHTML = '';
   getStack().forEach((id, i) => {
     const d = document.createElement('div'); d.className = 'pick' + (i === 0 ? ' main' : '');
-    d.appendChild(mkImg(heroTallChain(id), HERO_BY_ID[id].name));
+    d.appendChild(mkImg(heroLookTall(id), HERO_BY_ID[id].name));
     if (i === 0) { const c = document.createElement('div'); c.className = 'crown'; c.textContent = 'MAIN'; d.appendChild(c); }
     const ul = ultOf(id); const ui = mkImg(ultIconChain(id), ul.name, 'pult'); ui.title = ul.name + ' — ' + EFFECT_NAME[ul.type]; d.appendChild(ui);
     const n = document.createElement('div'); n.className = 'pn'; n.innerHTML = esc(HERO_BY_ID[id].name) + '<b>⚔ ' + fmt(heroPower(id)) + '</b><span style="color:' + EFFECT_COLOR[ul.type] + ';font-size:.6rem">' + esc(ul.name) + '</span>';

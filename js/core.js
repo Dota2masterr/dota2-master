@@ -192,6 +192,8 @@ function migrate(st) {
     st.season24 = { had, at: Date.now(), vet: had >= R.vetFrom, shown: false };
     if (had > R.keep) st.gems = R.keep;
   }
+  // 2.4.9: выдуманные вещи → настоящие вещи своих героев (один раз)
+  if (typeof cosMigrate === 'function' && !st._newer) cosMigrate(st);
 }
 // 2.4: окно с объяснением сброса и награда ветеранам
 function season24Modal() {
@@ -348,7 +350,7 @@ function updateProfileChip() {
   document.getElementById('pc-nick').textContent = USER.nick;
   const ct = typeof currentTitle === 'function' ? currentTitle() : null;
   document.getElementById('pc-sub').innerHTML = ct ? titleHTML(ct) : 'Арена ' + S.arena.cleared + '/100';
-  setImg(document.getElementById('pc-img'), heroImgChain(S.avatar || 'invoker'), S.avatar);
+  setImg(document.getElementById('pc-img'), heroLookChain(S.avatar || 'invoker'), S.avatar);
 }
 function switchTab(t) {
   if (busy.battle) return;
@@ -656,7 +658,7 @@ function renderHome() {
     '<button class="btn" data-click="openProfile()">Изменить ник / аватар</button></div>';
   document.getElementById('hod-home').innerHTML = hodBanner(false);
   document.getElementById('home-stats').innerHTML = statsHTML();
-  const av = mkImg(heroTallChain(S.avatar || 'invoker'), S.avatar);
+  const av = mkImg(typeof heroLookTall === 'function' ? heroLookTall(S.avatar || 'invoker') : heroTallChain(S.avatar || 'invoker'), S.avatar);
   av.style.cssText = 'width:72px;height:96px;object-fit:cover;border:1px solid var(--gold3)';
   document.getElementById('hp-av').appendChild(av);
 }

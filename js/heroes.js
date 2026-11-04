@@ -87,8 +87,11 @@ function renderPreview() {
   box.innerHTML = '';
   // 2.3: живой (анимированный) портрет героя из Dota; если видео не грузится — обычная картинка
   const vis = document.createElement('div'); vis.className = 'hero-visual';
-  const still = mkImg(heroTallChain(h.id), h.name); vis.appendChild(still);
-  if (!SETTINGS.noanim && SETTINGS.liveHeroes !== false) {
+  // 2.4.9: надетый облик (скин) меняет модельку героя
+  const skin = typeof heroSkin === 'function' ? heroSkin(h.id) : null;
+  const still = mkImg(skin && skin.path ? [itemImg(skin.path)].concat(heroTallChain(h.id)) : heroTallChain(h.id), h.name); vis.appendChild(still);
+  if (skin && skin.path) { vis.classList.add('skinned'); const sl = document.createElement('div'); sl.className = 'skin-lbl'; sl.style.color = RARITY_COLOR[skin.rarity]; sl.textContent = '✦ ' + skin.name; vis.appendChild(sl); }
+  if (!(skin && skin.path) && !SETTINGS.noanim && SETTINGS.liveHeroes !== false) {
     const v = document.createElement('video'); v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.preload = 'auto';
     v.setAttribute('playsinline', ''); v.src = STEAM.replace('/images/dota_react/', '/videos/dota_react/') + 'heroes/renders/' + h.id + '.webm';
     v.onloadeddata = () => { vis.classList.add('live'); v.play().catch(() => { }); }; v.onerror = () => v.remove();

@@ -101,7 +101,7 @@ function renderLoadout() {
   const box = document.getElementById('loadout-box');
   const h = HERO_BY_ID[hid];
   box.innerHTML = '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start"><div id="lo-img"></div><div style="flex:1;min-width:260px"><div class="cinzel" style="font-size:1.1rem;color:#fff">' + esc(h.name) + '</div><div class="muted" style="font-size:.85rem;margin-bottom:8px">Сила ' + fmt(heroPower(hid)) + ' · от снаряжения +' + fmt(equipPower(hid)) + '</div><div class="inv-grid" id="lo-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))"></div></div></div>';
-  const im = mkImg(heroTallChain(hid), h.name); im.style.cssText = 'width:90px;height:120px;object-fit:cover;border:1px solid var(--gold3)';
+  const im = mkImg(heroLookModel(hid), h.name, 'lo-model'); const sk = heroSkin(hid); if (sk && sk.path) im.title = sk.name;
   document.getElementById('lo-img').appendChild(im);
   const g = document.getElementById('lo-grid');
   EQ_SLOTS.forEach(sl => {

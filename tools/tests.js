@@ -25,7 +25,9 @@ function run(w) {
   });
   // шансы
   T('рулетка героя: сумма весов 100', () => E.SEGMENTS.reduce((a, s) => a + s.weight, 0) === 100);
-  T('сундуки: шансы суммируются в 100%', () => E.CHESTS.every(c => Object.values(c.w).reduce((a, b) => a + b, 0) === 100));
+  T('2.4.9: сокровищницы Dota: ≥15 штук, у каждой есть предметы и бонусы', () => E.CHESTS.length >= 15 && E.CHESTS.every(c => c.tr.items.length >= 3 && E.trBonus(c.tr).length >= 3));
+  T('2.4.9: свои шмотки есть у 115+ героев', () => [...E.COS_HEROES].filter(h => E.CS_ITEMS.some(x => x.hero === h && x.real)).length >= 115);
+  T('2.4.9: редкий бонус гарантирован на последнем открытии', () => { const t = E.CHESTS[0].tr; const st = E.trState(t.id); st.miss = E.TR_TIER[t.tier].guar - 1; const ok = E.trBonusChance(t) === 100; st.miss = 0; return ok; });
   T('слоты: возврат самоцветами < 100% ставки (без предметов)', () => { const ev = ['imm3', 'arc5', 'cos3', 'cos5'].map(id => w.simSlotEV(id, 40000).gemsPerBet); return ev.every(x => x > 0.4 && x < 1) || ev.join(', '); });
   T('weightedRarity выдаёт только известные редкости', () => { for (let i = 0; i < 500; i++) if (!E.RARITIES.includes(w.weightedRarity())) return false; return true; });
   // миграции и проверка сейва
@@ -60,7 +62,7 @@ function run(w) {
   T('2.4: каждая роль сильна против двух и слаба против двух', () => Object.keys(E.ROLE_INFO).every(r => w.roleBeats(r).length === 2 && w.roleWeakTo(r).length === 2));
   T('2.4: после 40 уровня награда растёт на 3%', () => Math.abs(w.lvlReward(60) / w.lvlReward(59) - C.arena.rewardGrowthAfter) < 0.01 && w.lvlReward(100) < 20000 || w.lvlReward(100));
   T('2.4: rewardScale не растёт после уровня capLevel', () => { const c0 = E.S.arena.cleared; E.S.arena.cleared = 60; const a = w.rewardScale(); E.S.arena.cleared = 99; const b = w.rewardScale(); E.S.arena.cleared = c0; return a === b; });
-  T('2.4: сундуки и лавка не дешевле базовой цены', () => E.CHESTS.every(c => c.cost >= C.chests[c.id].cost) && E.SHOP.every(i => i.cost >= C.shop[i.id]) && E.SHOP.length >= 22);
+  T('2.4: сундуки и лавка не дешевле базовой цены', () => E.CHESTS.every(c => c.cost >= E.TR_TIER[c.tr.tier].cost) && E.SHOP.every(i => i.cost >= C.shop[i.id]) && E.SHOP.length >= 22);
   T('2.4: ранги по 1000 MMR со ступенями', () => w.rankName(0) === 'Herald I' && w.rankName(3450) === 'Archon III' && w.rankName(999) === 'Herald V' && /Immortal · 7200/.test(w.rankName(7200)) || [w.rankName(0), w.rankName(3450), w.rankName(7200)].join(' / '));
   T('2.4: сезонный сброс кристаллов не трогает героев и предметы', () => { const st = w.freshState(); st.wipe = C.wipe.id; st.gems = 5e6; st.heroes.axe = { level: 33, bonus: 0 }; st.items = [{ uid: 1, type: 'skin', heroId: 'axe', rarity: 'rare', name: 'x' }]; delete st.season24; w.migrate(st); return st.gems === C.seasonReset.keep && st.heroes.axe.level === 33 && st.items.length === 1 && st.season24.vet === true; });
   T('2.4: кооп-бой детерминирован по сиду и действиям', () => { const team = ['axe', 'lina', 'lion', 'sven', 'zuus', 'pudge'].map((id, i) => ({ id, p: 1000, mods: {}, owner: i < 3 ? 0 : 1 })); const run = () => { const def = w.coopDef(0, team); const e = w.createBattle(team, def, w.seeded(42), { maxTicks: 60, manualUlt: true, smartSet: [0, 1, 2, 3, 4, 5] }); let k = 0; while (!e.done) e.step(k++ % 4 === 0 ? ['taunt:0'] : []); return JSON.stringify(e.result().enemyHp) + e.result().win; }; return run() === run(); });
