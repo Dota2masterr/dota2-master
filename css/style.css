@@ -895,3 +895,16 @@ body[data-tab="games"]{--tab-bg:url('../assets/bg/games.webp')}
 .tr-look{margin:6px 14px 0;background:none;border:none;color:#9aa6b2;font-size:.72rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;min-height:32px}
 .tr-look:hover{color:#fff}
 .tr-head{flex-wrap:wrap}
+
+/* 2.4.7: фоны «Пути Древнего» (сгенерированы игроком) */
+body[data-tab="rogue"]{--tab-bg:url('../assets/rogue/bg-map.webp')}
+body[data-tab="rogue"][data-rbg="act1"]{--tab-bg:url('../assets/rogue/bg-act1.webp')}
+body[data-tab="rogue"][data-rbg="act2"]{--tab-bg:url('../assets/rogue/bg-act2.webp')}
+body[data-tab="rogue"][data-rbg="act3"]{--tab-bg:url('../assets/rogue/bg-act3.webp')}
+body[data-tab="rogue"][data-rbg="abyss"]{--tab-bg:url('../assets/rogue/bg-abyss.webp')}
+.rg-map{background:linear-gradient(rgba(20,14,8,.35),rgba(20,14,8,.45)),url('../assets/rogue/bg-map.webp') center/cover;border:1px solid #5a4020}
+.rg-map .rg-node{box-shadow:0 3px 10px rgba(0,0,0,.6)}
+.rg-fight.f-act1{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.55)),url('../assets/rogue/bg-act1.webp') center/cover}
+.rg-fight.f-act2{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.55)),url('../assets/rogue/bg-act2.webp') center/cover}
+.rg-fight.f-act3{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.55)),url('../assets/rogue/bg-act3.webp') center/cover}
+.rg-fight.f-abyss{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.55)),url('../assets/rogue/bg-abyss.webp') center/cover}

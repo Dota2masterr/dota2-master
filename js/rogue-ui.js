@@ -3,9 +3,12 @@ let rgView = 'start', rgPick = null, rgAbyssSel = 0, rgStartSel = null;
 const RG_NODE = { fight: ['⚔', 'Бой'], elite: ['💀', 'Элита'], shop: ['🛒', 'Лавка'], event: ['❓', 'Событие'], rest: ['⛲', 'Фонтан'], chest: ['🎁', 'Сундук'], boss: ['👑', 'Босс'] };
 
 function rgHost() { return document.getElementById('rogue-host'); }
+// 2.4.7: фон вкладки по месту в забеге — карта в хабе, свой фон у каждого акта, Бездна — фиолетовая
+function rgSetBg(run) { document.body.dataset.rbg = !run ? 'map' : run.abyss > 0 && run.act === 2 ? 'abyss' : 'act' + ((run.act || 0) + 1); }
 function renderRogue() {
   const host = rgHost(); if (!host) return;
   const R = RS(), run = R.run;
+  rgSetBg(RF && RF.run ? RF.run : run);
   if (RF && !RF.test) return renderRogueFight();
   if (!run) return renderRogueHub();
   if (run.state === 'fight') { host.innerHTML = '<div class="panel panel-b rg-center"><div class="cinzel">Бой прерван</div><div class="muted">Забег сохранён. Бой начнётся заново с тем же здоровьем.</div><button class="btn green big" data-click="rogueResumeFight()">⚔ Продолжить бой</button></div>'; return; }
@@ -184,7 +187,8 @@ function rogueStart(daily) {
 // ================= ЭКРАН БОЯ =================
 function renderRogueFight() {
   const host = rgHost(); if (!host || !RF) return;
-  host.innerHTML = '<div class="rg-fight panel ' + (RF.run.act != null ? RG_ACT[RF.run.act || 0].bg : '') + '">' +
+  rgSetBg(RF.run);
+  host.innerHTML = '<div class="rg-fight panel ' + (RF.run.act != null ? RG_ACT[RF.run.act || 0].bg : '') + ' f-' + document.body.dataset.rbg + '">' +
     '<div class="rg-queue" id="rg-queue"></div>' +
     '<div class="rg-foes" id="rg-foes"></div>' +
     '<div class="rg-me" id="rg-me"></div>' +
