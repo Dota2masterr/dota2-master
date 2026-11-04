@@ -579,10 +579,11 @@ function rgApply(run, e, r) {
 }
 
 // ---------- конец забега и награды ----------
-// Кристаллы: rewardScale × (1.2 за акт + 2.4 за победу) × (1 + 0.12·Бездна). Полная награда — 3 забега в день, дальше ×0.25.
+// Кристаллы: rewardScale × (1.2 за акт + 10.2 за победу) × (1 + 0.12·Бездна), за победу не больше 14 000. Полная награда — 3 забега в день, дальше ×0.25.
 function rogueGemReward(acts, win, abyss, nth) {
   const R = ROGUE.reward;
-  const g = rewardScale() * (R.perAct * acts + (win ? R.win : 0)) * (1 + R.abyss * abyss);
+  let g = rewardScale() * (R.perAct * acts + (win ? R.win : 0)) * (1 + R.abyss * abyss);
+  if (win && R.winCap) g = Math.min(R.winCap, g);   // 2.8: полное прохождение — не больше 14 000
   return Math.round(g * (nth > R.fullPerDay ? R.overMul : 1));
 }
 function rogueEnd(win) {

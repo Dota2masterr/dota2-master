@@ -175,7 +175,7 @@ function savePreview(st, at, title) {
   const lv = Object.values(st.heroes || {}).reduce((a, h) => a + (h.level || 1), 0);
   return '<div class="panel panel-b" style="flex:1;min-width:150px"><div class="cinzel" style="color:var(--gold2)">' + title + '</div>' +
     '<div class="muted" style="font-size:.75rem">' + (at ? new Date(at).toLocaleString('ru-RU') : '—') + '</div>' +
-    '<div>⚔ Арена: <b>' + ((st.arena && st.arena.cleared) || 0) + '/100</b></div><div>' + gemHTML(st.gems || 0) + '</div>' +
+    '<div>⚔ Арена: <b>' + ((st.arena && st.arena.cleared) || 0) + '/' + ARENA_MAX + '</b></div><div>' + gemHTML(st.gems || 0) + '</div>' +
     '<div>🎨 Предметов: <b>' + ((st.items && st.items.length) || 0) + '</b></div><div>⬆ Сумма уровней: <b>' + lv + '</b></div></div>';
 }
 function askConflict(remoteSt, rAt) {
@@ -208,7 +208,7 @@ function publicRows(c) {
   const ct = currentTitle(), mmr = (S.pvp && S.pvp.mmr) || 0;
   const bt = buildTeam({ noCons: true });
   return {
-    ['board/' + c.uid]: { nick: USER.nick, title: ct ? { name: String(ct.name).slice(0, 24), color: ct.color, icon: ct.icon || null } : null, arena: S.arena.cleared, stack: Math.round(stackPower()), inv: S.invBest || null, surv: invSurvBest() || null, mmr, items: S.items.length, at: SV_TIME },
+    ['board/' + c.uid]: { nick: USER.nick, title: ct ? { name: String(ct.name).slice(0, 24), color: ct.color, icon: ct.icon || null } : null, ava: HERO_BY_ID[S.avatar] && /^[a-z_]{2,32}$/.test(S.avatar) ? S.avatar : null, arena: S.arena.cleared, stack: Math.round(stackPower()), inv: S.invBest || null, surv: invSurvBest() || null, mmr, items: S.items.length, at: SV_TIME },
     ['stacks/' + c.uid]: { nick: USER.nick, mmr, team: bt.team.map(t => ({ id: t.id, p: Math.round(t.p), mods: t.mods })), tm: bt.tm, at: SV_TIME }
   };
 }
@@ -273,7 +273,9 @@ async function pvpFight() {
   const fair = opps.filter(x => pvpEligible(x[1]) && Math.abs(x[1].mmr - S.pvp.mmr) <= CONFIG.bots.window);
   fair.sort((a, b) => Math.abs(a[1].mmr - S.pvp.mmr) - Math.abs(b[1].mmr - S.pvp.mmr));
   let ouid, opp;
-  if (fair.length) [ouid, opp] = pick(fair.slice(0, 5));
+  // 2.8: подбор — не только люди: с шансом CONFIG.bots.mix (или если людей мало) соперником будет рейтинговый бот твоего MMR
+  const useBot = !fair.length || Math.random() < (fair.length >= 3 ? CONFIG.bots.mix : CONFIG.bots.mixFew);
+  if (!useBot) [ouid, opp] = pick(fair.slice(0, 5));
   else { try { opp = await pickBotOpponent(); ouid = opp.botId; } catch (e) { opp = pvpBot(); ouid = 'bot'; } }
   const sum = opp.team.reduce((a, t) => a + t.p, 0);
   const def = { L: 0, loc: pick(LOCS), waves: opp.team.map((t, i) => ({ id: t.id, power: Math.round(t.p * opp.tm.atk), boss: i === 0, name: (i === 0 ? '👑 ' : '') + HERO_BY_ID[t.id].name + ' (' + opp.nick + ')' })), R: sum, reward: 0, back: 'online', pvp: { uid: ouid, nick: opp.nick + (opp.tier ? ' · ' + opp.tier : ''), mmr: opp.mmr, ai: Math.max(opp.ai || 0, CONFIG.botMinTier[rankIdx(S.pvp.mmr)] || 0), bot: !!opp.bot && !opp.ranked, rbot: opp.ranked ? opp.botId : null, power: sum } };
@@ -573,20 +575,26 @@ async function renderOnline(force) {
       Object.defineProperty(boardCache, '_mine', { value: mine, enumerable: false });
       boardAt = Date.now();
     }
-    const rows = Object.entries(boardCache).filter(([u, r]) => isObj(r) && (r.at || 0) >= CONFIG.wipe.at && !(boardSort === 'inv' && !(r.inv > 0)) && !(boardSort === 'surv' && !(r.surv > 0)) && !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, arena: Math.floor(num(r.arena, 0, 100, 0)), stack: num(r.stack, 0, 1e12, 0), mmr: Math.round(num(r.mmr, 0, CONFIG.bots.mmrMax, 0)), inv: r.inv > 0 ? num(r.inv, 0, 1e6, 0) : null, surv: r.surv > 0 ? Math.floor(num(r.surv, 0, 400, 0)) : null }));
+    const rows = Object.entries(boardCache).filter(([u, r]) => isObj(r) && (r.at || 0) >= CONFIG.wipe.at && !(boardSort === 'inv' && !(r.inv > 0)) && !(boardSort === 'surv' && !(r.surv > 0)) && !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, ava: r.ava, bot: r.bot, arena: Math.floor(num(r.arena, 0, ARENA_MAX, 0)), stack: num(r.stack, 0, 1e12, 0), mmr: Math.round(num(r.mmr, 0, CONFIG.bots.mmrMax, 0)), inv: r.inv > 0 ? num(r.inv, 0, 1e6, 0) : null, surv: r.surv > 0 ? Math.floor(num(r.surv, 0, 400, 0)) : null }));
     if (boardSort === 'mmr') { try { (await loadBots()).forEach(b => rows.push({ uid: b.id, nick: '🤖 ' + b.nick, bot: true, title: null, arena: 0, stack: 0, mmr: b.mmr, inv: null })); } catch (e) { } }
     const inTop = rows.some(r => r.uid === c.uid);
     const key = { arena: r => -r.arena * 1e9 - r.stack, stack: r => -r.stack, mmr: r => -r.mmr, inv: r => r.inv || 1e9, surv: r => -(r.surv || 0) }[boardSort];
     rows.sort((a, b) => key(a) - key(b));
     document.getElementById('board').innerHTML = '<table class="board"><tr><th>#</th><th>Игрок</th><th>Арена</th><th>Сила стака</th><th>MMR</th><th>Invoker</th><th>Выживание</th></tr>' +
-      rows.slice(0, 100).map((r, i) => '<tr class="' + (r.uid === c.uid ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(r.nick) + titleHTML(r.title) + (r.uid !== c.uid && !r.bot ? ' <button class="rep-btn" aria-label="Пожаловаться на игрока" title="Пожаловаться" data-click="openReport(\'' + r.uid + '\',\'' + esc(r.nick).replace(/'/g, '') + '\')">⚑</button>' : '') + (r.bot ? ' <span class="bot-tag">бот</span>' : '') + '</td><td>' + (r.bot ? '—' : r.arena + '/100') + '</td><td>' + (r.bot ? '—' : fmt(r.stack)) + '</td><td style="color:' + rankOf(r.mmr)[2] + '">' + r.mmr + ' ' + rankName(r.mmr) + '</td><td>' + (r.inv ? r.inv.toFixed(2) + 's' : '—') + '</td><td>' + (r.surv ? r.surv : '—') + '</td></tr>').join('') + myPlaceRow(inTop, boardCache._mine) + '</table>';
+      rows.slice(0, 100).map((r, i) => '<tr class="' + (r.uid === c.uid ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + avaHTML(r.bot ? null : r.ava, r.uid) + esc(r.nick) + titleHTML(r.title) + (r.uid !== c.uid && !r.bot ? ' <button class="rep-btn" aria-label="Пожаловаться на игрока" title="Пожаловаться" data-click="openReport(\'' + r.uid + '\',\'' + esc(r.nick).replace(/'/g, '') + '\')">⚑</button>' : '') + (r.bot ? ' <span class="bot-tag">бот</span>' : '') + '</td><td>' + (r.bot ? '—' : r.arena + '/' + ARENA_MAX) + '</td><td>' + (r.bot ? '—' : fmt(r.stack)) + '</td><td style="color:' + rankOf(r.mmr)[2] + '">' + r.mmr + ' ' + rankName(r.mmr) + '</td><td>' + (r.inv ? r.inv.toFixed(2) + 's' : '—') + '</td><td>' + (r.surv ? r.surv : '—') + '</td></tr>').join('') + myPlaceRow(inTop, boardCache._mine) + '</table>';
   } catch (e) { document.getElementById('board').innerHTML = '<div class="auth-err" style="padding:14px">Не удалось загрузить: ' + esc(e.message) + '</div>'; }
+}
+// 2.8: иконка героя-аватара в таблицах (лидеры, друзья, Invoker)
+function avaHTML(id, uid) {
+  if (!id && uid && typeof USER !== 'undefined' && cloud() && uid === cloud().uid) id = S.avatar;
+  const ok = id && HERO_BY_ID[id];
+  return ok ? '<img class="bd-ava" src="' + heroIcon(id) + '" referrerpolicy="no-referrer" alt="" loading="lazy">' : '<span class="bd-ava none">👤</span>';
 }
 // «моё место»: если меня нет в топ-100 — отдельная строка внизу
 function myPlaceRow(inTop, m) {
   if (inTop || !isObj(m)) return '';
   const mmr = Math.round(num(m.mmr, 0, CONFIG.bots.mmrMax, 0));
-  return '<tr class="me"><td>100+</td><td>' + esc(String(m.nick || USER.nick).slice(0, 20)) + ' (ты)</td><td>' + Math.floor(num(m.arena, 0, 100, 0)) + '/100</td><td>' + fmt(num(m.stack, 0, 1e12, 0)) + '</td><td style="color:' + rankOf(mmr)[2] + '">' + mmr + ' ' + rankName(mmr) + '</td><td>' + (m.inv > 0 ? (+m.inv).toFixed(2) + 's' : '—') + '</td><td>' + (m.surv > 0 ? Math.floor(+m.surv) : '—') + '</td></tr>';
+  return '<tr class="me"><td>100+</td><td>' + avaHTML(S.avatar) + esc(String(m.nick || USER.nick).slice(0, 20)) + titleHTML(m.title) + ' (ты)</td><td>' + Math.floor(num(m.arena, 0, ARENA_MAX, 0)) + '/' + ARENA_MAX + '</td><td>' + fmt(num(m.stack, 0, 1e12, 0)) + '</td><td style="color:' + rankOf(mmr)[2] + '">' + mmr + ' ' + rankName(mmr) + '</td><td>' + (m.inv > 0 ? (+m.inv).toFixed(2) + 's' : '—') + '</td><td>' + (m.surv > 0 ? Math.floor(+m.surv) : '—') + '</td></tr>';
 }
 function saveFb() {
   const k = document.getElementById('fb-key').value.trim(), d = document.getElementById('fb-db').value.trim();

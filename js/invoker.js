@@ -89,12 +89,12 @@ async function invSurvBoard(force) {
       if (force) await cloudPush();
       const raw = await db('GET', 'board', undefined, false, { orderBy: 'surv', startAt: 1, limitToLast: 50 }) || {};
       invSurvRows = Object.entries(raw).filter(([u, r]) => isObj(r) && r.surv > 0 && (r.at || 0) >= CONFIG.wipe.at && !(typeof LIVE !== 'undefined' && LIVE.banned && LIVE.banned[u]))
-        .map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, surv: Math.floor(num(r.surv, 0, 400, 0)) })).sort((a, b) => b.surv - a.surv);
+        .map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, ava: r.ava, surv: Math.floor(num(r.surv, 0, 400, 0)) })).sort((a, b) => b.surv - a.surv);
       invSurvAt = Date.now();
     } catch (e) { box.innerHTML = head + '<div class="auth-err">Не удалось загрузить: ' + esc(e.message) + '</div>'; return; }
   }
   const c = cloud(), top = invSurvRows.slice(0, 20), place = invSurvRows.findIndex(r => r.uid === c.uid);
-  box.innerHTML = head + (top.length ? '<table class="board"><tr><th>#</th><th>Игрок</th><th>Заклинаний</th></tr>' + top.map((r, i) => '<tr class="' + (r.uid === c.uid ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(r.nick) + titleHTML(r.title) + '</td><td>' + r.surv + '</td></tr>').join('') +
+  box.innerHTML = head + (top.length ? '<table class="board"><tr><th>#</th><th>Игрок</th><th>Заклинаний</th></tr>' + top.map((r, i) => '<tr class="' + (r.uid === c.uid ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + avaHTML(r.ava, r.uid) + esc(r.nick) + titleHTML(r.title) + '</td><td>' + r.surv + '</td></tr>').join('') +
     (place >= 20 ? '<tr class="me"><td>' + (place + 1) + '</td><td>' + esc(USER.nick) + ' (ты)</td><td>' + invSurvRows[place].surv + '</td></tr>' : '') + '</table>' : '<div class="muted">Пока никто не сыграл. Будь первым!</div>') +
     '<button class="btn ghost sm" style="margin-top:6px" data-click="invSurvBoard(true)">🔄 Обновить</button>';
 }
@@ -124,10 +124,13 @@ function invStart() {
   if (invMode === 'survival') { invOrder = []; for (let i = 0; i < 400; i++) invOrder.push(pick(INV_SPELLS)); invDeadline = Date.now() + 4000; }
   invOrbsRender(); invTarget(); invStats();
   clearInterval(invIv); invIv = setInterval(invStats, 50);
-  document.getElementById('inv-start').textContent = '▶ Идёт…';
+  invBtn();
   document.getElementById('inv-feedback').textContent = '';
 }
-function invStop() { invRun = false; clearInterval(invIv); document.getElementById('inv-start').textContent = '▶ Start'; invStats(); }
+function invStop() { invRun = false; clearInterval(invIv); invBtn(); invStats(); }
+// 2.8: одна кнопка Старт/Стоп, на ПК — пробел
+function invBtn() { const b = document.getElementById('inv-start'); if (!b) return; b.textContent = invRun ? '■ Стоп' : '▶ Старт'; b.className = 'btn ' + (invRun ? 'red' : 'green'); }
+function invToggle() { try { document.activeElement && document.activeElement.blur(); } catch (e) { } if (invRun) invStop(); else invStart(); }
 function invClear() { invOrbs = []; invOrbsRender(); }
 function invPress(k) {
   if (!invRun) return;

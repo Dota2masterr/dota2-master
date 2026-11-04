@@ -244,7 +244,7 @@ function counterPickWaves(d, ids) {
 }
 function survivalDef() {
   const base = reqPower(Math.max(1, S.arena.cleared)) * 0.5;
-  const loc = locOf(Math.min(100, S.arena.cleared + 1));
+  const loc = locOf(Math.min(ARENA_MAX, S.arena.cleared + 1));
   const waves = [];
   for (let i = 0; i < 60; i++) { const id = loc.pool[i % loc.pool.length]; if (!HERO_BY_ID[id]) continue; waves.push({ id, power: Math.round(base * Math.pow(1.13, i)), boss: (i + 1) % 10 === 0, name: HERO_BY_ID[id].name + ' · волна ' + (waves.length + 1) }); }
   return { L: 0, loc, waves, R: base, K: 1.5 * 2.2, reward: 0, survival: true };

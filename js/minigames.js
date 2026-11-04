@@ -17,6 +17,7 @@ function renderGames() {
     ['hook', '🪝', 'Pudge Hook', 'Попади хуком по бегущему герою. 10 хуков.'],
     ['sunstrike', '☀', 'Sun Strike', 'Предскажи, где будет враг через 1.7 секунды, и попади Sun Strike. 10 кастов.'],
     ['guess', '❓', 'Угадай героя', 'По кусочку портрета или иконке ульты. 10 вопросов.'],
+    ['invgame', '🧙', 'Invoker Game', 'Все режимы: гонка, бесконечный, обучение и выживание. Старт/стоп — пробел.'],
     ['invoker', '🔮', 'Invoker: выживание', 'Таймер всё короче. Ошибся или не успел — конец.'],
     ['tower', '🏰', 'Битва за Башню', 'Карточная стратегия: 50 этажей против ботов и PvP. Лучший этаж: ' + (S.tower ? S.tower.best : 0) + '.']
   ];
@@ -30,6 +31,7 @@ function setBest(g, v, higherBetter) {
 }
 function startGame_(id) {
   stopGames(); curGame = id; document.body.dataset.game = id;
+  if (id === 'invgame') { switchTab('invoker'); return; }
   if (id === 'invoker') { switchTab('invoker'); invSetMode('survival'); invStart(); if (typeof applyMysticBg === 'function') applyMysticBg(document.querySelector('.inv-target')); return; }
   if (id === 'tower') { renderGames(); document.getElementById('game-stage').innerHTML = '<div id="tower-menu"></div>'; renderTowerMenu(); return; }
   renderGames();

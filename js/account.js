@@ -92,7 +92,7 @@ function statEvent(ev, oncePerDay) {
     _save();
     if (!S || !S.arena) return;
     const done = S.statArena || 0;
-    [10, 25, 50, 75, 100].forEach(m => { if (done < m && S.arena.cleared >= m) { S.statArena = m; if (S.arena.cleared - m < 3) statEvent('arena_' + m); } });
+    [10, 25, 50, 75, 100, 150, 200].forEach(m => { if (done < m && S.arena.cleared >= m) { S.statArena = m; if (S.arena.cleared - m < 3) statEvent('arena_' + m); } });
   };
   const _claimSeason = claimSeason; claimSeason = function () { _claimSeason(); statEvent('season_claim'); };
   const _start = startGame;

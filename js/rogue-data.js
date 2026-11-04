@@ -9,7 +9,7 @@ const ROGUE = {
   restHeal: 0.4, skillUpPow: 0.25, maxSkillLv: 3,
   neutralChance: { elite: 0.35, boss: 1 },
   // награда в кристаллах: см. rogueGemReward() и docs/расчёт
-  reward: { perAct: 1.2, win: 2.4, abyss: 0.12, fullPerDay: 3, overMul: 0.25 },
+  reward: { perAct: 1.2, win: 10.2, abyss: 0.12, fullPerDay: 3, overMul: 0.25, winCap: 14000 },   // 2.8: полное прохождение — до 14 000 (было ≈6×rewardScale)
   shards: { perAct: 4, win: 10, abyss: 2 },
   metaCap: 0.12,                                 // стартовый бонус от основной игры — не больше +12%
   unlockHero: 30, unlockStart: 20,               // цены разблокировок в Осколках

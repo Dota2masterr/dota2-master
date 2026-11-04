@@ -169,7 +169,7 @@ function openSettings() {
 // ---------- ЯЗЫК (интерфейс) ----------
 const I18N = {
   en: {
-    'nav:home': 'Home', 'nav:heroes': 'Heroes', 'nav:slots': 'Slots', 'nav:collection': 'Collection', 'nav:upgrade': 'Upgrader', 'nav:arena': 'Arena', 'nav:invoker': 'Invoker Game', 'nav:quests': 'Quests', 'nav:chests': 'Treasures', 'nav:games': 'Mini-games', 'nav:online': 'Online',
+    'nav:home': 'Home', 'nav:heroes': 'Heroes', 'nav:slots': 'Slots', 'nav:collection': 'Collection', 'nav:upgrade': 'Upgrader', 'nav:arena': 'Arena', 'nav:invoker': 'Invoker Game', 'nav:quests': 'Quests', 'nav:chests': 'Treasures', 'nav:games': 'Mini-games', 'nav:online': 'Online', 'nav:play': '▶ Play', 'nav:shop': '🛒 Shop',
     'st:stack': '⚔ Stack power', 'st:power': 'Σ Total power', 'st:items': '🎨 Items', 'st:spins': '🎰 Spins', 'st:arena': '🏟 Arena',
     'spd:slow': '🐢 Slow', 'spd:fast': '⚡ Fast', 'btn:upall': '⬆ Upgrade all', 'spin': 'SPIN', 'fight': '⚔ FIGHT'
   }
@@ -185,13 +185,6 @@ function applyLang() {
     b.textContent = L && L[k] ? L[k] : I18N_RU[k];
     if (badge) b.appendChild(badge);
   });
-  const stats = document.querySelectorAll('.subbar .stat');
-  ['st:stack', 'st:power', 'st:items', 'st:spins', 'st:arena'].forEach((k, i) => {
-    const el = stats[i]; if (!el) return;
-    const tn = el.childNodes[0];
-    if (!I18N_RU[k]) I18N_RU[k] = tn.textContent;
-    tn.textContent = (L && L[k] ? L[k] : I18N_RU[k].trim()) + ' ';
-  });
   [['spd-slow', 'spd:slow'], ['spd-fast', 'spd:fast']].forEach(([id, k]) => { const el = document.getElementById(id); if (!I18N_RU[k]) I18N_RU[k] = el.textContent; el.textContent = L ? L[k] : I18N_RU[k]; });
   const sb = document.getElementById('spin-btn'); if (sb) { if (!I18N_RU.spin) I18N_RU.spin = sb.textContent; sb.textContent = L ? L.spin : I18N_RU.spin; }
 }
@@ -200,10 +193,10 @@ function applyLang() {
 const TUTORIAL = [
   { sel: '#gems-chip', t: 'Это кристаллы — валюта игры. Они нужны для круток, слотов, лавки и сундуков.' },
   { sel: '[data-tab=heroes]', t: 'Во вкладке «Герои» прокачивай героев на рулетке. С 10 уровня открываются таланты.' },
-  { sel: '[data-tab=arena]', t: 'Арена: главный герой + 4 сильнейших сражаются с волнами врагов. 100 уровней, Рошан, лавка и режимы.' },
-  { sel: '[data-tab=slots]', t: 'Слоты и сундуки дают скины и снаряжение. Снаряжение повышает силу героя.' },
+  { sel: '[data-tab=play]', t: '«Играть»: арена (главный герой + 4 сильнейших против волн врагов, 200 уровней), Путь Древнего, мини-игры и онлайн.' },
+  { sel: '[data-tab=shop]', t: '«Лавка»: слоты, апгрейдер и сундуки дают скины и снаряжение. Снаряжение повышает силу героя.' },
   { sel: '[data-tab=quests]', t: 'Каждый день — награда за вход и три задания. Забирай награды здесь.' },
-  { sel: '#free-btn', t: 'Бесплатные кристаллы раз в 10 минут. Удачи, и пусть будет НИШТЯК!' }
+  { sel: '#free-btn', t: 'Бесплатные кристаллы раз в 10 минут — кнопка рядом с балансом. Удачи, и пусть будет НИШТЯК!' }
 ];
 let tutStep = -1;
 function startTutorial(force) {

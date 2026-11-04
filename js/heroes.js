@@ -2,10 +2,10 @@
 let selectedHero = null, attrFilter = 'all', heroSort = 'name', heroSearch = '';
 let heroWheel = null;
 const SEGMENTS = [
-  { label: '+1 УР', type: 'level', value: 1, color: '#2f7a26', weight: 29 },   // 2.4.2: +6 от убранного сектора «Сила +10%»
-  { label: '🔶 ×0.6', type: 'gems', value: 0.6, color: '#1f6f7d', weight: 12 },
+  { label: '+1 УР', type: 'level', value: 1, color: '#2f7a26', weight: 25 },   // 2.8: 29→25 (ушло в БИЧ)   // 2.4.2: +6 от убранного сектора «Сила +10%»
+  { label: '🔶 ×0.6', type: 'gems', value: 0.6, color: '#1f6f7d', weight: 10 },   // 2.8: 12→10 (ушло в БИЧ)
   { label: '+2 УР', type: 'level', value: 2, color: '#2a5fa8', weight: 14 },
-  { label: 'БИЧ', sub: 'провал', type: 'fail', value: 0, color: '#3a3f46', weight: 18 },
+  { label: 'БИЧ', sub: 'провал', type: 'fail', value: 0, color: '#3a3f46', weight: 24 },   // 2.8: чаще БИЧ (было 18)
   { label: '+3 УР', type: 'level', value: 3, color: '#6a3fb8', weight: 7 },
   { label: '🎨 СКИН', type: 'skin', value: 1, color: '#9a2f86', weight: 5 },
   { label: '🔶 ×1.5', type: 'gems', value: 1.5, color: '#178f9e', weight: 6 },
@@ -13,6 +13,32 @@ const SEGMENTS = [
   { label: '+5 УР', sub: 'ДЖЕКПОТ', type: 'jackpot', value: 5, color: '#c8331f', weight: 3 },
   { label: '×3', sub: '3 СТРЕЛКИ', type: 'triple', value: 3, color: '#d6a01c', weight: 3 }
 ];
+// 2.8: у героя 50-го уровня уровни на рулетке заменены на кристаллы-осколки и слабое снаряжение (не выше Rare)
+const SEGMENTS_MAX = SEGMENTS.map(s => {
+  if (s.type === 'level' && s.value === 1) return Object.assign({}, s, { label: '🔶 ×0.5', sub: 'осколки', type: 'gems', value: 0.5 });
+  if (s.type === 'level' && s.value === 2) return Object.assign({}, s, { label: '🛡 ВЕЩЬ', sub: 'до Uncommon', type: 'eqlow', value: 1 });
+  if (s.type === 'level' && s.value === 3) return Object.assign({}, s, { label: '🔶 ×1', sub: 'осколки', type: 'gems', value: 1 });
+  if (s.type === 'jackpot') return Object.assign({}, s, { label: '🛡 RARE', sub: 'вещь', type: 'eqrare', value: 1 });
+  if (s.type === 'eq') return Object.assign({}, s, { label: '🛡 ВЕЩЬ', sub: 'до Rare', type: 'eqmax', value: 1 });
+  return s;
+});
+let wheelSegs = SEGMENTS, wheelMode = '';
+function heroSegLists() { return [SEGMENTS, SEGMENTS_MAX]; }   // для тестов
+function heroSegs(id) { return id && S.heroes[id] && S.heroes[id].level >= CONFIG.maxLevel ? SEGMENTS_MAX : SEGMENTS; }
+function syncHeroWheel() {
+  const segs = heroSegs(selectedHero), mode = segs === SEGMENTS_MAX ? 'max' : 'norm';
+  if (mode === wheelMode && heroWheel) return;
+  wheelMode = mode; wheelSegs = segs;
+  heroWheel = buildWheel(document.getElementById('hero-wheel'), segs, { id: 'h', center: mode === 'max' ? '50' : 'D' });
+}
+function lowRarity(max) { const r = weightedRarity(); return rarityIdx(r) > max ? RARITIES[Math.floor(Math.random() * (max + 1))] : r; }
+function spinCounterUI(cur, tot) {
+  const host = document.getElementById('hero-wheel'); if (!host) return;
+  let el = document.getElementById('spin-counter');
+  if (!el) { el = document.createElement('div'); el.id = 'spin-counter'; el.className = 'spin-counter'; host.appendChild(el); }
+  if (!tot || tot <= 1) { el.style.display = 'none'; return; }
+  el.style.display = ''; el.innerHTML = '<b>' + cur + '</b>/' + tot + '<small>круток</small>';
+}
 function initHeroes() {
   const f = document.getElementById('attr-filter');
   f.innerHTML = '';
@@ -30,7 +56,7 @@ function initHeroes() {
   sel.innerHTML = '<option value="name">По имени</option><option value="level">По уровню</option><option value="power">По силе</option>';
   sel.onchange = () => { heroSort = sel.value; renderHeroList(); };
   f.appendChild(sel);
-  heroWheel = buildWheel(document.getElementById('hero-wheel'), SEGMENTS, { id: 'h', center: 'D' });
+  wheelMode = ''; syncHeroWheel();
 }
 function renderHeroes() { const hb = document.getElementById('hod-heroes'); if (hb) hb.innerHTML = hodBanner(true); renderHeroList(); renderPreview(); }
 function tierOf(l) { return Math.min(5, Math.floor(l / 10)); }
@@ -74,6 +100,7 @@ function renderHeroList() {
 function selectHero(id) {
   if (busy.hero) return;
   selectedHero = id;
+  syncHeroWheel();
   renderPreview();
   document.querySelectorAll('#heroes-list .hcard').forEach(c => c.classList.remove('selected'));
   renderHeroList();
@@ -103,7 +130,8 @@ function renderPreview() {
   m.innerHTML = '<div class="nm">' + esc(h.name) + '</div><div class="sub"><img src="' + ATTR_ICON[h.attr] + '" referrerpolicy="no-referrer" style="width:14px;vertical-align:-2px"> ' + ATTR_NAME[h.attr] + ' · ' + (h.ranged ? 'дальний бой' : 'ближний бой') + '</div>' +
     '<div class="sub">Уровень <b style="color:var(--gold2)">' + st.level + '</b>/' + CONFIG.maxLevel + ' · Сила <b style="color:#fff">' + fmt(heroPower(h.id)) + '</b>' + (st.bonus ? ' <span style="color:var(--ok)">(+' + fmt(st.bonus) + ' бонус)</span>' : '') + '</div>' +
     '<div class="sub" id="pv-ult"></div>' +
-    '<div class="xpbar"><div style="width:' + (st.level / CONFIG.maxLevel * 100) + '%"></div></div>';
+    '<div class="xpbar"><div style="width:' + (st.level / CONFIG.maxLevel * 100) + '%"></div></div>' +
+    (st.level >= CONFIG.maxLevel ? '<div class="sub" style="color:var(--gold2)">🏅 Максимальный уровень: на рулетке вместо уровней — кристаллы-осколки и снаряжение (не выше Rare)</div>' : '');
   box.appendChild(m);
   const ul = ultOf(h.id), pu = document.getElementById('pv-ult');
   const ui = mkImg(ultIconChain(h.id), ul.name); ui.style.cssText = 'width:20px;height:20px;vertical-align:-5px;border-radius:3px;margin-right:4px';
@@ -125,19 +153,19 @@ function heroLog(cls, txt) {
   const d = document.createElement('div'); d.className = cls; d.textContent = txt;
   l.prepend(d); while (l.children.length > 40) l.lastChild.remove();
 }
-let batchLeft = 0, batchRes = [];
+let batchLeft = 0, batchRes = [], batchTotal = 0;
 function spinHero() {
   if (busy.hero || !selectedHero || modalOpen) return;
   const n = +document.getElementById('spin-count').value || 1;
   if (!canPay(heroSpinCost(selectedHero))) return showModal('🔶', 'Мало кристаллов', 'Нужно ' + fmt(heroSpinCost(selectedHero)) + ' 🔶 на одну крутку.', 'bad');
-  busy.hero = true; batchLeft = n; batchRes = [];
+  busy.hero = true; batchLeft = n; batchRes = []; batchTotal = n;
   document.getElementById('spin-btn').disabled = true;
   oneHeroSpin();
 }
 function pickSegment() {
-  const tot = SEGMENTS.reduce((a, s) => a + s.weight, 0);
+  const tot = wheelSegs.reduce((a, s) => a + s.weight, 0);
   let r = Math.random() * tot;
-  for (let i = 0; i < SEGMENTS.length; i++) { r -= SEGMENTS[i].weight; if (r <= 0) return i; }
+  for (let i = 0; i < wheelSegs.length; i++) { r -= wheelSegs[i].weight; if (r <= 0) return i; }
   return 0;
 }
 // 2.3: сегмент ×3 — на следующей крутке появляются ещё 2 стрелки (через 120°), каждая тоже даёт награду
@@ -153,11 +181,11 @@ function oneHeroSpin() {
   const st = S.heroes[selectedHero];
   const cost = heroSpinCost(selectedHero);
   if (batchLeft <= 0 || !canPay(cost)) return finishHeroBatch();
-  // 2.3: герой уже 50-го уровня — рулетку останавливаем
-  if (st.level >= CONFIG.maxLevel) { heroLog('gold', HERO_BY_ID[selectedHero].name + ' уже ' + CONFIG.maxLevel + ' уровня — рулетка остановлена'); return finishHeroBatch(); }
+  syncHeroWheel();   // 2.8: на 50-м уровне — рулетка с осколками и вещами
+  const SG = wheelSegs;
   addGems(-cost); S.spins++; track('heroSpins');
   // самая первая крутка в жизни аккаунта — гарантированный ДЖЕКПОТ (первое «вау»)
-  const idx = !S.firstSpinDone ? SEGMENTS.findIndex(s => s.type === 'jackpot') : pickSegment();
+  const idx = !S.firstSpinDone && SG === SEGMENTS ? SEGMENTS.findIndex(s => s.type === 'jackpot') : pickSegment();
   S.firstSpinDone = true;
   const a = heroWheel.angles[idx];
   const target = a.start + (a.end - a.start) * rnd(0.15, 0.85);
@@ -166,16 +194,18 @@ function oneHeroSpin() {
   if (triple) S.tripleNext--;
   setExtraPointers(triple);
   const extra = triple ? [segAt(target + 120), segAt(target + 240)] : [];
-  document.getElementById('spin-status').textContent = 'Крутка ' + (batchRes.length + 1) + '…';
+  const nth = batchTotal - batchLeft + 1;
+  document.getElementById('spin-status').textContent = 'Крутка ' + nth + (batchTotal > 1 ? ' из ' + batchTotal : '') + '…';
+  spinCounterUI(nth, batchTotal);
   spinWheelTo(heroWheel, target, ms);
   setTimeout(() => {
-    applySegment(SEGMENTS[idx], cost);
-    batchRes.push(SEGMENTS[idx]);
-    extra.forEach(j => { heroLog('gold', '➕ Доп. стрелка: ' + SEGMENTS[j].label); applySegment(SEGMENTS[j], cost); batchRes.push(SEGMENTS[j]); });
+    applySegment(SG[idx], cost);
+    batchRes.push(SG[idx]);
+    extra.forEach(j => { heroLog('gold', '➕ Доп. стрелка: ' + SG[j].label); applySegment(SG[j], cost); batchRes.push(SG[j]); });
     if (triple) setTimeout(() => setExtraPointers((S.tripleNext || 0) > 0), 900);
     batchLeft--;
     renderPreview(); updateTop();
-    if (batchLeft > 0 && canPay(heroSpinCost(selectedHero)) && st.level < CONFIG.maxLevel) setTimeout(oneHeroSpin, speed === 'fast' ? 250 : 650);
+    if (batchLeft > 0 && canPay(heroSpinCost(selectedHero))) setTimeout(oneHeroSpin, speed === 'fast' ? 250 : 650);
     else finishHeroBatch();
   }, ms + 60);
 }
@@ -188,13 +218,14 @@ function applySegment(seg, cost) {
   else if (seg.type === 'power') { const b = Math.max(3, Math.round(calcPower(st.level) * seg.value)); st.bonus = (st.bonus || 0) + b; heroLog('win', h.name + ': бонус силы +' + fmt(b)); }
   else if (seg.type === 'skin') { const it = addSkin(h.id, weightedRarity()); heroLog('win', '🎨 ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'); }
   else if (seg.type === 'triple') { S.tripleNext = Math.min(3, (S.tripleNext || 0) + 1); heroLog('win', '×3! На следующей крутке будет 3 стрелки'); hype('НИШТЯК'); setTimeout(() => setExtraPointers(true), 300); }
+  else if (seg.type === 'eqlow' || seg.type === 'eqrare' || seg.type === 'eqmax') { const it = addEquipment(h.id, seg.type === 'eqrare' ? 'rare' : lowRarity(seg.type === 'eqlow' ? 1 : 2)); heroLog('win', '🛡 ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'); }
   else if (seg.type === 'eq') { const it = addEquipment(h.id, weightedRarity()); heroLog('win', '🛡 ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'); }
   else { heroLog('lose', 'Провал на ' + h.name); hype('БИЧ'); }
   // небольшой шанс бонусного дропа
-  if (seg.type !== 'fail' && Math.random() < 0.12) { const it = addSkin(h.id, weightedRarity()); heroLog('win', '+ скин ' + it.name); }
+  if (seg.type !== 'fail' && Math.random() < 0.12) { const it = addSkin(h.id, st.level >= CONFIG.maxLevel ? lowRarity(2) : weightedRarity()); heroLog('win', '+ скин ' + it.name); }
 }
 function finishHeroBatch() {
-  busy.hero = false;
+  busy.hero = false; spinCounterUI(0, 0);
   const cnt = {}; batchRes.forEach(s => cnt[s.label] = (cnt[s.label] || 0) + 1);
   document.getElementById('spin-status').innerHTML = 'Готово: ' + (Object.entries(cnt).map(([k, v]) => k + '×' + v).join(' · ') || '—');
   save(); renderPreview(); renderHeroList(); updateTop();

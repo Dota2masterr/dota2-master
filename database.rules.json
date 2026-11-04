@@ -26,7 +26,10 @@
           ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 20 && root.child('nicks/' + newData.val().toLowerCase().replace('.', ',')).val() === auth.uid"
         },
         "arena": {
-          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 200"
+        },
+        "ava": {
+          ".validate": "newData.isString() && newData.val().matches(/^[a-z_]{2,32}$/)"
         },
         "stack": {
           ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000000"

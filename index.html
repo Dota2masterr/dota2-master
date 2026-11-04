@@ -6,7 +6,7 @@
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebasedatabase.app https://*.firebaseio.com; frame-src https://open.spotify.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'">
 <title>Dota 2 Master — фан-игра по Dota 2: герои, арена, слоты, PvP</title>
-<meta name="description" content="Бесплатная браузерная фан-игра по Dota 2: прокачивай героев на рулетке, собирай скины и снаряжение, проходи арену из 100 уровней, сражайся в PvP и выполняй задания сезона. Без доната.">
+<meta name="description" content="Бесплатная браузерная фан-игра по Dota 2: прокачивай героев на рулетке, собирай скины и снаряжение, проходи арену из 200 уровней, сражайся в PvP и выполняй задания сезона. Без доната.">
 <meta name="theme-color" content="#0b0e12">
 <meta name="color-scheme" content="dark">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -17,7 +17,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Dota 2 Master">
 <meta property="og:title" content="Dota 2 Master — фан-игра по Dota 2">
-<meta property="og:description" content="Герои, арена на 100 уровней, слоты, Invoker Game, PvP и сезоны. Бесплатно, прямо в браузере.">
+<meta property="og:description" content="Герои, арена на 200 уровней, слоты, Invoker Game, PvP и сезоны. Бесплатно, прямо в браузере.">
 <meta property="og:image" content="https://dota2masterr.github.io/dota2-master/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -28,6 +28,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Roboto+Condensed:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/redesign.css">
 </head>
 <body data-tab="home">
 
@@ -61,41 +62,25 @@
     <nav class="nav" id="nav">
       <button data-tab="home" data-click="switchTab('home')">Главная</button>
       <button data-tab="heroes" data-click="switchTab('heroes')">Герои</button>
-      <button data-tab="slots" data-click="switchTab('slots')">Слоты</button>
       <button data-tab="collection" data-click="switchTab('collection')">Арсенал</button>
-      <button data-tab="upgrade" data-click="switchTab('upgrade')">Апгрейдер</button>
-      <button data-tab="arena" data-click="switchTab('arena')">Арена</button>
-      <button data-tab="rogue" data-click="switchTab('rogue')">Путь Древнего</button>
-      <button data-tab="invoker" data-click="switchTab('invoker')">Invoker Game</button>
+      <button data-tab="play" class="nav-group" data-click="openGroup('play')">▶ Играть</button>
+      <button data-tab="shop" class="nav-group" data-click="openGroup('shop')">🛒 Лавка</button>
       <button data-tab="quests" data-click="switchTab('quests')">Задания</button>
-      <button data-tab="chests" data-click="switchTab('chests')">Сундуки</button>
-      <button data-tab="games" data-click="switchTab('games')">Мини-игры</button>
-      <button data-tab="online" data-click="switchTab('online')">Онлайн</button>
     </nav>
     <div class="userbox">
+      <div class="hstats"><div class="hstat" title="Сила стака — 5 героев в бою">⚔ <b id="st-stack">0</b></div><div class="hstat" title="Сила всех героев">Σ <b id="st-power">0</b></div></div>
       <div class="cur-chip" title="Кристаллы" id="gems-chip"></div>
+      <button class="btn gold sm" id="free-btn" data-click="freeGems()">+500</button>
+      <div class="seg hseg" title="Скорость анимаций"><button id="spd-slow" data-click="setSpeed('slow')" title="Медленно">🐢</button><button id="spd-fast" data-click="setSpeed('fast')" title="Быстро">⚡</button></div>
+      <button class="btn ghost sm" id="install-btn" style="display:none" data-click="installApp()" title="Установить как приложение">📱</button>
+      <button class="btn ghost sm" data-click="openSettings()" title="Настройки">⚙</button>
       <div class="profile-chip" data-click="openProfile()" title="Профиль">
         <img id="pc-img" alt="">
         <div><div class="nick" id="pc-nick">—</div><div class="lvl" id="pc-sub">профиль</div></div>
       </div>
     </div>
   </div>
-</div>
-<div class="subbar">
-  <div class="wrap">
-    <div class="stat">⚔ Сила стака <b id="st-stack">0</b></div>
-    <div class="stat">Σ Сила всех <b id="st-power">0</b></div>
-    <div class="stat">🎨 Предметов <b id="st-items">0</b></div>
-    <div class="stat">🎰 Круток <b id="st-spins">0</b></div>
-    <div class="stat">🏟 Арена <b id="st-arena">1</b>/100</div>
-    <div class="spacer"></div>
-    <button class="btn gold sm" id="free-btn" data-click="freeGems()">+500</button>
-    <div class="seg" title="Скорость анимаций"><button id="spd-slow" data-click="setSpeed('slow')">🐢 Медленно</button><button id="spd-fast" data-click="setSpeed('fast')">⚡ Быстро</button></div>
-    <button class="btn ghost sm" data-click="upgradeAll()" title="Все герои +1 уровень">⬆ Улучшить всех</button>
-    <button class="btn ghost sm" data-click="refreshUI()" title="Обновить">🔄</button>
-    <button class="btn ghost sm" id="install-btn" style="display:none" data-click="installApp()" title="Установить как приложение">📱</button>
-    <button class="btn ghost sm" data-click="openSettings()" title="Настройки">⚙</button>
-  </div>
+  <div class="groupbar" id="groupbar"></div>
 </div>
 
 <div class="wrap">
@@ -106,7 +91,7 @@
     <div class="bg-heroes" id="home-heroes"></div>
     <div class="txt">
       <h1>DOTA 2 MASTER</h1>
-      <p>Качай героев на рулетке, выбивай скины и снаряжение в четырёх слот-машинах, улучшай предметы и проведи свою команду через <b>100 уровней арены</b> — от верхнего лайна до мида.</p>
+      <p>Качай героев на рулетке, выбивай скины и снаряжение в четырёх слот-машинах, улучшай предметы и проведи свою команду через <b>200 уровней арены</b> — от верхнего лайна до Трона Тьмы.</p>
       <button class="btn green big" data-click="switchTab('arena')">В БОЙ</button>
       <button class="btn ghost" style="margin-left:6px" data-click="switchTab('heroes')">Герои</button>
     </div>
@@ -130,7 +115,7 @@
 <section class="tab" id="tab-heroes">
   <div class="heroes-layout">
     <div class="panel">
-      <div class="panel-h"><h2>Выбери героя</h2><span class="muted" id="hero-count" style="font-size:.8rem"></span></div>
+      <div class="panel-h"><h2>Выбери героя</h2><span class="muted" id="hero-count" style="font-size:.8rem"></span><button class="btn gold sm" style="margin-left:auto" data-click="upgradeAll()" title="Все герои +1 уровень">⬆ Улучшить всех</button></div>
       <div class="panel-b">
         <div id="hod-heroes"></div>
         <div class="attr-filter" id="attr-filter"></div>
@@ -142,7 +127,7 @@
       <div class="sel-preview" id="sel-preview"><div class="muted" style="width:100%">Выбери героя слева</div></div>
       <div class="wheel-wrap" id="hero-wheel"></div>
       <div class="batch">Круток подряд:
-        <select id="spin-count"><option value="1">1</option><option value="3">3</option><option value="5">5</option><option value="10">10</option></select>
+        <select id="spin-count"><option value="1">1</option><option value="3">3</option><option value="5">5</option><option value="10">10</option><option value="25">25</option><option value="50">50</option></select>
       </div>
       <button class="btn green big" id="spin-btn" disabled data-click="spinHero()">КРУТИТЬ</button>
       <div class="cost-line">Цена крутки: <b id="spin-cost">—</b> · <span id="spin-status">или <kbd>Пробел</kbd></span></div>
@@ -261,19 +246,18 @@
         <div class="muted" style="font-size:.72rem;letter-spacing:2px;text-transform:uppercase">Цель</div>
         <img id="inv-spell-img" alt="">
         <div class="sn" id="inv-spell-name">—</div>
-        <div class="muted" id="inv-spell-hint" style="font-size:.85rem">Нажми Start</div>
+        <div class="muted" id="inv-spell-hint" style="font-size:.85rem">Нажми «Старт» или пробел</div>
         <div class="inv-next" id="inv-next"></div>
       </div>
       <div class="orbs"><div class="orb" id="orb0"></div><div class="orb" id="orb1"></div><div class="orb" id="orb2"></div></div>
       <div class="invoked" id="invoked"><div class="slotx"></div><div class="slotx"></div></div>
       <div class="skillbar" id="skillbar"></div>
       <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
-        <button class="btn green" id="inv-start" data-click="invStart()">▶ Start</button>
+        <button class="btn green" id="inv-start" data-click="invToggle()">▶ Старт</button>
         <button class="btn" data-click="invClear()">⌫ Очистить сферы</button>
-        <button class="btn red" data-click="invStop()">Stop</button>
       </div>
       <div id="inv-feedback" style="text-align:center;min-height:28px;margin-top:10px;font-family:Cinzel;font-weight:700"></div>
-      <div class="muted" style="text-align:center;font-size:.75rem">Клавиши <kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd> · Backspace — очистить · порядок сфер не важен</div>
+      <div class="muted" style="text-align:center;font-size:.75rem">Клавиши <kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> <kbd>R</kbd> · <kbd>Пробел</kbd> — старт/стоп · Backspace — очистить · порядок сфер не важен</div>
     </div>
     <div class="panel panel-b" id="inv-surv-board" style="display:none;margin-top:12px"></div>
     <div class="sec-title">Рецепты</div>

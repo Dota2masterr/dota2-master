@@ -227,7 +227,7 @@ function createBattle(team, def, rand, opts) {
     let d = 0;
     const base = atk * s.pow * H;
     // Войд уклоняется и от навыков (20%), на него не действует безмолвие
-    if (e.mech === 'void' && rand() < 0.2 && !['heal', 'shield', 'buff', 'summon'].includes(s.kind)) { x.miss = true; x.hp = pct(e); x.log = t.name + ': ' + s.name + ' — промах по Войду'; ev.push(x); return 0; }
+    if (e.mech === 'void' && rand() < 0.2 && !['heal', 'shield', 'buff', 'summon'].includes(s.kind)) { x.miss = true; x.hp = pct(e); x.log = t.name + ': ' + s.name + ' — промах по ' + String(e.name).split(' — ')[0]; ev.push(x); return 0; }
     switch (s.kind) {
       case 'dmg': d = hitE(e, base); x.log = t.name + ': ' + s.name + ' по ' + e.name; break;
       case 'aoe':
@@ -258,7 +258,7 @@ function createBattle(team, def, rand, opts) {
     if (e.alive && e.mech === 'ancient' && !e.phase && e.hp < e.max * 0.5) {
       e.phase = 1; e.hp = e.max * 0.75; e.atk *= 1.3;
       T.forEach(a => { if (a.alive && !a.m.stunImmune) a.stun = Math.max(a.stun, 1); });
-      ev.push({ k: 'mech', text: '🏛 Древний во 2-й фазе: лечится, оглушает команду и звереет!', ehp: pct(e) });
+      ev.push({ k: 'mech', text: '🏛 ' + (/^The Ancient/.test(e.name) ? 'Древний' : String(e.name).split(' — ')[0]) + ' во 2-й фазе: лечится, оглушает команду и звереет!', ehp: pct(e) });
     }
   }
 
@@ -307,14 +307,14 @@ function createBattle(team, def, rand, opts) {
     const rndT = () => pickHero(e, alive2);
     if (e.boss && e.mech === 'doom' && (e.n === 1 || e.n % 3 === 0)) {
       const cand = alive2.filter(ti => !(T[ti].doom > 0)).sort((a, b) => T[b].atk - T[a].atk);
-      if (cand.length) { T[cand[0]].doom = 4; ev.push({ k: 'mech', text: '🔥 Doom проклинает ' + T[cand[0]].name + ': 4 хода без ульты' }); }
+      if (cand.length) { T[cand[0]].doom = 4; ev.push({ k: 'mech', text: '🔥 ' + String(e.name).split(' — ')[0] + ' проклинает ' + T[cand[0]].name + ': 4 хода без ульты' }); }
     }
     let didSkill = false;
     if (e.n % every === 0 && e.silence <= 0) {
       const type = e.ult.type;
       const x = { k: 'eult', type, hits: [], log: e.name + ': ' + e.ult.name };
       ev.push(x);
-      if (e.boss && e.mech === 'void') { alive2.forEach(ti => { T[ti].stun = Math.max(T[ti].stun, 1); }); ev.push({ k: 'mech', text: '⏳ Хроносфера! Команда замерла' }); }
+      if (e.boss && e.mech === 'void') { alive2.forEach(ti => { T[ti].stun = Math.max(T[ti].stun, 1); }); ev.push({ k: 'mech', text: /^Faceless/.test(e.name) ? '⏳ Хроносфера! Команда замерла' : '⏳ ' + String(e.name).split(' — ')[0] + ': команда замерла' }); }
       const after = [];
       if (type === 'aoe' || (e.boss && type !== 'heal')) {
         alive2.forEach(ti => { const d = e.atk * (0.8 + rand() * 0.4) * 0.6 * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]); });
@@ -412,8 +412,8 @@ function createBattle(team, def, rand, opts) {
     const e = E[wi];
     e.wt++;
     const night = e.mech === 'night' && e.wt <= 10;
-    if (e.mech === 'night' && e.wt === 1) ev.push({ k: 'mech', text: '🌙 Наступила ночь: Night Stalker сильнее, твои атаки слабее' });
-    if (e.mech === 'night' && e.wt === 11) ev.push({ k: 'mech', text: '☀ Рассвет! Ночь кончилась' });
+    if (e.mech === 'night' && e.wt === 1) ev.push({ k: 'mech', text: /^Night Stalker/.test(e.name) ? '🌙 Наступила ночь: Night Stalker сильнее, твои атаки слабее' : '😡 ' + String(e.name).split(' — ')[0] + ' в ярости: он сильнее, твои атаки слабее' });
+    if (e.mech === 'night' && e.wt === 11) ev.push({ k: 'mech', text: /^Night Stalker/.test(e.name) ? '☀ Рассвет! Ночь кончилась' : '😮‍💨 Ярость прошла' });
     T.forEach((t, ti) => { if (t.alive && t.doom > 0) { t.doom--; hurt(ti, t.max * 0.08, ev); } });
     for (let i = 0; i < T.length && e.alive; i++) if (T[i].alive) heroAct(i, e, ev, night, inputs);
     if (CO) coopAfterHeroes(ev);

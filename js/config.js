@@ -13,7 +13,9 @@ const CONFIG = {
   heroOfDay: { spinMul: 1, powerMul: 1, wins: 3, rewardMul: 1.5 },
   arena: {
     reqBase: 55, reqGrowth: 1.0755,         // требуемая сила уровня
+    reqCapLevel: 100, reqGrowthAfter: 1.0052,   // 2.8: уровни 101–200 — сила растёт на 0.52% за уровень (200-й ≈ ×1.7 от 100-го)
     rewardBase: 70, rewardGrowth: 1.085,    // награда за уровень
+    rewardCap2Level: 100, rewardGrowthAfter2: 1.01,   // 2.8: после 100-го награда +1% за уровень
     rewardCapLevel: 40, rewardGrowthAfter: 1.03,   // 2.4: с 40-го уровня награда растёт на 3% за уровень (было 8.5%)
     kBase: 1.5, kGrowth: 0.0035,            // сложность врагов
     replayMul: 0.15,                        // повтор пройденного уровня (2.4: было 0.4)
@@ -28,7 +30,7 @@ const CONFIG = {
   wipe: { id: 'release-2.4', at: 1793734800000 },   // 2.4: у всех кристаллов не больше keep; у кого было ≥ vetFrom — титул «Ветеран 2.3» и Rare-скин
   // 2.4: боты с рейтингом (узел bots/): окно поиска ±window, сильные боты (от counterFrom) берут контр-пики,
   // за 1 бой MMR бота меняется не больше maxStep, каждый день боты играют между собой и растут на dailyGrowth
-  bots: { window: 1000, startMax: 6400, mmrMax: 9000, counterFrom: 3000, maxStep: 60, dailyGrowth: 4, powerPerMmr: 5000 },
+  bots: { mix: 0.5, mixFew: 0.65, window: 1000, startMax: 6400, mmrMax: 9000, counterFrom: 3000, maxStep: 60, dailyGrowth: 4, powerPerMmr: 5000 },
   // 2.5: набор MMR медленнее. Победа +15…+20 и поражение −25…−50 (−20…−40 ×1.25) умножаются на коэффициент ранга:
   // чем выше ранг, тем меньше за победу и больше за поражение (нужный винрейт плавно растёт: ~56% в Herald → ~83% в Immortal).
   // Дневной лимит считается по чистому приросту за день (поражения его уменьшают): после dailyCap прирост ×afterCap,
@@ -98,10 +100,10 @@ const CONFIG = {
   // 2.7.2: бонусные спины — шанс за платную крутку, затем рулетка на 1–10 бесплатных спинов (веса: меньше — чаще, в среднем ≈3.7)
   slotsBonus: { chance: 0.02, w: [22, 18, 15, 12, 10, 8, 6, 4, 3, 2] },
   slots: {
-    imm3: { minBet: 50, lines: 5, full: { arcana: 285, immortal: 85.5, mythical: 38, rare: 19, uncommon: 12.3, common: 7.6 }, pair: { arcana: 4.75, immortal: 2.38, mythical: 1.52, rare: 0.95, uncommon: 0.66, common: 0.47 } },   // 2.7.2: ×0.95 — запас под бонусные спины
-    arc5: { minBet: 100, lines: 10, p5: { arcana: 8550, immortal: 2138, mythical: 646, rare: 266, uncommon: 128, common: 76 }, p4: { arcana: 646, immortal: 214, mythical: 85.5, rare: 42.8, uncommon: 20.9, common: 12.8 }, p3: { arcana: 64.6, immortal: 26.6, mythical: 12.8, rare: 7.6, uncommon: 4.75, common: 3.23 }, boost: 0.3 },   // 2.7.2: ×0.95 — запас под бонусные спины
-    cos3: { minBet: 50, lines: 5, full: { arcana: 260, immortal: 78, mythical: 35, rare: 17, uncommon: 11, common: 7 }, pair: { arcana: 4.4, immortal: 2.2, mythical: 1.4, rare: 0.9, uncommon: 0.6, common: 0.44 } },
-    cos5: { minBet: 100, lines: 10, p5: { arcana: 7800, immortal: 1950, mythical: 580, rare: 240, uncommon: 117, common: 68 }, p4: { arcana: 580, immortal: 195, mythical: 78, rare: 39, uncommon: 19, common: 11.7 }, p3: { arcana: 58, immortal: 24, mythical: 11.7, rare: 6.8, uncommon: 4.4, common: 2.9 } }
+    imm3: { minBet: 50, lines: 5, full: { arcana: 294, immortal: 88.1, mythical: 39.1, rare: 19.6, uncommon: 12.7, common: 7.83 }, pair: { arcana: 4.89, immortal: 2.45, mythical: 1.57, rare: 0.98, uncommon: 0.68, common: 0.48 } },   // 2.7.2: ×0.95 — запас под бонусные спины 2.8: +3%
+    arc5: { minBet: 100, lines: 10, p5: { arcana: 8806, immortal: 2202, mythical: 665, rare: 274, uncommon: 132, common: 78.3 }, p4: { arcana: 665, immortal: 220, mythical: 88.1, rare: 44.1, uncommon: 21.5, common: 13.2 }, p3: { arcana: 66.5, immortal: 27.4, mythical: 13.2, rare: 7.83, uncommon: 4.89, common: 3.33 }, boost: 0.3 },   // 2.7.2: ×0.95 — запас под бонусные спины 2.8: +3%
+    cos3: { minBet: 50, lines: 5, full: { arcana: 268, immortal: 80.3, mythical: 36.1, rare: 17.5, uncommon: 11.3, common: 7.21 }, pair: { arcana: 4.53, immortal: 2.27, mythical: 1.44, rare: 0.93, uncommon: 0.62, common: 0.45 } },  // 2.8: +3%
+    cos5: { minBet: 100, lines: 10, p5: { arcana: 8034, immortal: 2008, mythical: 597, rare: 247, uncommon: 121, common: 70 }, p4: { arcana: 597, immortal: 201, mythical: 80.3, rare: 40.2, uncommon: 19.6, common: 12.1 }, p3: { arcana: 59.7, immortal: 24.7, mythical: 12.1, rare: 7, uncommon: 4.53, common: 2.99 } }  // 2.8: +3%
   },
   // прогресс: сезонный пропуск, недельные задания, лиги PvP (этап 3)
   progression: {

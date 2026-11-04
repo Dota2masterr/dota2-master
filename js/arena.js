@@ -1,7 +1,7 @@
-// ================= ARENA: 100 уровней, 4 локации, All Pick =================
+// ================= ARENA: 200 уровней (2.8: было 100), 8 локаций, All Pick =================
 const LOCS = [
   { id: 'top', name: 'Верхний лайн', from: 1, to: 25, tab: 'loc-top', g: 'g-top',
-    pool: ['axe','centaur','tidehunter','mars','bristleback','dark_seer','beastmaster','magnataur','primal_beast','sand_king','slardar','legion_commander','abyssal_underlord','batrider','brewmaster','pangolier','timbersaw','shredder','visage','omniknight'],
+    pool: ['axe','centaur','tidehunter','mars','bristleback','dark_seer','beastmaster','magnataur','primal_beast','sand_king','slardar','legion_commander','abyssal_underlord','batrider','brewmaster','pangolier','tiny','shredder','visage','omniknight'],
     boss: 'doom_bringer', bossName: 'Doom — хозяин верхнего лайна',
     mech: 'doom', mechText: 'Проклятие Doom: с первого хода и потом каждые 3 хода самый сильный твой герой на 4 хода теряет ульту и горит (−8% здоровья за ход).' },
   { id: 'bot', name: 'Нижний лайн', from: 26, to: 50, tab: 'loc-bot', g: 'g-bot',
@@ -15,16 +15,36 @@ const LOCS = [
   { id: 'mid', name: 'Мид', from: 76, to: 100, tab: 'loc-mid', g: 'g-mid',
     pool: ['invoker','nevermore','queenofpain','storm_spirit','ember_spirit','void_spirit','puck','templar_assassin','zuus','lina','obsidian_destroyer','tinker','kunkka','morphling','arc_warden','huskar','leshrac','monkey_king','kez','muerta'],
     boss: 'elder_titan', bossName: 'The Ancient — Древний',
-    mech: 'ancient', mechText: 'Две фазы: на 50% здоровья Древний лечится до 75%, оглушает команду на ход и бьёт на 30% сильнее. Добивание не действует.' }
+    mech: 'ancient', mechText: 'Две фазы: на 50% здоровья Древний лечится до 75%, оглушает команду на ход и бьёт на 30% сильнее. Добивание не действует.' },
+  // 2.8: сторона Тьмы — уровни 101–200, те же механики боссов, враги сильнее
+  { id: 'dtop', name: 'Лайн Тьмы', from: 101, to: 125, tab: 'loc-top dire', g: 'g-top dire',
+    pool: ['axe','centaur','tidehunter','mars','bristleback','dark_seer','beastmaster','magnataur','primal_beast','sand_king','slardar','legion_commander','batrider','brewmaster','pangolier','shredder','visage','omniknight','dragon_knight','earthshaker'],
+    boss: 'abyssal_underlord', bossName: 'Underlord — владыка Бездны',
+    mech: 'doom', mechText: 'Проклятие Бездны: с первого хода и потом каждые 3 хода самый сильный твой герой на 4 хода теряет ульту и горит (−8% здоровья за ход).' },
+  { id: 'dbot', name: 'Пустоши Тьмы', from: 126, to: 150, tab: 'loc-bot dire', g: 'g-bot dire',
+    pool: ['phantom_assassin','juggernaut','antimage','spectre','medusa','luna','drow_ranger','sven','lion','crystal_maiden','witch_doctor','lich','jakiro','gyrocopter','troll_warlord','naga_siren','phantom_lancer','vengefulspirit','dazzle','razor'],
+    boss: 'terrorblade', bossName: 'Terrorblade — демон-отступник',
+    mech: 'void', mechText: 'Метаморфоза: раз в 4 хода вся команда замирает на ход (BKB не спасает). 20% обычных атак по боссу — промах.' },
+  { id: 'djungle', name: 'Рошпит', from: 151, to: 175, tab: 'loc-jungle dire', g: 'g-jungle dire',
+    pool: ['lycan','ursa','enchantress','chen','broodmother','lone_druid','life_stealer','bloodseeker','furion','treant','riki','nyx_assassin','bounty_hunter','hoodwink','slark','weaver','clinkz','undying','venomancer','doom_bringer'],
+    boss: 'life_stealer', bossName: 'Lifestealer — кошмар Рошпита',
+    mech: 'night', mechText: 'Ярость: первые 10 ходов боя с ним его удары ×1.6, а твои атаки −30%. Продержись, пока он не выдохнется.' },
+  { id: 'dthrone', name: 'Трон Тьмы', from: 176, to: 200, tab: 'loc-mid dire', g: 'g-mid dire',
+    pool: ['invoker','nevermore','queenofpain','storm_spirit','ember_spirit','void_spirit','puck','templar_assassin','zuus','lina','obsidian_destroyer','tinker','kunkka','morphling','arc_warden','huskar','leshrac','monkey_king','faceless_void','night_stalker'],
+    boss: 'spectre', bossName: 'Spectre — хозяйка Трона Тьмы',
+    mech: 'ancient', mechText: 'Две фазы: на 50% здоровья босс лечится до 75%, оглушает команду на ход и бьёт на 30% сильнее. Добивание не действует.' }
 ];
+const ARENA_MAX = 200;
+function arenaLocs() { return LOCS; }   // для тестов
 function locOf(L) { return LOCS.find(l => L >= l.from && L <= l.to); }
-function reqPower(L) { const A = CONFIG.arena; return Math.round(A.reqBase * Math.pow(A.reqGrowth, L - 1)); }
+// 2.8: после 100-го уровня сила растёт медленно (reqGrowthAfter), иначе 200-й был бы недостижим
+function reqPower(L) { const A = CONFIG.arena, c = A.reqCapLevel || 1e9; return Math.round(A.reqBase * Math.pow(A.reqGrowth, Math.min(L, c) - 1) * Math.pow(A.reqGrowthAfter || A.reqGrowth, Math.max(0, L - c))); }
 // 2.4: после уровня rewardCapLevel награда растёт медленно (rewardGrowthAfter), а не ×1.085 за уровень
-function lvlReward(L) { const A = CONFIG.arena, c = A.rewardCapLevel || 1e9; return Math.round(A.rewardBase * Math.pow(A.rewardGrowth, Math.min(L, c) - 1) * Math.pow(A.rewardGrowthAfter || A.rewardGrowth, Math.max(0, L - c))); }
+function lvlReward(L) { const A = CONFIG.arena, c = A.rewardCapLevel || 1e9, c2 = A.rewardCap2Level || 1e9; return Math.round(A.rewardBase * Math.pow(A.rewardGrowth, Math.min(L, c) - 1) * Math.pow(A.rewardGrowthAfter || A.rewardGrowth, Math.max(0, Math.min(L, c2) - c)) * Math.pow(A.rewardGrowthAfter2 || A.rewardGrowthAfter || A.rewardGrowth, Math.max(0, L - c2))); }
 function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function levelDef(L) {
   const loc = locOf(L), r = seeded(L * 7919 + 13);
-  const n = 3 + Math.floor((L - 1) / 25);           // 3..6 волн
+  const n = 3 + Math.min(3, Math.floor((L - 1) / 25));   // 3..6 волн (с 76-го и дальше — 6)
   const w = []; for (let i = 0; i < n - 1; i++) w.push(1 + 0.15 * i); w.push(2.2);
   const sw = w.reduce((a, b) => a + b, 0);
   const R = reqPower(L);
@@ -94,11 +114,12 @@ function renderArena() {
   });
   document.getElementById('stack-power').textContent = fmt(stackPower());
   renderShopPanel(); renderSynergyBox(); renderRoshan(); if (typeof renderCoop === 'function') renderCoop(); if (typeof renderFights === 'function') renderFights();
-  const cur = Math.min(100, S.arena.cleared + 1);
+  const cur = Math.min(ARENA_MAX, S.arena.cleared + 1);
   if (!arenaLoc) arenaLoc = locOf(cur).id;
   if (!arenaSel) arenaSel = cur;
   const lt = document.getElementById('loc-tabs'); lt.innerHTML = '';
   LOCS.forEach(l => {
+    if (l.from === 101) { const sp = document.createElement('div'); sp.className = 'loc-sep'; sp.textContent = 'Сторона Тьмы · 101–200' + (S.arena.cleared < 100 ? ' · откроется после 100-го' : ''); lt.appendChild(sp); }
     const d = document.createElement('div');
     d.className = 'loc-tab ' + l.tab + (l.id === arenaLoc ? ' active' : '') + (cur < l.from ? ' locked' : '');
     const done = Math.max(0, Math.min(25, S.arena.cleared - l.from + 1));
@@ -159,7 +180,7 @@ function renderLevelInfo() {
     '<div style="flex:1;min-width:180px;font-size:.82rem"><div>Награда: ' + gemHTML(replay ? Math.round(def.reward * CONFIG.arena.replayMul) : def.reward) + (replay ? ' <span class="muted">(повтор, без предметов)</span>' : '') + '</div>' +
     (!replay ? '<div>' + (def.skin ? '🎨 Скин за босса' : '') + (def.skin && def.eq ? ' + ' : '') + (def.eq ? '🛡 Снаряжение' : '') + (!def.skin && !def.eq ? '<span class="muted">Скин — каждый 4-й босс, снаряжение — каждый 2-й</span>' : '') + '</div>' : '') + '</div>' +
     '<div style="display:flex;flex-direction:column;gap:6px"><button class="btn green big" data-click="startBattle(' + L + ',false)">⚔ В БОЙ</button>' +
-    (!replay && L < 100 && arenaMode === 'normal' ? '<button class="btn sm" data-click="startBattle(' + L + ',true)" title="Сражаться с уровнями подряд, пока не проиграешь">▶ Цепочка уровней</button>' : '') + '</div>';
+    (!replay && L < ARENA_MAX && arenaMode === 'normal' ? '<button class="btn sm" data-click="startBattle(' + L + ',true)" title="Сражаться с уровнями подряд, пока не проиграешь">▶ Цепочка уровней</button>' : '') + '</div>';
   const ws = document.getElementById('wave-strip');
   def.waves.forEach((w, i) => {
     if (i) { const a = document.createElement('span'); a.className = 'arr'; a.textContent = '›'; ws.appendChild(a); }
@@ -550,7 +571,7 @@ function endBattle() {
     arenaLog('lose', '💀 ' + msg); feed(msg, 'var(--danger)');
   }
   save(); updateTop(); updateProfileChip();
-  const chainNext = BT.chain && result.win && L < 100;
+  const chainNext = BT.chain && result.win && L < ARENA_MAX;
   const btn = document.getElementById('bt-skip');
   btn.textContent = chainNext ? 'Стоп цепочки' : 'Закрыть';
   let auto = null;
@@ -559,7 +580,7 @@ function endBattle() {
     feed('Цепочка: следующий уровень ' + (L + 1) + '…', 'var(--gold2)');
     auto = setTimeout(() => { closeBattle(true); arenaSel = L + 1; arenaLoc = locOf(L + 1).id; startBattle(L + 1, true); }, speed === 'fast' ? 1200 : 2200);
   } else if (result.win && L % 25 === 0 && !replay) {
-    setTimeout(() => showModal('👑', def.loc.name + ' захвачен!', 'Босс повержен. ' + (L === 100 ? 'Ты прошёл всю арену — Древний пал!' : 'Открыта локация: ' + locOf(L + 1).name), 'ok'), 600);
+    setTimeout(() => showModal('👑', def.loc.name + ' захвачен!', 'Босс повержен. ' + (L === ARENA_MAX ? 'Ты прошёл всю арену — Трон Тьмы пал!' : L === 100 ? 'Древний пал! Открыта сторона Тьмы: ' + locOf(L + 1).name : 'Открыта локация: ' + locOf(L + 1).name), 'ok'), 600);
   }
 }
 function endSpecialBattle(def, result, st) {
@@ -609,5 +630,5 @@ function closeBattle(keep) {
   const back = BT && BT.def && BT.def.back;
   busy.battle = false; BT = null;
   if (back) { switchTab(back); return; }                 // 2.3: после PvP/дуэли/файтов — обратно туда, откуда пришёл
-  if (!keep) { const c = Math.min(100, S.arena.cleared + 1); arenaSel = c; arenaLoc = locOf(c).id; cmBan = -1; renderArena(); }
+  if (!keep) { const c = Math.min(ARENA_MAX, S.arena.cleared + 1); arenaSel = c; arenaLoc = locOf(c).id; cmBan = -1; renderArena(); }
 }

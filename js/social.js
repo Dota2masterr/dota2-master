@@ -53,7 +53,12 @@ async function loadFriends() {
   const c = cloud(); if (!c) return {};
   FRIENDS = await db('GET', 'friends/' + c.uid).catch(() => null) || {};
   // взаимность: добавил ли друг меня
-  await Promise.all(Object.keys(FRIENDS).map(async f => { FRIENDS[f].mutual = !!(await db('GET', 'friends/' + f + '/' + c.uid).catch(() => null)); }));
+  await Promise.all(Object.keys(FRIENDS).map(async f => {
+    FRIENDS[f].mutual = !!(await db('GET', 'friends/' + f + '/' + c.uid).catch(() => null));
+    // 2.8: аватар и титул друга — из таблицы лидеров
+    const bd = await db('GET', 'board/' + f).catch(() => null);
+    if (isObj(bd)) { FRIENDS[f].ava = bd.ava; FRIENDS[f].title = bd.title; FRIENDS[f].arena = bd.arena; FRIENDS[f].mmr = bd.mmr; }
+  }));
   return FRIENDS;
 }
 async function addFriend() {
@@ -84,7 +89,7 @@ function friendsHTML() {
 function renderFriends() {
   const box = document.getElementById('fr-list'); if (!box) return;
   const list = Object.entries(FRIENDS || {});
-  box.innerHTML = list.length ? list.map(([uid, f]) => '<div class="fr-row"><span>' + (f.mutual ? '🤝' : '⏳') + ' <b>' + esc(String(f.nick || '?')) + '</b>' + (f.mutual ? '' : ' <span class="muted" style="font-size:.75rem">ждёт взаимности</span>') + '</span><span>' +
+  box.innerHTML = list.length ? list.map(([uid, f]) => '<div class="fr-row"><span class="fr-who">' + avaHTML(f.ava) + (f.mutual ? '🤝' : '⏳') + ' <b>' + esc(String(f.nick || '?')) + '</b>' + titleHTML(f.title) + (f.mmr != null ? ' <span class="muted" style="font-size:.72rem">' + (+f.mmr || 0) + ' MMR · арена ' + (+f.arena || 0) + '</span>' : '') + (f.mutual ? '' : ' <span class="muted" style="font-size:.75rem">ждёт взаимности</span>') + '</span><span>' +
     '<button class="btn sm" data-click="duelFriend(\'' + uid + '\')" aria-label="Дуэль">⚔ Дуэль</button> ' + (f.mutual ? '<button class="btn sm gold" data-click="giftToFriend(\'' + esc(String(f.nick || '')).replace(/'/g, '') + '\')">🎁</button> ' : '') +
     '<button class="btn sm ghost" data-click="removeFriend(\'' + uid + '\')" aria-label="Удалить из друзей">✕</button></span></div>').join('') : 'Пока никого. Добавь друга по нику.';
 }

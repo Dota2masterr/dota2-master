@@ -342,21 +342,37 @@ function updateTop() {
   document.getElementById('gems-chip').innerHTML = gemHTML(S.gems);
   document.getElementById('st-stack').textContent = fmt(stackPower());
   document.getElementById('st-power').textContent = fmt(totalPower());
-  document.getElementById('st-items').textContent = fmt(S.items.length);
-  document.getElementById('st-spins').textContent = fmt(S.spins);
-  document.getElementById('st-arena').textContent = Math.min(100, S.arena.cleared + 1);
 }
 function updateProfileChip() {
   document.getElementById('pc-nick').textContent = USER.nick;
   const ct = typeof currentTitle === 'function' ? currentTitle() : null;
-  document.getElementById('pc-sub').innerHTML = ct ? titleHTML(ct) : 'Арена ' + S.arena.cleared + '/100';
+  document.getElementById('pc-sub').innerHTML = ct ? titleHTML(ct) : 'Арена ' + S.arena.cleared + '/' + ARENA_MAX;
   setImg(document.getElementById('pc-img'), heroLookChain(S.avatar || 'invoker'), S.avatar);
+}
+// 2.8: вкладки сгруппированы — «Играть» и «Лавка» открывают подменю
+const NAV_GROUPS = {
+  play: { tabs: [['arena', '⚔ Арена'], ['rogue', '🌿 Путь Древнего'], ['games', '🎮 Мини-игры'], ['online', '🌐 Онлайн']], also: ['invoker'] },
+  shop: { tabs: [['slots', '🎰 Слоты'], ['upgrade', '⚒ Апгрейдер'], ['chests', '📦 Сундуки']], also: [] }
+};
+let groupLast = { play: 'arena', shop: 'slots' };
+function groupOf(t) { for (const g in NAV_GROUPS) if (NAV_GROUPS[g].tabs.some(x => x[0] === t) || NAV_GROUPS[g].also.includes(t)) return g; return null; }
+function openGroup(g) { if (NAV_GROUPS[g]) switchTab(groupLast[g] || NAV_GROUPS[g].tabs[0][0]); }
+function renderGroupBar(t) {
+  const bar = document.getElementById('groupbar'); if (!bar) return;
+  const g = groupOf(t);
+  if (!g) { bar.innerHTML = ''; bar.classList.remove('on'); return; }
+  groupLast[g] = t;
+  const cur = t === 'invoker' ? 'games' : t;
+  bar.classList.add('on');
+  bar.innerHTML = '<div class="wrap">' + NAV_GROUPS[g].tabs.map(([id, n]) => '<button class="' + (id === cur ? 'active' : '') + '" data-click="switchTab(\'' + id + '\')">' + n + '</button>').join('') + '</div>';
 }
 function switchTab(t) {
   if (busy.battle) return;
   currentTab = t;
   document.body.dataset.tab = t;                         // 2.4.6: фон вкладки
-  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  const grp = groupOf(t);
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t || b.dataset.tab === grp));
+  renderGroupBar(t);
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + t));
   try { if (location.hash !== '#' + t) history.replaceState(null, '', '#' + t); } catch (e) {}
   if (t === 'home') renderHome();
@@ -471,7 +487,7 @@ function profileCardHTML() {
   return '<div class="pf-card"><div class="pf-ava"><img src="' + STEAM + 'heroes/' + (S.avatar || 'invoker') + '.png" referrerpolicy="no-referrer" alt=""></div>' +
     '<div class="pf-main"><div class="pf-nick">' + esc(USER.nick) + '</div>' + (ct ? titleHTML(ct) : '') +
     '<div class="pf-rank" style="color:' + rk[2] + ';border-color:' + rk[2] + '">' + (typeof rankName === 'function' ? rankName(pv.mmr || 0) : rk[0]) + ' · ' + (pv.mmr || 0) + ' MMR</div></div></div>' +
-    '<div class="pf-stats">' + st('⚔', 'Арена', (S.arena.cleared || 0) + '/100') + st('💪', 'Сила стака', fmtShort(stackPower())) + st('🏆', 'PvP', (pv.w || 0) + '–' + (pv.l || 0)) +
+    '<div class="pf-stats">' + st('⚔', 'Арена', (S.arena.cleared || 0) + '/' + ARENA_MAX) + st('💪', 'Сила стака', fmtShort(stackPower())) + st('🏆', 'PvP', (pv.w || 0) + '–' + (pv.l || 0)) +
     st('⭐', 'Героев 50 ур.', maxed + '/' + HEROES.length) + st('🎒', 'Предметов', fmt(S.items.length)) + st('🟢', 'Arcana', arc) +
     st('🏅', 'Достижения', ach + '/' + achT) + st('🏰', 'Башня', 'этаж ' + ((S.tower && S.tower.best) || 0)) + st('🌀', 'Путь Древнего', ((S.rogue && S.rogue.wins) || 0) + ' побед') + '</div>' +
     '<div class="pf-top"><div class="muted">Лучшие герои</div>' + top.map(h => '<div class="pf-hero"><img src="' + STEAM + 'heroes/' + h.id + '.png" referrerpolicy="no-referrer" alt=""><span>' + esc(h.name) + '<small>ур. ' + S.heroes[h.id].level + ' · ⚔ ' + fmtShort(heroPower(h.id)) + '</small></span></div>').join('') + '</div>';
@@ -640,6 +656,7 @@ document.addEventListener('keydown', e => {
     if (modalOpen) { e.preventDefault(); closeModal(); return; }
     if (currentTab === 'heroes') { e.preventDefault(); spinHero(); }
     else if (currentTab === 'slots') { e.preventDefault(); spinSlots(); }
+    else if (currentTab === 'invoker' && typeof invToggle === 'function') { e.preventDefault(); invToggle(); }
   }
   if (e.code === 'Escape' && modalOpen) closeModal();
 });
@@ -653,7 +670,7 @@ function renderHome() {
   document.getElementById('home-profile').innerHTML =
     '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">' +
     '<div id="hp-av"></div><div style="flex:1;min-width:200px"><div class="cinzel" style="font-size:1.3rem;color:#fff;font-weight:700">' + esc(USER.nick) + titleHTML(currentTitle()) + '</div>' +
-    '<div class="muted" style="font-size:.85rem;margin-top:4px">Кристаллы: ' + gemHTML(S.gems) + ' · Сила стака: <b style="color:var(--gold2)">' + fmt(stackPower()) + '</b> · Арена: <b>' + S.arena.cleared + '/100</b> · Побед: ' + S.arena.wins + ' · Предметов: ' + S.items.length + '</div>' +
+    '<div class="muted" style="font-size:.85rem;margin-top:4px">Кристаллы: ' + gemHTML(S.gems) + ' · Сила стака: <b style="color:var(--gold2)">' + fmt(stackPower()) + '</b> · Арена: <b>' + S.arena.cleared + '/' + ARENA_MAX + '</b> · Побед: ' + S.arena.wins + ' · Предметов: ' + S.items.length + '</div>' +
     '<div class="muted" style="font-size:.85rem;margin-top:4px">Сильнейший герой: <b style="color:#fff">' + best.name + '</b> (ур. ' + S.heroes[best.id].level + ', ⚔ ' + fmt(heroPower(best.id)) + ')' + (S.invBest ? ' · Рекорд Invoker: ' + S.invBest.toFixed(2) + 's' : '') + '</div></div>' +
     '<button class="btn" data-click="openProfile()">Изменить ник / аватар</button></div>';
   document.getElementById('hod-home').innerHTML = hodBanner(false);
