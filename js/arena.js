@@ -42,9 +42,14 @@ function levelDef(L) {
   return { L, loc, waves, R, K, reward: lvlReward(L), skin: L % 4 === 0, eq: L % 2 === 0, mechText: L % 25 === 0 ? loc.mechText : '' };
 }
 
-// лимит наградных повторов в сутки (CONFIG.arena.replayRewardedPerDay)
+// 2.7.1: цикл арены — раз в CONFIG.arena.cycleH часов (36 ч)
+function arenaCycleMs() { return (CONFIG.arena.cycleH || 24) * 3600e3; }
+function arenaCycle() { return 'c' + Math.floor(nowMs() / arenaCycleMs()); }
+function arenaCycleLeft() { const m = arenaCycleMs(); return m - (nowMs() % m); }
+function arenaCycleText() { const s = Math.ceil(arenaCycleLeft() / 60000), h = Math.floor(s / 60); return h + ' ч ' + (s % 60) + ' мин'; }
+// лимит наградных повторов за цикл арены (CONFIG.arena.replayRewardedPerDay)
 function replayFactor() {
-  const d = todayStr(); if (!S.replayDay || S.replayDay.d !== d) S.replayDay = { d, n: 0 };
+  const d = arenaCycle(); if (!S.replayDay || S.replayDay.d !== d) S.replayDay = { d, n: 0 };
   S.replayDay.n++;
   return S.replayDay.n > CONFIG.arena.replayRewardedPerDay ? CONFIG.arena.replayOverMul : 1;
 }
@@ -52,6 +57,7 @@ function replayFactor() {
 // ---------- UI ----------
 let arenaLoc = null, arenaSel = null;
 function initArena() { arenaLoc = null; arenaSel = null; }
+function setArenaLoc(id) { arenaLoc = id; renderArena(); }
 function setMainHero(id) { S.mainHero = id === 'auto' ? null : id; if (S.customStack && HERO_BY_ID[id]) { const cs = S.customStack.filter(x => x !== id); cs.unshift(id); S.customStack = cs.slice(0, 5); } save(); renderArena(); updateTop(); }
 // ---------- 2.3: свой стак ----------
 let stackDraft = null;
@@ -100,6 +106,9 @@ function renderArena() {
     d.onclick = () => { arenaLoc = l.id; renderArena(); };
     lt.appendChild(d);
   });
+  // 2.7: файты — отдельные разделы арены
+  if (typeof fightTabsHTML === 'function') lt.insertAdjacentHTML('beforeend', '<div class="loc-sep">Файты · по 50 уровней · 🔄 обновление арены через ' + arenaCycleText() + '</div>' + fightTabsHTML(arenaLoc));
+  if (String(arenaLoc).startsWith('f:') && typeof renderFightGrid === 'function') { renderFightGrid(arenaLoc.slice(2)); return; }
   const L0 = LOCS.find(l => l.id === arenaLoc);
   const lg = document.getElementById('levels-grid'); lg.innerHTML = '';
   for (let L = L0.from; L <= L0.to; L++) {
@@ -137,7 +146,7 @@ function renderLevelInfo() {
   const replay = L <= S.arena.cleared;
   const modeRow = '<div class="mode-row" style="width:100%">' + Object.keys(MODES).map(m => '<button class="btn sm ' + (arenaMode === m ? 'gold' : 'ghost') + '" title="' + esc(MODES[m].d) + '" data-click="setArenaMode(\'' + m + '\')">' + MODES[m].name + '</button>').join('') + '<span class="muted" style="font-size:.75rem;align-self:center;margin-left:6px">' + esc(MODES[arenaMode].d) + '</span></div>';
   if (arenaMode === 'survival') {
-    document.getElementById('level-info').innerHTML = modeRow + '<div style="flex:1"><div class="cinzel" style="font-size:1.2rem;color:#fff">Выживание</div><div class="muted" style="font-size:.85rem">Волны идут без конца, каждая на 13% сильнее. Награда за каждую пройденную волну.</div><div style="font-size:.85rem;margin-top:4px">Рекорд: <b style="color:var(--gold2)">' + (S.survivalBest || 0) + '</b> волн · Твой стак: <b style="color:var(--radiant)">' + fmt(stackPower()) + '</b></div><div style="font-size:.85rem">Попыток сегодня: <b style="color:' + (survivalLeft() ? 'var(--ok)' : 'var(--danger)') + '">' + survivalLeft() + '/1</b></div></div><button class="btn green big" ' + (survivalLeft() ? '' : 'disabled') + ' data-click="startSurvival()">' + (survivalLeft() ? '⚔ НАЧАТЬ' : '⏳ ЗАВТРА') + '</button>';
+    document.getElementById('level-info').innerHTML = modeRow + '<div style="flex:1"><div class="cinzel" style="font-size:1.2rem;color:#fff">Выживание</div><div class="muted" style="font-size:.85rem">Волны идут без конца, каждая на 13% сильнее. Награда за каждую пройденную волну.</div><div style="font-size:.85rem;margin-top:4px">Рекорд: <b style="color:var(--gold2)">' + (S.survivalBest || 0) + '</b> волн · Твой стак: <b style="color:var(--radiant)">' + fmt(stackPower()) + '</b></div><div style="font-size:.85rem">Попыток за цикл: <b style="color:' + (survivalLeft() ? 'var(--ok)' : 'var(--danger)') + '">' + survivalLeft() + '/1</b></div></div><button class="btn green big" ' + (survivalLeft() ? '' : 'disabled') + ' data-click="startSurvival()">' + (survivalLeft() ? '⚔ НАЧАТЬ' : '⏳ ' + arenaCycleText()) + '</button>';
     return;
   }
   const ch = winChanceEstimate(def);
@@ -534,7 +543,7 @@ function endBattle() {
     feed(msg, 'var(--ok)');
   } else {
     st.textContent = '💀 ПОРАЖЕНИЕ'; st.style.color = 'var(--danger)'; sfx('lose'); S.winStreak = 0;
-    const pd = todayStr(); if (!S.pityDay || S.pityDay.d !== pd) S.pityDay = { d: pd, n: 0 };
+    const pd = arenaCycle(); if (!S.pityDay || S.pityDay.d !== pd) S.pityDay = { d: pd, n: 0 };
     const pity = S.pityDay.n++ < CONFIG.arena.pityPerDay ? Math.round(def.reward * CONFIG.arena.pity) : 0;
     addGems(pity); S.arena.losses++;
     msg = 'Поражение на уровне ' + L + ' (дошёл до волны ' + (Math.min(def.waves.length, result.ticks.filter(t => t.some(e => e.k === 'wave')).length + 1)) + '/' + def.waves.length + '). Утешение +' + fmt(pity) + ' 🔶';

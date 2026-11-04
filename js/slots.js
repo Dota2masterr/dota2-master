@@ -7,7 +7,7 @@ const SLOT_HERO_POOL = {
   immortal: ['phantom_assassin','nevermore','queenofpain','rubick','zuus','windrunner','lina','juggernaut','antimage','ember_spirit','crystal_maiden','axe','kez'],
   arcana: ['juggernaut','phantom_assassin','nevermore','crystal_maiden','legion_commander','pudge','invoker','terrorblade','ogre_magi','monkey_king','queenofpain','drow_ranger','earthshaker','faceless_void','lina','rubick']
 };
-const SLOT_W = { common: 26, uncommon: 19, rare: 15, mythical: 11, immortal: 7, arcana: 4 };
+const SLOT_W = { common: 27, uncommon: 20, rare: 15, mythical: 11, immortal: 7, arcana: 4 };   // 2.5.3: чуть чаще совпадения (common 26→27, uncommon 19→20)
 const MACHINES = [
   { id: 'imm3', name: 'Immortal 3×3', reels: 3, kind: 'hero', theme: 'theme-immortal', light: '#e4ae39', sub: '3×3 · 5 линий · герои · 3 в линию = скин героя' },
   { id: 'arc5', name: 'Arcana 3×5', reels: 5, kind: 'hero', theme: 'theme-arcana', light: '#ade55c', sub: '3×5 · 10 линий · герои · 4–5 в линию = скин' },
@@ -29,7 +29,7 @@ function initSlots() {
   st.innerHTML = '';
   MACHINES.forEach(m => {
     const b = document.createElement('button'); b.textContent = m.name; b.dataset.m = m.id;
-    b.onclick = () => { if (busy.slot || autoTotal) return; curMachine = m; renderSlotTab(); };
+    b.onclick = () => { if (busy.slot || autoTotal || fsActive()) return; curMachine = m; renderSlotTab(); };
     st.appendChild(b);
     bets[m.id] = bets[m.id] || m.minBet;
   });
@@ -69,8 +69,8 @@ function renderSlotTab() {
     '<div class="bet-row"><button class="btn sm" data-click="chBet(-10000)">−10к</button><button class="btn sm" data-click="chBet(-' + m.minBet + ')">−</button>' +
     '<input type="number" id="bet" min="' + m.minBet + '" step="' + m.minBet + '" value="' + bets[m.id] + '" data-change="setBet(this.value)"><img class="gem" src="' + GEM_IMG + '" referrerpolicy="no-referrer">' +
     '<button class="btn sm" data-click="chBet(' + m.minBet + ')">+</button><button class="btn sm" data-click="chBet(10000)">+10к</button><button class="btn sm ghost" data-click="setBet(1e9)">MAX</button></div>' +
-    '<div style="margin-top:12px"><button class="btn green big" id="slot-btn" data-click="spinSlots()">КРУТИТЬ</button></div><div id="auto-row"></div><div id="auto-info"></div>' +
-    '<div class="muted" style="font-size:.72rem;margin-top:4px">ставка на все ' + m.lines + ' линий · мин. ' + m.minBet + ' · макс ' + fmt(maxB) + ' · <kbd>Пробел</kbd></div>' +
+    '<div style="margin-top:12px"><button class="btn green big" id="slot-btn" data-click="spinSlots()">КРУТИТЬ</button></div><div id="fs-row" class="fs-row" style="display:none"></div><div id="auto-row"></div><div id="auto-info"></div>' +
+    '<div class="muted" style="font-size:.72rem;margin-top:4px">🎁 шанс бонусных спинов ' + Math.round(CONFIG.slotsBonus.chance * 100) + '% за крутку (1–10 бесплатных) · ставка на все ' + m.lines + ' линий · мин. ' + m.minBet + ' · макс ' + fmt(maxB) + ' · <kbd>Пробел</kbd></div>' +
     '<div class="last-win" id="last-win"></div>' +
     '<div class="paytable"><h4>Выплаты за линию · ставка/' + m.lines + ' × множитель</h4><div class="paygrid">' + slotPayRows(m) + '</div>' +
     '<div class="muted" style="font-size:.72rem;margin-top:6px;text-align:center">Совпадения считаются слева направо по линиям. Полная линия = <b style="color:#fff">НИШТЯК</b> · выигрыш = <b style="color:#fff">21</b> · мимо = <b style="color:#fff">БИЧ</b></div></div>' +
@@ -85,16 +85,73 @@ function renderSlotTab() {
   updateSlotBtn(); updateAutoUI();
 }
 function normBet(v) { const m = curMachine; v = Math.floor(+v || m.minBet); v = Math.max(m.minBet, Math.min(CONFIG.slotsMaxBet, v, Math.max(m.minBet, S.gems))); return Math.round(v / m.minBet) * m.minBet || m.minBet; }
-function setBet(v) { if (busy.slot) return; bets[curMachine.id] = normBet(v); const i = document.getElementById('bet'); if (i) i.value = bets[curMachine.id]; updateSlotBtn(); }
+function setBet(v) { if (busy.slot || fsActive()) return; bets[curMachine.id] = normBet(v); const i = document.getElementById('bet'); if (i) i.value = bets[curMachine.id]; updateSlotBtn(); }
 function chBet(d) { setBet(bets[curMachine.id] + d); }
-function updateSlotBtn() { const b = document.getElementById('slot-btn'); if (b) b.disabled = busy.slot || !canPay(bets[curMachine.id]); }
+function updateSlotBtn() {
+  const b = document.getElementById('slot-btn'); if (!b) return;
+  const fs = fsActive();
+  b.disabled = busy.slot || fsWheelOpen || (!fs && !canPay(bets[curMachine.id]));
+  b.textContent = fs ? '🎁 БЕСПЛАТНЫЙ СПИН' : 'КРУТИТЬ';
+  fsRowUI();
+}
+// ---------- 2.7.2: бонусные (бесплатные) спины ----------
+let fsWheelOpen = false;
+function fsActive() { const f = S && S.slotFs; return f && f.left > 0 && MACHINES.some(m => m.id === f.m) ? f : null; }
+function fsRowUI() {
+  const el = document.getElementById('fs-row'); if (!el) return;
+  const f = fsActive();
+  el.innerHTML = f ? '🎁 Бонусные спины: <b>' + (f.total - f.left) + '/' + f.total + '</b> · ставка ' + gemHTML(f.bet) + ' · выиграно ' + gemHTML(f.win || 0) : '';
+  el.style.display = f ? '' : 'none';
+}
+function rollFsCount(r) { const w = CONFIG.slotsBonus.w, tot = w.reduce((a, b) => a + b, 0); let x = (r == null ? Math.random() : r) * tot; for (let i = 0; i < w.length; i++) { x -= w[i]; if (x < 0) return i + 1; } return w.length; }
+function openFsWheel(m, bet) {
+  if (autoTotal) stopAuto('выпали бонусные спины!');
+  const n = rollFsCount();
+  S.slotFs = { m: m.id, bet, left: n, total: n, win: 0 }; save();   // сохраняем сразу — перезагрузка не отнимет спины
+  fsWheelOpen = true; updateSlotBtn();
+  const W = 74, CELLS = 46, stop = 38;
+  const cells = []; for (let i = 0; i < CELLS; i++) cells.push(i === stop ? n : 1 + Math.floor(Math.random() * 10));
+  const col = k => k >= 9 ? '#ade55c' : k >= 7 ? '#e4ae39' : k >= 5 ? '#c8a4ff' : k >= 3 ? '#4fb6d8' : '#8a8f98';
+  const ov = document.createElement('div'); ov.className = 'fs-ov'; ov.id = 'fs-ov';
+  ov.innerHTML = '<div class="fs-box"><div class="fs-title">🎁 БОНУСНЫЕ СПИНЫ!</div><div class="muted" style="font-size:.85rem">Рулетка решит, сколько бесплатных спинов по ставке ' + gemHTML(bet) + '</div>' +
+    '<div class="fs-wheel"><div class="fs-mark"></div><div class="fs-strip" id="fs-strip">' + cells.map(k => '<div class="fs-cell" style="border-color:' + col(k) + ';color:' + col(k) + '">' + k + '</div>').join('') + '</div></div>' +
+    '<div class="fs-res" id="fs-res">&nbsp;</div><button class="btn green big" id="fs-go" disabled>Крутится…</button></div>';
+  document.body.appendChild(ov);
+  hype('БОНУС'); sfx('coin');
+  const strip = document.getElementById('fs-strip'), wheel = strip.parentElement;
+  const target = stop * W + W / 2 - wheel.clientWidth / 2 + (Math.random() - 0.5) * W * 0.6;
+  const dur = speed === 'fast' ? 2200 : 4200;
+  strip.style.transform = 'translateX(0)'; void strip.offsetWidth;
+  strip.style.transition = 'transform ' + dur + 'ms cubic-bezier(.12,.7,.18,1)';
+  strip.style.transform = 'translateX(' + (-target) + 'px)';
+  setTimeout(() => {
+    sfx('win');
+    strip.children[stop].classList.add('hit');
+    document.getElementById('fs-res').innerHTML = 'Выпало: <b style="color:' + col(n) + '">' + n + '</b> ' + plural(n, 'бесплатный спин', 'бесплатных спина', 'бесплатных спинов');
+    const go = document.getElementById('fs-go'); go.disabled = false; go.textContent = '▶ Начать';
+    go.onclick = () => { ov.remove(); fsWheelOpen = false; updateSlotBtn(); spinSlots(); };
+  }, dur + 150);
+}
+function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? b : c; }
+function fsFinish() {
+  const f = S.slotFs; S.slotFs = null; save(); updateSlotBtn();
+  const lw = document.getElementById('last-win');
+  if (lw) lw.innerHTML = '🎁 Бонусные спины закончились: ' + f.total + ' шт. — итого +' + gemHTML(f.win || 0);
+  feed('🎁 Бонусные спины в слотах: ' + f.total + ' шт., выигрыш +' + fmt(f.win || 0) + ' 🔶', 'var(--gold2)');
+  showModal('🎁', 'Бонусные спины: +' + fmt(f.win || 0), f.total + ' ' + plural(f.total, 'бесплатный спин', 'бесплатных спина', 'бесплатных спинов') + ' по ставке ' + fmt(f.bet) + ' принесли ' + fmt(f.win || 0) + ' кристаллов.', (f.win || 0) > 0 ? 'ok' : '');
+}
 // сетка 3 ряда × N барабанов: grid[барабан][ряд]
 function rollGrid(m) { const g = []; for (let r = 0; r < m.reels; r++) g.push([pickSlotSym(m.kind), pickSlotSym(m.kind), pickSlotSym(m.kind)]); return g; }
 function spinSlots() {
-  const m = curMachine, bet = bets[m.id];
-  if (busy.slot || modalOpen || currentTab !== 'slots') return;
-  if (!canPay(bet)) return showModal('🔶', 'Мало кристаллов', 'Ставка ' + fmt(bet) + ' 🔶', 'bad');
-  busy.slot = true; addGems(-bet); S.spins++; track('slotSpins'); updateTop(); updateSlotBtn();
+  const fs = fsActive();
+  if (fs && curMachine.id !== fs.m) { curMachine = MACHINES.find(x => x.id === fs.m); renderSlotTab(); }
+  const m = curMachine, bet = fs ? Math.min(CONFIG.slotsMaxBet, Math.max(m.minBet, Math.floor(+fs.bet) || m.minBet)) : bets[m.id];
+  if (busy.slot || fsWheelOpen || modalOpen || currentTab !== 'slots') return;
+  if (fs) { busy.slot = true; fs.left--; busy.slotFree = true; save(); updateSlotBtn(); }
+  else {
+    if (!canPay(bet)) return showModal('🔶', 'Мало кристаллов', 'Ставка ' + fmt(bet) + ' 🔶', 'bad');
+    busy.slot = true; busy.slotFree = false; addGems(-bet); S.spins++; track('slotSpins'); updateTop(); updateSlotBtn();
+  }
   const lw = document.getElementById('last-win'); lw.textContent = ''; lw.className = 'last-win';
   const ls = document.getElementById('slot-lines'); if (ls) ls.innerHTML = '';
   const grid = rollGrid(m);
@@ -145,6 +202,7 @@ function evalSlots(m, bet, grid) {
   if (total > 0) {
     const win = Math.floor(bet * total);
     addGems(win);
+    if (busy.slotFree && S.slotFs) S.slotFs.win = (S.slotFs.win || 0) + win;
     // предметы: за каждую «предметную» линию, но не больше 2 за крутку
     const got = [];
     wins.filter(w => w.drop).sort((a, b) => rarityIdx(b.rarity) - rarityIdx(a.rarity)).slice(0, 2).forEach(w => {
@@ -161,7 +219,13 @@ function evalSlots(m, bet, grid) {
     lw.textContent = '😢 Ни одной линии'; lw.className = 'last-win lose';
     if (Math.random() < 0.05) { const it = addEquipment(pick(HEROES).id, 'common'); lw.textContent += ' · утешительный ' + it.name; }
   }
+  const free = busy.slotFree; busy.slotFree = false;
   busy.slot = false; updateTop(); updateSlotBtn(); save();
+  if (free) {   // бесплатный спин: следующий сам, в конце — итог
+    if (!S.slotFs || S.slotFs.left <= 0) return fsFinish();
+    return setTimeout(() => { if (fsActive() && currentTab === 'slots' && !modalOpen) spinSlots(); }, speed === 'fast' ? 350 : 800);
+  }
+  if (Math.random() < CONFIG.slotsBonus.chance) return openFsWheel(m, bet);
   afterSlotSpin(full, total > 0);
 }
 function drawSlotLines(m, wins) {
