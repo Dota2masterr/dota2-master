@@ -79,7 +79,8 @@ function renderHeroList() {
       const st = S.heroes[h.id];
       const c = document.createElement('div');
       c.className = 'hcard' + (selectedHero === h.id ? ' selected' : '');
-      c.title = h.name + ' · ур. ' + st.level + ' · ⚔ ' + fmt(heroPower(h.id));
+      const spc = skinPct(h.id); c.title = h.name + ' · ур. ' + st.level + ' · ⚔ ' + fmt(heroPower(h.id)) + (spc.n ? ' · 🎭 ' + pctTxt(spc.total) : '');
+      if (spc.n) { const sb2 = document.createElement('div'); sb2.className = 'skinb'; sb2.textContent = '🎭'; sb2.title = 'Скины: ' + pctTxt(spc.total) + ' силы'; c.appendChild(sb2); }
       c.appendChild(mkImg(heroImgChain(h.id), h.name));
       const t = tierOf(st.level); if (t) { const tr = document.createElement('div'); tr.className = 'tier tier-' + t; c.appendChild(tr); }
       if (h.id === main) { const m = document.createElement('div'); m.className = 'mainstar'; m.textContent = '👑'; c.appendChild(m); }
@@ -139,6 +140,9 @@ function renderPreview() {
   const tdiv = document.createElement('div'); tdiv.innerHTML = renderTalents(h.id); box.after ? null : null;
   const old = document.getElementById('pv-tal'); if (old) old.remove();
   tdiv.id = 'pv-tal'; tdiv.style.width = '100%'; box.parentNode.insertBefore(tdiv, box.nextSibling);
+  { const sp = skinPct(h.id), sk = document.createElement('div'); sk.className = 'sub skin-buff'; sk.style.color = sp.n ? '#c8a4ff' : 'var(--muted)';
+    sk.textContent = sp.n ? '🎭 Скины: ' + sp.n + ' → ' + pctTxt(sp.total) + ' силы (лучший ' + RARITY_NAMES[sp.rarity] + ' ' + pctTxt(sp.best) + (sp.extra ? ', коллекция ' + pctTxt(sp.extra) : '') + ')' : '🎭 Скин героя из сундука даст +1…5% силы, каждый следующий — ещё +0.5%';
+    m.appendChild(sk); }
   const sc = setCount(h.id); if (sc >= 3) { const sb = document.createElement('div'); sb.className = 'sub'; sb.style.color = '#ffd36a'; sb.textContent = '✦ Набор героя: ' + sc + '/6 своих предметов → +' + (sc >= 6 ? 25 : 10) + '% силы'; m.appendChild(sb); }
   if (typeof collectionCount === 'function') { const cc = collectionCount(h.id); const cb = document.createElement('div'); cb.className = 'sub'; cb.style.color = cc >= 6 ? '#ade55c' : 'var(--muted)'; cb.textContent = '🌈 Коллекция редкостей: ' + cc + '/6' + (cc >= 6 ? ' → +' + Math.round(CONFIG.social.collectionBonus * 100) + '% силы' : ' (предметы героя всех редкостей = +' + Math.round(CONFIG.social.collectionBonus * 100) + '% силы)'); m.appendChild(cb); }
   const cost = heroSpinCost(h.id);

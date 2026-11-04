@@ -52,7 +52,7 @@ function itemCard(it, acts) {
   const inf = document.createElement('div'); inf.className = 'info';
   inf.innerHTML = '<div class="nm"></div><div class="rr"></div><div class="hh"></div>';
   inf.querySelector('.nm').textContent = it.name;
-  inf.querySelector('.rr').textContent = RARITY_NAMES[it.rarity] + (it.type === 'eq' ? ' · ' + eqPctText(it.rarity) : '');
+  inf.querySelector('.rr').textContent = RARITY_NAMES[it.rarity] + (it.type === 'eq' ? ' · ' + eqPctText(it.rarity) : it.type === 'skin' ? ' · ' + pctTxt(SKIN_PCT[it.rarity] || 0) + ' силы герою' : '');
   inf.querySelector('.hh').textContent = HERO_BY_ID[it.heroId] ? HERO_BY_ID[it.heroId].name : '';
   c.appendChild(inf);
   if (acts) { const a = document.createElement('div'); a.className = 'acts'; acts.forEach(x => { const b = document.createElement('button'); b.className = x.c; b.textContent = x.t; b.onclick = ev => { ev.stopPropagation(); x.f(ev); }; a.appendChild(b); }); c.appendChild(a); }

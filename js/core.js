@@ -256,8 +256,17 @@ function equipPct(id) { return eqItems(id).reduce((a, it) => a + (EQ_PCT[it.rari
 function equipPower(id) { const h = S.heroes[id]; if (!h) return 0; const base = calcPower(h.level); return Math.round(eqItems(id).reduce((a, it) => a + Math.max(EQ_FLAT[it.rarity] || 0, base * (EQ_PCT[it.rarity] || 0)), 0)); }
 // 2.10: скин героя (лучший из своих) даёт небольшой бонус силы: Common +1% … Arcana +5%
 const SKIN_PCT = { common: 0.01, uncommon: 0.015, rare: 0.02, mythical: 0.03, immortal: 0.04, arcana: 0.05 };
-function skinBest(id) { let best = null; for (const x of S.items) if (x.type === 'skin' && x.heroId === id && (!best || rarityIdx(x.rarity) > rarityIdx(best.rarity))) best = x; return best; }
-function skinMul(id) { const b = skinBest(id); return 1 + (b ? SKIN_PCT[b.rarity] || 0 : 0); }
+function skinBest(id, items) { let best = null; for (const x of (items || S.items)) if (x.type === 'skin' && x.heroId === id && (!best || rarityIdx(x.rarity) > rarityIdx(best.rarity))) best = x; return best; }
+// 2.11: бонус скинов = лучший скин героя (+1…5%) + по +0.5% за каждый следующий разный скин этого героя (до +2.5%)
+const SKIN_EXTRA = 0.005, SKIN_EXTRA_CAP = 0.025;
+function skinPct(id, items) {
+  items = items || S.items; const b = skinBest(id, items); if (!b) return { n: 0, best: 0, extra: 0, total: 0 };
+  const names = new Set(); for (const x of items) if (x.type === 'skin' && x.heroId === id) names.add(x.name);
+  const best = SKIN_PCT[b.rarity] || 0, extra = Math.min(SKIN_EXTRA_CAP, SKIN_EXTRA * (names.size - 1));
+  return { n: names.size, best, extra, total: best + extra, rarity: b.rarity };
+}
+function skinMul(id) { return 1 + skinPct(id).total; }
+function pctTxt(v) { return '+' + (+(v * 100).toFixed(1)) + '%'; }
 function heroPower(id) { const h = S.heroes[id]; return Math.round((calcPower(h.level) + equipPower(id)) * (typeof setBonusMul === 'function' ? setBonusMul(id) : 1) * skinMul(id)); }
 function totalPower() { return HEROES.reduce((a, h) => a + heroPower(h.id), 0); }
 function sortedByPower() { return HEROES.slice().sort((a, b) => heroPower(b.id) - heroPower(a.id)); }
