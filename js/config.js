@@ -27,7 +27,21 @@ const CONFIG = {
   wipe: { id: 'release-2.4', at: 1793734800000 },   // 2.4: у всех кристаллов не больше keep; у кого было ≥ vetFrom — титул «Ветеран 2.3» и Rare-скин
   // 2.4: боты с рейтингом (узел bots/): окно поиска ±window, сильные боты (от counterFrom) берут контр-пики,
   // за 1 бой MMR бота меняется не больше maxStep, каждый день боты играют между собой и растут на dailyGrowth
-  bots: { window: 1000, startMax: 6000, mmrMax: 9000, counterFrom: 3000, maxStep: 40, dailyGrowth: 4, powerPerMmr: 5000 },
+  bots: { window: 1000, startMax: 6400, mmrMax: 9000, counterFrom: 3000, maxStep: 60, dailyGrowth: 4, powerPerMmr: 5000 },
+  // 2.5: набор MMR медленнее. Победа +15…+20 и поражение −25…−50 (−20…−40 ×1.25) умножаются на коэффициент ранга:
+  // чем выше ранг, тем меньше за победу и больше за поражение (нужный винрейт плавно растёт: ~56% в Herald → ~83% в Immortal).
+  // Дневной лимит считается по чистому приросту за день (поражения его уменьшают): после dailyCap прирост ×afterCap.
+  // На рангах от promoFrom повышение в следующий ранг — только при винрейте выше 50% за последние 50 матчей (минимум promoMin матчей).
+  mmr: { lossMul: 1.25, winByRank: [1, 0.95, 0.88, 0.8, 0.72, 0.64, 0.56, 0.48], lossByRank: [0.6, 0.7, 0.8, 0.9, 0.95, 1, 1.05, 1.1],
+    dailyCap: 500, afterCap: 0.1, promoFrom: 4, promoWindow: 50, promoMin: 20, promoWr: 0.5 },
+  // 2.5: уровни ботов (по их MMR) — сила стака, бонус атаки и ИИ (0 — простой, 3 — элитный)
+  botTiers: [
+    { id: 'easy', n: 'Лёгкий', from: 0, pow: 0.95, atk: 1, ai: 0, c: '#8ac26a' },
+    { id: 'mid', n: 'Средний', from: 2000, pow: 1, atk: 1, ai: 1, c: '#6ab8e0' },
+    { id: 'hard', n: 'Сложный', from: 4000, pow: 1.015, atk: 1.01, ai: 2, c: '#c88aff' },
+    { id: 'elite', n: 'Элитный', from: 6000, pow: 1.03, atk: 1.02, ai: 3, c: '#ff7a4a' }
+  ],
+  botMinTier: [0, 0, 1, 1, 2, 2, 3, 3],      // по рангу игрока: на высоких рангах — только сильные боты
   sell: { common: 30, uncommon: 70, rare: 180, mythical: 450, immortal: 1100, arcana: 3000 },
   sellEqMul: 1.2,
   sellSkinMul: 2,

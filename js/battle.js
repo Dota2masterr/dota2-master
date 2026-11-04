@@ -263,8 +263,11 @@ function createBattle(team, def, rand, opts) {
   }
 
   // враг выбирает цель: обычно передняя линия, прыгуны (инициаторы) — задняя
+  // 2.5: ИИ сильных PvP-ботов и соперников на высоких рангах: фокусит самого раненого героя
+  const AI = def.pvp ? Math.max(0, Math.min(3, def.pvp.ai | 0)) : 0;
   function pickHero(e, alive) {
     if (CO && e === E[0] && coAgg()) { const hold = alive.filter(i => T[i].owner === CO.aggro); if (hold.length) alive = hold; }
+    if (AI && rand() < [0, 0.35, 0.6, 0.8][AI]) return alive.slice().sort((a, b) => T[a].hp / T[a].max - T[b].hp / T[b].max)[0];
     const front = alive.filter(i => T[i].line === 'front'), back = alive.filter(i => T[i].line === 'back');
     let pool;
     if (e.role === 'initiator') pool = back.length && rand() < C.jumpBack ? back : (front.length ? front : back);
@@ -297,7 +300,7 @@ function createBattle(team, def, rand, opts) {
     const alive2 = alive.filter(i => T[i].alive); if (!alive2.length) return;
     if (e.stun > 0) { e.stun--; ev.push({ k: 'estunned' }); return; }
     e.n++;
-    const every = def.fastUlt ? 3 : e.boss ? BOSS_ULT_EVERY : ENEMY_ULT_EVERY;
+    const every = Math.max(2, (def.fastUlt ? 3 : e.boss ? BOSS_ULT_EVERY : ENEMY_ULT_EVERY) - (AI >= 3 ? 1 : 0));
     const dm = (e.rage > 0 ? 1.4 : 1) * (night ? 1.6 : 1) * (e.slow > 0 ? 0.8 : 1) * (e.buffT > 0 ? e.buff : 1);
     const tk = ti => DM * roleMul(e.role, T[ti].role) * dm * heroTaken(ti) * (CO && coAgg() && e === E[0] ? (CO.pin > 0 && T[ti].owner === CO.aggro ? C.coop.holderTaken : CO.pin > 0 ? 1 : C.coop.loose) : 1);
     const dodge = ti => T[ti].eva && rand() < T[ti].eva;
@@ -316,7 +319,8 @@ function createBattle(team, def, rand, opts) {
       if (type === 'aoe' || (e.boss && type !== 'heal')) {
         alive2.forEach(ti => { const d = e.atk * (0.8 + rand() * 0.4) * 0.6 * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]); });
       } else if (type === 'stun') {
-        const ti = rndT();
+        // 2.5: умный ИИ оглушает героя, у которого вот-вот будет ульта
+        const ti = AI >= 2 ? alive2.slice().sort((a, b) => (T[b].charge || 0) - (T[a].charge || 0))[0] : rndT();
         if (!T[ti].m.stunImmune) { T[ti].stun = 2; x.stunned = ti; } else x.bkb = ti;
         const d = e.atk * tk(ti); x.hits.push([ti, Math.round(d), 0]); after.push([ti, d]);
       } else if (type === 'heal') {
@@ -329,7 +333,7 @@ function createBattle(team, def, rand, opts) {
       after.forEach(([ti, d], hi) => { hurt(ti, d, ev); x.hits[hi][2] = pct(T[ti]); });
     } else {
       const s = pickSkill(e, null);
-      if (s && e.n % 2 === 0) { didSkill = true; e.cd[s.key] = s.cd + C.enemySkillCdAdd; enemySkill(e, s, ev, tk, rndT, alive2, dodge); }
+      if (s && (AI >= 2 || e.n % 2 === 0)) { didSkill = true; e.cd[s.key] = s.cd + C.enemySkillCdAdd; enemySkill(e, s, ev, tk, rndT, alive2, dodge); }
       else {
         const ti = rndT();
         const miss = dodge(ti);

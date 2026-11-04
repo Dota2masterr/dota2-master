@@ -1,5 +1,6 @@
 // ================= 2.4: РАНГИ ПО 1000 MMR И БОТЫ С РЕЙТИНГОМ =================
 // Ранг = 1000 MMR, внутри — 5 ступеней по 200 (Archon I … Archon V). Immortal — от 7000, дальше просто число.
+// 2.5: боты делятся на уровни (CONFIG.botTiers), на высоких рангах встречаются только сильные; набор MMR медленнее (CONFIG.mmr).
 // Соперник ищется среди людей в окне ±1000 MMR. Если людей нет — бот из узла bots/ (у бота ник, значок 🤖,
 // свой MMR и ранг). Боты тоже играют между собой раз в день, а сильные боты (от 3000) берут контр-пики.
 const RANK_STEP = 1000, SUB_STEP = 200, SUB_NAMES = ['I', 'II', 'III', 'IV', 'V'];
@@ -17,12 +18,16 @@ const BOT_NICKS = ['NightWalker', 'MidOrFeed', 'xX_Pudge_Xx', 'SilentCarry', 'Ga
   'ПудгоХук', 'Невидимка', 'ТихийМид', 'Лесник228', 'ВардыКупи', 'ДайМид', 'ТапокАнтимага', 'КрипДенай', 'ЭгидаМоя', 'СаппортБезВардов',
   'Арканщик', 'ЛегендарныйАрхонт', 'Ш4рмер', 'CourierSniper', 'AegisThief', 'RapierDrop', 'CheeseEater', 'TowerHugger', 'BackdoorKing', 'RampageHunter',
   'Morph_Main', 'InvokerGod', 'QWERtyuiop', 'Sunstrike99', 'MeepoTeam', 'ChronoTime', 'VoidSphere', 'DoomBringer', 'FlameLina', 'IceMaiden',
-  'ЗолотойВепрь', 'Мидер2007', 'Хардлейн', 'Оффлейнер', 'ДжаггерСпин', 'МиранаСтрела', 'ЛионПальчик', 'ВисаджКрик', 'ТинкерРефреш', 'ЗевсУльта'];
+  'ЗолотойВепрь', 'Мидер2007', 'Хардлейн', 'Оффлейнер', 'ДжаггерСпин', 'МиранаСтрела', 'ЛионПальчик', 'ВисаджКрик', 'ТинкерРефреш', 'ЗевсУльта',
+  // 2.5: ещё 30 ботов
+  'ShadowShaman', 'TrueSight', 'GlimmerCape', 'SpiritVessel', 'WardTheRiver', 'DeepDiver', 'PushMid', 'HighGround', 'MegaCreeps', 'ComebackKing',
+  'StunLock', 'ManaBurn', 'NoFeedPls', 'LastPick', 'DraftGod', 'Пятёрка', 'ЛиняяЛиния', 'ЭнигмаБХ', 'ШейкерЭхо', 'ДазлГрейв',
+  'КоролевскийДром', 'МагнусРП', 'ВойдХрон', 'ТерорБлейд', 'ЛинаЛагуна', 'КоролевскийСпирит', 'ТрентЛес', 'ЧенПоддержка', 'ОракулФейт', 'ИоТетер'];
 const BOT_COUNT = BOT_NICKS.length;
 const BOT_ID_RE = /^b[0-9]{1,3}$/;
 let botCache = null, botAt = 0;
 // стартовый MMR бота: от 0 до ~6000, поровну по рангам
-function botSeedMmr(i) { return Math.round((i / BOT_COUNT) * CONFIG.bots.startMax + seeded(i * 97 + 5)() * 300); }
+function botSeedMmr(i) { return Math.min(6400, Math.round((i / BOT_COUNT) * CONFIG.bots.startMax + seeded(i * 97 + 5)() * 300)); }
 function botRow(i, v) {
   v = isObj(v) ? v : {};
   return { id: 'b' + i, i, nick: BOT_NICKS[i] || ('Bot' + i), mmr: Math.round(num(v.mmr, 0, CONFIG.bots.mmrMax, botSeedMmr(i))), w: Math.floor(num(v.w, 0, 1e6, 0)), l: Math.floor(num(v.l, 0, 1e6, 0)), bot: true };
@@ -40,7 +45,11 @@ async function loadBots(force) {
   }
   return list;
 }
-// стак бота: герои по номеру бота, сила — около твоей (±10%, сильнее, если MMR бота выше)
+// 2.5: уровень бота по его MMR: лёгкий / средний / сложный / элитный
+function botTier(mmr) { let t = CONFIG.botTiers[0]; CONFIG.botTiers.forEach(x => { if (mmr >= x.from) t = x; }); return t; }
+function botTierIdx(mmr) { return CONFIG.botTiers.indexOf(botTier(mmr)); }
+function rankIdx(mmr) { return RANKS.indexOf(rankOf(mmr)); }
+// стак бота: герои по номеру бота, сила — около твоей и растёт с уровнем бота и твоим рангом
 function botStack(b) {
   const r = seeded(b.i * 7919 + Math.floor(b.mmr / 100));
   const pool = HEROES.map(h => h.id), ids = [];
@@ -55,15 +64,22 @@ function botStack(b) {
     const cand = want && ids.length < 3 ? pool.filter(id => want.includes(heroRole(id))) : pool;
     const id = cand[Math.floor(r() * cand.length)]; if (!ids.includes(id)) ids.push(id);
   }
-  const power = Math.max(50, stackPower()) * (1 + Math.max(-0.2, Math.min(0.2, (b.mmr - S.pvp.mmr) / C.powerPerMmr))) * (0.92 + r() * 0.16);
-  const w = [0.3, 0.2, 0.18, 0.16, 0.16];
-  return { nick: '🤖 ' + b.nick, mmr: b.mmr, team: ids.map((id, k) => ({ id, p: Math.max(10, Math.round(power * w[k])) })), tm: { atk: 1 }, bot: true, botId: b.id, ranked: true, counter: !!want };
+  const tier = botTier(b.mmr), rk = rankIdx(S.pvp.mmr);
+  // сила: около твоей, × уровень бота, +0.4% за каждый твой ранг; разброс у сильных ботов меньше (они стабильнее)
+  const spread = tier.ai >= 2 ? 0.08 : 0.16;
+  const power = Math.max(50, stackPower()) * (1 + Math.max(-0.2, Math.min(0.2, (b.mmr - S.pvp.mmr) / C.powerPerMmr))) * tier.pow * (1 + 0.004 * rk) * (1 - spread / 2 + r() * spread);
+  // сильные боты вкладывают больше силы в главного героя (билд «керри»), слабые — ровно
+  const w = tier.ai >= 2 ? [0.31, 0.2, 0.17, 0.16, 0.16] : [0.3, 0.2, 0.18, 0.16, 0.16];
+  return { nick: '🤖 ' + b.nick, mmr: b.mmr, team: ids.map((id, k) => ({ id, p: Math.max(10, Math.round(power * w[k])) })), tm: { atk: tier.atk }, bot: true, botId: b.id, ranked: true, counter: !!want, ai: tier.ai, tier: tier.n };
 }
 // ближайший по MMR бот в окне ±1000 (если такого нет — самый близкий)
 async function pickBotOpponent() {
   const list = await loadBots();
-  const near = list.filter(b => Math.abs(b.mmr - S.pvp.mmr) <= CONFIG.bots.window).sort((a, b) => Math.abs(a.mmr - S.pvp.mmr) - Math.abs(b.mmr - S.pvp.mmr));
-  const cand = near.length ? near.slice(0, 6) : list.slice().sort((a, b) => Math.abs(a.mmr - S.pvp.mmr) - Math.abs(b.mmr - S.pvp.mmr)).slice(0, 1);
+  // 2.5: на высоких рангах — только сильные боты (CONFIG.botMinTier по рангу игрока)
+  const minT = CONFIG.botMinTier[rankIdx(S.pvp.mmr)] || 0;
+  let pool = list.filter(b => botTierIdx(b.mmr) >= minT); if (!pool.length) pool = list.slice().sort((a, b) => b.mmr - a.mmr).slice(0, 6);
+  const near = pool.filter(b => Math.abs(b.mmr - S.pvp.mmr) <= CONFIG.bots.window).sort((a, b) => Math.abs(a.mmr - S.pvp.mmr) - Math.abs(b.mmr - S.pvp.mmr));
+  const cand = near.length ? near.slice(0, 6) : pool.slice().sort((a, b) => Math.abs(a.mmr - S.pvp.mmr) - Math.abs(b.mmr - S.pvp.mmr)).slice(0, 1);
   return botStack(pick(cand));
 }
 // после боя с ботом его MMR меняется в обратную сторону

@@ -13,7 +13,7 @@ let curGame = null;
 function renderGames() {
   const host = document.getElementById('games-host');
   const games = [
-    ['lasthit', '🗡', 'Ластхит', 'Линия с волнами крипов: добивай врагов и денай своих. 45 секунд.'],
+    ['lasthit', '🗡', 'Ластхит', 'Линия с пачками крипов (новая — когда закончится прошлая): добивай врагов и денай своих. 45 секунд.'],
     ['hook', '🪝', 'Pudge Hook', 'Попади хуком по бегущему герою. 10 хуков.'],
     ['sunstrike', '☀', 'Sun Strike', 'Предскажи, где будет враг через 1.7 секунды, и попади Sun Strike. 10 кастов.'],
     ['guess', '❓', 'Угадай героя', 'По кусочку портрета или иконке ульты. 10 вопросов.'],
@@ -67,20 +67,22 @@ function lhStart() {
     document.getElementById('lh-t').textContent = Math.ceil(left / 1000);
     if (left <= 0) return lhEnd();
     LH.cd = Math.max(0, LH.cd - dt);
-    // волны: каждые 9 секунд по 4 крипа с каждой стороны
-    if (el >= LH.nextWave) { LH.nextWave += 9000; for (let s = 0; s < 2; s++) for (let i = 0; i < 4; i++) LH.creeps.push({ id: LH.id++, side: s, x: s === 0 ? -20 - i * 34 : 740 + i * 34, y: 130 + (i % 2) * 26, hp: i === 3 ? 300 : 420, max: i === 3 ? 300 : 420, rng: i === 3, cd: 600 + Math.random() * 600 }); }
+    // 2.5: новая пачка (по 4 крипа с каждой стороны) выходит, только когда прошлая полностью закончилась
+    const anyAlive = LH.creeps.some(c => c.hp > 0);
+    if (anyAlive) LH.nextWave = el + 1200;
+    if (!anyAlive && el >= LH.nextWave) { LH.nextWave = el + 1200; for (let s = 0; s < 2; s++) for (let i = 0; i < 4; i++) LH.creeps.push({ id: LH.id++, side: s, x: s === 0 ? -20 - i * 34 : 740 + i * 34, y: 130 + (i % 2) * 26, hp: i === 3 ? 300 : 420, max: i === 3 ? 300 : 420, rng: i === 3, cd: 600 + Math.random() * 600 }); }
     // движение и драка крипов
     LH.creeps.forEach(c => {
       if (c.hp <= 0) return;
       const foes = LH.creeps.filter(o => o.hp > 0 && o.side !== c.side);
       const tgt = foes.sort((a, b) => Math.abs(a.x - c.x) - Math.abs(b.x - c.x))[0];
       const reach = c.rng ? 140 : 40;
-      if (tgt && Math.abs(tgt.x - c.x) <= reach) { c.cd -= dt; if (c.cd <= 0) { c.cd = 1000 + Math.random() * 300; const d = (c.rng ? 22 : 19) + Math.random() * 10; tgt.hp -= d; if (tgt.hp <= 0) { tgt.hp = 0; tgt.dieT = 30; if (tgt.side === 1) { LH.miss++; LH.fx.push({ x: tgt.x, y: tgt.y - 30, t: 'упущен', c: '#ff7a6a', life: 30 }); } } } }
+      if (tgt && Math.abs(tgt.x - c.x) <= reach) { c.cd -= dt; if (c.cd <= 0) { c.cd = 1000 + Math.random() * 300; const d = ((c.rng ? 22 : 19) + Math.random() * 10) * 1.6; /* 2.5: пачки дерутся быстрее */ tgt.hp -= d; if (tgt.hp <= 0) { tgt.hp = 0; tgt.dieT = 30; if (tgt.side === 1) { LH.miss++; LH.fx.push({ x: tgt.x, y: tgt.y - 30, t: 'упущен', c: '#ff7a6a', life: 30 }); } } } }
       else {
         // 2.4: не заходить в своего крипа впереди — встают «очередью»
         const dir = c.side === 0 ? 1 : -1;
         const ahead = LH.creeps.some(o => o !== c && o.hp > 0 && o.side === c.side && Math.abs(o.y - c.y) < 22 && (o.x - c.x) * dir > 0 && (o.x - c.x) * dir < 30);
-        if (!ahead) c.x += dir * 0.05 * dt;
+        if (!ahead) c.x += dir * (foes.length ? 0.05 : 0.22) * dt;   // врагов не осталось — быстро уходят
       }
     });
     // расталкивание: у каждого крипа радиус 15
@@ -94,6 +96,8 @@ function lhStart() {
       if (c.hp <= 0) { c.hp = 0; c.dieT = 30; if (c.side === 1) { LH.hits++; LH.fx.push({ x: c.x, y: c.y - 30, t: '+💰', c: '#ffd36a', life: 40 }); sfx('coin'); } else { LH.denies++; LH.fx.push({ x: c.x, y: c.y - 30, t: '!', c: '#7ad3ff', life: 40 }); sfx('coin'); } }
       return false;
     });
+    // выжившие крипы победившей стороны уходят с экрана — пачка закончилась
+    LH.creeps.forEach(c => { if (c.hp > 0 && ((c.side === 0 && c.x > 780) || (c.side === 1 && c.x < -60))) { c.hp = 0; c.dieT = 1; } });
     LH.creeps = LH.creeps.filter(c => c.hp > 0 || (c.dieT = (c.dieT || 0) - 1) > 0);
     lhDraw();
     document.getElementById('lh-hits').textContent = LH.hits; document.getElementById('lh-den').textContent = LH.denies; document.getElementById('lh-miss').textContent = LH.miss;

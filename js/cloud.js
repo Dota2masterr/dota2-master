@@ -223,7 +223,29 @@ setInterval(() => { if (USER && cloud() && !conflictOpen && isDirty()) cloudPush
 // 2.4: каждый ранг = 1000 MMR, внутри 5 ступеней по 200 (см. js/bots.js: rankName)
 const RANKS = [['Herald', 0, '#8a7a5a'], ['Guardian', 1000, '#7a8a9a'], ['Crusader', 2000, '#4a9a6a'], ['Archon', 3000, '#3a8aca'], ['Legend', 4000, '#9a6aca'], ['Ancient', 5000, '#ca9a3a'], ['Divine', 6000, '#e8c77a'], ['Immortal', 7000, '#e0452f']];
 function rankOf(mmr) { let r = RANKS[0]; RANKS.forEach(x => { if (mmr >= x[1]) r = x; }); return r; }
-function ensurePvp() { S.pvp = S.pvp || { mmr: 0, w: 0, l: 0, day: '', fights: 0, reset: 1 }; if (S.pvp.reset !== 1) { S.pvp.mmr = 0; S.pvp.peak = 0; S.pvp.reset = 1; } if (isNewDay(S.pvp.day, todayStr())) { S.pvp.day = todayStr(); S.pvp.fights = 0; } }
+function ensurePvp() { S.pvp = S.pvp || { mmr: 0, w: 0, l: 0, day: '', fights: 0, reset: 1 }; if (S.pvp.reset !== 1) { S.pvp.mmr = 0; S.pvp.peak = 0; S.pvp.reset = 1; } if (isNewDay(S.pvp.day, todayStr())) { S.pvp.day = todayStr(); S.pvp.fights = 0; S.pvp.gain = 0; } if (typeof S.pvp.hist !== 'string') S.pvp.hist = ''; if (!isFinite(S.pvp.gain)) S.pvp.gain = 0; }
+// 2.5: винрейт за последние N матчей (история — строка из 1/0, новые справа)
+function pvpWinrate(n) { const h = (S.pvp.hist || '').slice(-(n || CONFIG.mmr.promoWindow)); return h.length ? (h.split('').filter(c => c === '1').length / h.length) : 0; }
+// 2.5: изменение MMR. exp — ожидаемый шанс победы (Эло). Возвращает { delta, note }
+function mmrDelta(win, exp, mmr, gainToday, hist) {
+  hist = String(hist || '');
+  const M = CONFIG.mmr, rk = RANKS.indexOf(rankOf(mmr));
+  if (!win) return { delta: -Math.round((20 + 20 * exp) * M.lossMul * (M.lossByRank[rk] || 1)), note: '' };
+  let d = (15 + 5 * (1 - exp)) * (M.winByRank[rk] || 1), note = '';
+  // дневной лимит: после dailyCap прирост резко падает до завтра
+  const room = Math.max(0, M.dailyCap - gainToday);
+  if (d > room) { d = room + (d - room) * M.afterCap; note = ' · дневной лимит MMR (' + M.dailyCap + ') — дальше прирост ×' + M.afterCap; }
+  d = Math.max(1, Math.round(d));
+  // высокие ранги: повышение в следующий ранг — только при винрейте > 50% за последние 50 матчей
+  if (rk >= M.promoFrom && rk < RANKS.length - 1) {
+    const next = RANKS[rk + 1][1];
+    if (mmr + d >= next) {
+      const h = hist.slice(-M.promoWindow), games = h.length, wr = games ? h.split('').filter(c => c === '1').length / games : 0;
+      if (games < M.promoMin || wr <= M.promoWr) { d = Math.max(0, next - 1 - mmr); note += ' · для повышения до ' + RANKS[rk + 1][0] + ' нужен винрейт выше 50% за последние ' + M.promoWindow + ' матчей (сейчас ' + Math.round(wr * 100) + '% за ' + games + ', минимум ' + M.promoMin + ' матчей)'; }
+    }
+  }
+  return { delta: d, note };
+}
 // чужой стак из базы — только проверенные поля
 function cleanStack(v) {
   if (!isObj(v) || !Array.isArray(v.team)) return null;
@@ -250,7 +272,7 @@ async function pvpFight() {
   if (fair.length) [ouid, opp] = pick(fair.slice(0, 5));
   else { try { opp = await pickBotOpponent(); ouid = opp.botId; } catch (e) { opp = pvpBot(); ouid = 'bot'; } }
   const sum = opp.team.reduce((a, t) => a + t.p, 0);
-  const def = { L: 0, loc: pick(LOCS), waves: opp.team.map((t, i) => ({ id: t.id, power: Math.round(t.p * opp.tm.atk), boss: i === 0, name: (i === 0 ? '👑 ' : '') + HERO_BY_ID[t.id].name + ' (' + opp.nick + ')' })), R: sum, reward: 0, back: 'online', pvp: { uid: ouid, nick: opp.nick, mmr: opp.mmr, bot: !!opp.bot && !opp.ranked, rbot: opp.ranked ? opp.botId : null, power: sum } };
+  const def = { L: 0, loc: pick(LOCS), waves: opp.team.map((t, i) => ({ id: t.id, power: Math.round(t.p * opp.tm.atk), boss: i === 0, name: (i === 0 ? '👑 ' : '') + HERO_BY_ID[t.id].name + ' (' + opp.nick + ')' })), R: sum, reward: 0, back: 'online', pvp: { uid: ouid, nick: opp.nick + (opp.tier ? ' · ' + opp.tier : ''), mmr: opp.mmr, ai: Math.max(opp.ai || 0, CONFIG.botMinTier[rankIdx(S.pvp.mmr)] || 0), bot: !!opp.bot && !opp.ranked, rbot: opp.ranked ? opp.botId : null, power: sum } };
   def.K = 1.5 / opp.team.reduce((a, t) => a + Math.pow(t.p / sum, 2), 0);
   switchTab('arena');
   startBattle(0, false, def);
@@ -282,8 +304,10 @@ function pvpResult(def, result) {
   if (bad) { save(); return 'PvP против ' + def.pvp.nick + ': ⚠ результат не засчитан (' + bad + '). MMR не изменился.'; }
   // 2.3: победа +15…+20 (больше — за сильного соперника), поражение −20…−40 (больше — от слабого)
   const exp = 1 / (1 + Math.pow(10, ((def.pvp.mmr || 0) - S.pvp.mmr) / 400));
-  let delta = result.win ? Math.round(15 + 5 * (1 - exp)) : -Math.round(20 + 20 * exp);
-  if (def.pvp.bot || def.pvp.duel) delta = 0;                                                   // бот и дуэль с другом: без рейтинга
+  const md = mmrDelta(result.win, exp, S.pvp.mmr, S.pvp.gain || 0, S.pvp.hist);
+  let delta = md.delta, mmrNote = md.note;
+  if (def.pvp.bot || def.pvp.duel) { delta = 0; mmrNote = ''; }
+  else { S.pvp.hist = ((S.pvp.hist || '') + (result.win ? '1' : '0')).slice(-CONFIG.mmr.promoWindow); S.pvp.gain = (S.pvp.gain || 0) + delta; }                                                   // бот и дуэль с другом: без рейтинга
   if (result.win && !def.pvp.bot && !def.pvp.duel && !def.pvp.rbot && def.pvp.uid) pvpHit(def.pvp.uid, Math.round(15 + 5 * (1 - exp)));   // сопернику снимаем MMR
   if (def.pvp.rbot) botAfterFight(def.pvp.rbot, -delta, !result.win);                                       // рейтинговый бот: MMR в обратную сторону
   S.pvp.mmr = Math.max(0, Math.min(CONFIG.bots.mmrMax, S.pvp.mmr + delta)); S.pvp.fights++;
@@ -294,7 +318,7 @@ function pvpResult(def, result) {
   track('pvp');
   const hodMsg = result.win && !def.pvp.bot ? hodWin(BT ? BT.team.map(t => t.id) : getStack()) : '';
   save(); schedulePush();
-  return 'PvP против ' + def.pvp.nick + ': ' + (result.win ? 'ПОБЕДА' : 'поражение') + (def.pvp.bot ? ' · тренировка, рейтинг не меняется · MMR ' : ' · MMR ' + (delta >= 0 ? '+' : '') + delta + ' → ') + S.pvp.mmr + ' (' + rankName(S.pvp.mmr) + ')' + (def.pvp.rbot ? ' · соперник — бот 🤖' : '') + (g ? ' · +' + fmt(g) + ' 🔶' : '') + hodMsg;
+  return 'PvP против ' + def.pvp.nick + ': ' + (result.win ? 'ПОБЕДА' : 'поражение') + (def.pvp.bot ? ' · тренировка, рейтинг не меняется · MMR ' : ' · MMR ' + (delta >= 0 ? '+' : '') + delta + ' → ') + S.pvp.mmr + ' (' + rankName(S.pvp.mmr) + ')' + mmrNote + (def.pvp.rbot ? ' · соперник — бот 🤖' : '') + (g ? ' · +' + fmt(g) + ' 🔶' : '') + hodMsg;
 }
 
 // ---------- подарки (двойная запись в одной транзакции) ----------
@@ -525,7 +549,7 @@ async function renderOnline(force) {
   ensurePvp();
   const rk = rankOf(S.pvp.mmr), nx = rankNext(S.pvp.mmr);
   botDailyMatches().catch(() => {});
-  host.innerHTML = '<div class="online-grid"><div class="panel panel-b"><div class="cinzel" style="color:' + rk[2] + ';font-size:1.4rem;letter-spacing:2px">' + rankName(S.pvp.mmr) + '</div>' + (nx ? '<div class="muted" style="font-size:.75rem">до следующей ступени: ' + nx + ' MMR · ранг = 1000 MMR, 5 ступеней</div>' : '') + '<div>MMR <b>' + S.pvp.mmr + '</b> · побед ' + S.pvp.w + ' · поражений ' + S.pvp.l + '</div><div class="muted" style="font-size:.8rem">Наградных PvP-боёв сегодня: ' + Math.max(0, CONFIG.pvp.rewardedPerDay - S.pvp.fights) + '/' + CONFIG.pvp.rewardedPerDay + '</div><button class="btn red big" style="margin-top:10px" data-click="pvpFight()">⚔ НАЙТИ СОПЕРНИКА</button><div class="muted" style="font-size:.75rem;margin-top:6px">Твой стак сражается с сохранённым стаком другого игрока.</div></div>' +
+  host.innerHTML = '<div class="online-grid"><div class="panel panel-b"><div class="cinzel" style="color:' + rk[2] + ';font-size:1.4rem;letter-spacing:2px">' + rankName(S.pvp.mmr) + '</div>' + (nx ? '<div class="muted" style="font-size:.75rem">до следующей ступени: ' + nx + ' MMR · ранг = 1000 MMR, 5 ступеней</div>' : '') + '<div>MMR <b>' + S.pvp.mmr + '</b> · побед ' + S.pvp.w + ' · поражений ' + S.pvp.l + '</div><div class="muted" style="font-size:.78rem">Набрано MMR сегодня: <b>' + Math.max(0, S.pvp.gain || 0) + '</b>/' + CONFIG.mmr.dailyCap + ' (после лимита прирост ×' + CONFIG.mmr.afterCap + ') · винрейт за последние ' + Math.min(CONFIG.mmr.promoWindow, (S.pvp.hist || '').length) + ': ' + Math.round(pvpWinrate() * 100) + '%' + (RANKS.indexOf(rk) >= CONFIG.mmr.promoFrom ? ' · для повышения ранга нужно больше 50%' : '') + '</div><div class="muted" style="font-size:.8rem">Наградных PvP-боёв сегодня: ' + Math.max(0, CONFIG.pvp.rewardedPerDay - S.pvp.fights) + '/' + CONFIG.pvp.rewardedPerDay + '</div><button class="btn red big" style="margin-top:10px" data-click="pvpFight()">⚔ НАЙТИ СОПЕРНИКА</button><div class="muted" style="font-size:.75rem;margin-top:6px">Твой стак сражается с сохранённым стаком другого игрока.</div></div>' +
     '<div class="panel panel-b"><h3 class="cinzel" style="color:var(--gold2)">Подарок другу</h3><div class="field"><label>Ник</label><input type="text" id="gift-nick" maxlength="20"></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select id="gift-kind"><option value="gems">Кристаллы</option><option value="item">Предмет</option></select><input type="number" id="gift-amount" placeholder="сколько" style="width:110px" min="' + CONFIG.gifts.min + '" max="' + CONFIG.gifts.maxOne + '"><select id="gift-item" style="display:none;max-width:220px"><option value="">— выбери предмет —</option>' +
     S.items.filter(x => !equippedOn(x.uid)).slice(0, 200).map(x => '<option value="' + x.uid + '">' + esc(x.name) + ' (' + RARITY_NAMES[x.rarity] + ')</option>').join('') + '</select><button class="btn gold" data-click="sendGift()">Отправить</button></div>' +
     '<div class="muted" style="font-size:.72rem;margin-top:4px">До ' + CONFIG.gifts.dayCount + ' подарков и ' + fmt(CONFIG.gifts.daySum) + ' 🔶 в сутки, не чаще раза в ' + (CONFIG.gifts.cooldownMs / 1000) + ' с.</div><div class="auth-err" id="gift-err"></div></div></div>' +
