@@ -29,7 +29,7 @@ function setBest(g, v, higherBetter) {
   return false;
 }
 function startGame_(id) {
-  stopGames(); curGame = id;
+  stopGames(); curGame = id; document.body.dataset.game = id;
   if (id === 'invoker') { switchTab('invoker'); invSetMode('survival'); invStart(); if (typeof applyMysticBg === 'function') applyMysticBg(document.querySelector('.inv-target')); return; }
   if (id === 'tower') { renderGames(); document.getElementById('game-stage').innerHTML = '<div id="tower-menu"></div>'; renderTowerMenu(); return; }
   renderGames();

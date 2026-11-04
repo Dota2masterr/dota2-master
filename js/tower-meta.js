@@ -259,19 +259,20 @@ function twCupBotStart() {
 function twEmote(i) {
   if (!TB || TB.done) return; const e = TWM.emotes[i]; if (!e) return;
   if (TB.emoAt && Date.now() - TB.emoAt < 1500) return; TB.emoAt = Date.now();
-  twShowEmote(TB.me, e);
+  twShowEmote(TB.me, i);
   if (TB.online) db('POST', 'tower_rooms/' + TB.online.id + '/emo', { u: TB.online.uid, e: i, at: SV_TIME }).catch(() => { });
-  else if (Math.random() < 0.35) setTimeout(() => TB && !TB.done && twShowEmote(1 - TB.me, TWM.emotes[Math.floor(Math.random() * TWM.emotes.length)]), 900 + Math.random() * 900);
+  else if (Math.random() < 0.35) setTimeout(() => TB && !TB.done && twShowEmote(1 - TB.me, Math.floor(Math.random() * TWM.emotes.length)), 900 + Math.random() * 900);
 }
 function twShowEmote(side, e) {
   if (!TB) return; if (side !== TB.me && TS().mute) return;
   const box = document.querySelector('.tw-cv-box'); if (!box) return;
-  const d = document.createElement('div'); d.className = 'tw-emo ' + (side === TB.me ? 'me' : 'opp'); d.textContent = e;
+  const ix = typeof e === 'number' ? e : Math.max(0, TWM.emotes.indexOf(e));
+  const d = document.createElement('div'); d.className = 'tw-emo ' + (side === TB.me ? 'me' : 'opp'); d.innerHTML = assetTag('tower/emote-' + (ix + 1), 'tw-emo-img', TWM.emotes[ix]);
   box.appendChild(d); setTimeout(() => d.remove(), 2200);
 }
 function twMute() { const T = TS(); T.mute = !T.mute; save(); const b = document.getElementById('tw-mute'); if (b) b.textContent = T.mute ? '🔇' : '🔊'; twFlash(T.mute ? 'Эмодзи соперника скрыты' : 'Эмодзи соперника видны'); }
 function twEmoteBar() {
-  return '<div class="tw-emobar">' + TWM.emotes.map((e, i) => '<button class="tw-emob" data-click="twEmote(' + i + ')" aria-label="Эмодзи ' + e + '">' + e + '</button>').join('') +
+  return '<div class="tw-emobar">' + TWM.emotes.map((e, i) => '<button class="tw-emob" data-click="twEmote(' + i + ')" aria-label="Эмодзи ' + e + '">' + assetTag('tower/emote-' + (i + 1), 'tw-emob-img', e) + '</button>').join('') +
     '<button class="tw-emob" id="tw-mute" data-click="twMute()" title="Заглушить эмодзи соперника">' + (TS().mute ? '🔇' : '🔊') + '</button></div>';
 }
 
@@ -282,7 +283,7 @@ function twMetaTabs() {
   const T = TS(), ai = twArenaIdx(T.cups), A = TWM.arenas[ai], next = TWM.arenas[ai + 1];
   const ready = T.chests.filter(x => twChestState(x) === 'ready').length, qn = twQuests().filter(q => !q.done && q.n >= q.need).length;
   const roadN = TWM.road.filter((m, i) => !T.road.got[i] && T.road.best >= m.c).length;
-  return '<div class="tw-arena"><span class="tw-aic">' + A.ic + '</span><div><b>' + A.n + '</b><div class="muted">🏆 ' + T.cups + (next ? ' · до «' + next.n + '» ' + (next.cups - T.cups) : ' · высшая арена') + ' · ᚱ ' + T.runes + ' Рун</div></div></div>' +
+  return '<div class="tw-arena">' + assetTag('tower/arena-icon-' + ai, 'tw-aimg', A.n) + '<div><b>' + A.n + '</b><div class="muted">' + assetTag('tower/icon-cup', 'tw-ico') + ' ' + T.cups + (next ? ' · до «' + next.n + '» ' + (next.cups - T.cups) : ' · высшая арена') + ' · ' + assetTag('tower/icon-rune', 'tw-ico') + ' ' + T.runes + ' Рун</div></div></div>' +
     '<div class="seg tw-tabs">' + [['battle', '⚔ Бой'], ['cards', '🃏 Карты'], ['chests', '📦 Сундуки' + (ready ? ' •' : '')], ['shop', 'ᚱ Магазин'], ['road', '🏆 Дорога' + (roadN ? ' •' : '')], ['quests', '📋 Задания' + (qn ? ' •' : '')], ['top', '📊 Топ']]
       .map(([k, n]) => '<button class="' + (twTab === k ? 'active' : '') + '" data-click="twMetaTab(\'' + k + '\')">' + n + '</button>').join('') + '</div>';
 }
@@ -293,7 +294,7 @@ function twMetaBody() {
     return '<div class="muted" style="font-size:.78rem">Уровень карты: +' + Math.round(TWM.lvlStep * 100) + '% здоровья и урона за уровень (до ' + TWM.lvlMax + '). В PvP уровень считается не выше ' + TWM.pvpLvlCap + ' — сила не решает всё. Копии карт — из сундуков, Руны — за победы и задания.</div><div class="tw-cards">' +
       all.map(c => {
         const sp = twCardSpec(c, 1), k = twCard(c), un = twUnlocked(c), need = k.l < TWM.lvlMax ? TWM.copies[k.l - 1] : 0;
-        return '<div class="tw-ccard' + (un ? '' : ' lock') + '"><div class="tw-card">' + twCardFace(sp) + '<b>' + sp.cost + '</b></div><div class="tw-cinfo"><b>' + esc(sp.n) + '</b> · ур. ' + k.l + (un ? '' : ' · 🔒 ' + TWM.arenas[twCardArena(c)].n) +
+        return '<div class="tw-ccard' + (un ? '' : ' lock') + '"><div class="tw-card ' + twFrameCls(sp.cost) + '">' + twCardFace(sp) + '<b>' + sp.cost + '</b></div><div class="tw-cinfo"><b>' + esc(sp.n) + '</b> · ур. ' + k.l + (un ? '' : ' · 🔒 ' + TWM.arenas[twCardArena(c)].n) +
           '<div class="muted">' + esc(TW_CARD_INFO[c] || ('Герой · ' + ROLE_INFO[heroRole(c.slice(2))].n)) + '</div>' +
           (k.l < TWM.lvlMax ? '<div class="tw-prog"><div style="width:' + Math.min(100, k.c / need * 100) + '%"></div><span>' + k.c + '/' + need + '</span></div><button class="btn sm ' + (twCanLevel(c) ? 'gold' : 'ghost') + '" ' + (twCanLevel(c) ? '' : 'disabled') + ' data-click="twLevelUp(\'' + c + '\')">⬆ ' + TWM.runes[k.l - 1] + ' ᚱ</button>' : '<div class="muted">максимум</div>') + '</div></div>';
       }).join('') + '</div>' + twLevelTable();
@@ -304,17 +305,17 @@ function twMetaBody() {
         const st = twChestState(ch);
         if (st === 'empty') return '<div class="tw-slot empty">пусто</div>';
         const x = TWM.chests[ch.t], left = ch.start ? Math.max(0, ch.start + x.sec * 1000 - nowMs()) / 1000 : x.sec;
-        return '<button class="tw-slot ' + st + '" data-click="twChestTap(' + i + ')" title="' + esc(twChestOdds(ch.t)) + '"><span class="tw-sic">' + x.ic + '</span><b>' + x.n + '</b><small>' + (st === 'ready' ? 'Открыть!' : st === 'opening' ? '⏳ ' + twDur(left) : 'Нажми: ' + twDur(x.sec)) + '</small></button>';
+        return '<button class="tw-slot ' + st + '" data-click="twChestTap(' + i + ')" title="' + esc(twChestOdds(ch.t)) + '">' + assetTag('tower/chest-' + ch.t + (st === 'ready' ? '-open' : ''), 'tw-simg', x.n) + '<b>' + x.n + '</b><small>' + (st === 'ready' ? 'Открыть!' : st === 'opening' ? '⏳ ' + twDur(left) : 'Нажми: ' + twDur(x.sec)) + '</small></button>';
       }).join('') + '</div><div class="sec-sub">Шансы выпадения</div>' + Object.keys(TWM.chests).map(t => '<div class="tw-odds">' + TWM.chests[t].ic + ' ' + esc(twChestOdds(t)) + ' Шанс получить за победу: ' + TWM.slotDrop[t] + '%.</div>').join('');
   }
   if (twTab === 'shop') {
     return '<div class="muted" style="font-size:.78rem">Магазин Башни — только за Руны (ᚱ). Руны нельзя купить: их дают победы, задания и дорога кубков. У тебя: <b>' + T.runes + ' ᚱ</b></div><div class="tw-shop">' +
-      TWM.shop.map((s, i) => { const x = TWM.chests[s.t]; return '<div class="tw-shopi"><span class="tw-sic">' + x.ic + '</span><b>' + x.n + ' сундук</b><div class="muted">' + esc(twChestOdds(s.t)).replace('Открывается', 'Из магазина открывается сразу, а в слоте —') + '</div><button class="btn sm ' + (T.runes >= s.cost ? 'gold' : 'ghost') + '" data-click="twShopBuy(' + i + ')">' + s.cost + ' ᚱ</button></div>'; }).join('') + '</div>';
+      TWM.shop.map((s, i) => { const x = TWM.chests[s.t]; return '<div class="tw-shopi">' + assetTag('tower/chest-' + s.t, 'tw-simg', x.n) + '<b>' + x.n + ' сундук</b><div class="muted">' + esc(twChestOdds(s.t)).replace('Открывается', 'Из магазина открывается сразу, а в слоте —') + '</div><button class="btn sm ' + (T.runes >= s.cost ? 'gold' : 'ghost') + '" data-click="twShopBuy(' + i + ')">' + s.cost + ' ᚱ</button></div>'; }).join('') + '</div>';
   }
   if (twTab === 'road') {
     return '<div class="muted" style="font-size:.78rem">Сезон Башни: осталось ' + twSeasonLeft() + ' дн. Лучший результат сезона: 🏆 ' + T.road.best + '. В конце сезона кубки выше ' + TWM.season.keepFrom + ' уменьшаются вдвое (сверх ' + TWM.season.keepFrom + ').</div><div class="tw-road">' +
       TWM.road.map((m, i) => { const got = T.road.got[i], ok = T.road.best >= m.c; const r = m.r.runes ? m.r.runes + ' ᚱ' : TWM.chests[m.r.chest].ic + ' ' + TWM.chests[m.r.chest].n; return '<div class="tw-rstep' + (got ? ' got' : ok ? ' ok' : '') + '"><b>🏆 ' + m.c + '</b><span>' + r + (m.r.title ? ' + титул' : '') + '</span>' + (got ? '✅' : ok ? '<button class="btn sm gold" data-click="twRoadClaim(' + i + ')">Забрать</button>' : '🔒') + '</div>'; }).join('') + '</div>' +
-      '<div class="sec-sub">Арены</div><div class="tw-road">' + TWM.arenas.map((a, i) => '<div class="tw-rstep' + (T.cupsBest >= a.cups ? ' got' : '') + '"><b>' + a.ic + ' ' + a.n + '</b><span>от 🏆 ' + a.cups + '</span><span class="muted">' + (a.cards.map(twSpecName).join(', ') || 'престиж') + '</span></div>').join('') + '</div>';
+      '<div class="sec-sub">Арены</div><div class="tw-road">' + TWM.arenas.map((a, i) => '<div class="tw-rstep' + (T.cupsBest >= a.cups ? ' got' : '') + '"><b>' + assetTag('tower/arena-icon-' + i, 'tw-ico2', a.n) + ' ' + a.n + '</b><span>от 🏆 ' + a.cups + '</span><span class="muted">' + (a.cards.map(twSpecName).join(', ') || 'престиж') + '</span></div>').join('') + '</div>';
   }
   if (twTab === 'quests') {
     return '<div class="muted" style="font-size:.78rem">Новые задания каждый день. Награда — Руны.</div>' + twQuests().map((q, i) => '<div class="tw-quest' + (q.done ? ' got' : '') + '"><span>' + esc(twQuestText(q)) + '</span><span class="muted">' + q.n + '/' + q.need + '</span>' + (q.done ? '✅' : q.n >= q.need ? '<button class="btn sm gold" data-click="twQuestClaim(' + i + ')">+' + q.r + ' ᚱ</button>' : '<span>' + q.r + ' ᚱ</span>') + '</div>').join('');

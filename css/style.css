@@ -908,3 +908,34 @@ body[data-tab="rogue"][data-rbg="abyss"]{--tab-bg:url('../assets/rogue/bg-abyss.
 .rg-fight.f-act2{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.55)),url('../assets/rogue/bg-act2.webp') center/cover}
 .rg-fight.f-act3{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.55)),url('../assets/rogue/bg-act3.webp') center/cover}
 .rg-fight.f-abyss{background:linear-gradient(rgba(0,0,0,.25),rgba(0,0,0,.55)),url('../assets/rogue/bg-abyss.webp') center/cover}
+/* ===== 2.4.8: картинки «Защиты башен» ===== */
+body[data-tab="games"][data-game="tower"]{--tab-bg:url('../assets/tower/bg-menu.webp')}
+.a-ico,.tw-ico{width:1.15em;height:1.15em;vertical-align:-.2em;object-fit:contain}
+.tw-ico2{width:1.6em;height:1.6em;vertical-align:-.45em;object-fit:contain}
+.tw-aimg{width:56px;height:56px;object-fit:contain;filter:drop-shadow(0 2px 6px #000)}
+.tw-simg{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+.tw-slot.ready .tw-simg{animation:ultgood .6s infinite alternate}
+.tw-card.fr-common,.tw-card.fr-rare,.tw-card.fr-epic{background-size:100% 100%;background-repeat:no-repeat;border-color:transparent}
+.tw-card.fr-common{background-image:url('../assets/tower/card-frame-common.webp'),linear-gradient(#1e242c,#12161b)}
+.tw-card.fr-rare{background-image:url('../assets/tower/card-frame-rare.webp'),linear-gradient(#1a2232,#10141d)}
+.tw-card.fr-epic{background-image:url('../assets/tower/card-frame-epic.webp'),linear-gradient(#251a32,#140f1d)}
+.tw-card img{object-fit:contain}
+.tw-emob{padding:2px}.tw-emob-img{width:34px;height:34px;object-fit:contain;display:block;margin:auto}
+.tw-emo{background:none;padding:0}.tw-emo-img{width:84px;height:84px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.7))}
+.tw-mana{overflow:visible}.tw-mico{position:absolute;left:-10px;top:50%;transform:translateY(-50%);width:28px;height:28px;object-fit:contain;z-index:3;filter:drop-shadow(0 1px 3px #000)}
+.tw-banner{display:block;width:min(420px,90%);margin:0 auto -18px;filter:drop-shadow(0 6px 14px #000)}
+.tw-card img[src*="assets/tower"]{border-radius:0;object-fit:contain;width:46px;height:46px;filter:drop-shadow(0 2px 3px #000)}
+.tw-next img[src*="assets/tower"]{border-radius:0;object-fit:contain}
+.tw-card.sel.sel{border-color:#ffd36a}
+/* ===== 2.4.8: картинки «Пути Древнего» ===== */
+.rg-nimg{width:44px;height:44px;object-fit:contain;display:block;margin:auto;filter:drop-shadow(0 2px 4px #000)}
+.rg-node.t-boss .rg-nimg{width:58px;height:58px}
+.rg-foeimg{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.7))}
+.rg-scene{margin:-12px -12px 10px;border-radius:6px 6px 0 0;overflow:hidden;max-height:240px}
+.rg-sceneimg{width:100%;height:240px;object-fit:cover;display:block;mask-image:linear-gradient(#000 70%,transparent);-webkit-mask-image:linear-gradient(#000 70%,transparent)}
+.rg-fx{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:4;animation:rgfx .6s ease-out forwards}
+.rg-fximg{width:90%;max-width:140px;object-fit:contain}
+@keyframes rgfx{0%{opacity:0;transform:scale(.5)}25%{opacity:1;transform:scale(1.05)}100%{opacity:0;transform:scale(1.25)}}
+.rg-pic img.rg-foeimg{height:72px;object-fit:contain;border-radius:0}
+.rg-unit.boss .rg-pic img.rg-foeimg{height:110px}
+.rg-bossintro{text-align:center;margin-bottom:6px}.rg-bossimg{width:220px;height:220px;object-fit:contain;filter:drop-shadow(0 0 24px rgba(255,80,40,.5))}

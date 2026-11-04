@@ -40,7 +40,7 @@ function rgMapHTML(run) {
       const done = i < run.row || (i === run.row && j === run.col);
       const cur = i === run.row && j === run.col;
       const N = RG_NODE[n.t];
-      h += '<button class="rg-node t-' + n.t + (reach ? ' reach' : '') + (done ? ' done' : '') + (cur ? ' cur' : '') + '" id="rgn-' + i + '-' + j + '" ' + (reach ? 'data-click="rogueGo(' + i + ',' + j + ')"' : 'disabled') + ' title="' + N[1] + '"><span>' + N[0] + '</span><small>' + N[1] + '</small></button>';
+      h += '<button class="rg-node t-' + n.t + (reach ? ' reach' : '') + (done ? ' done' : '') + (cur ? ' cur' : '') + '" id="rgn-' + i + '-' + j + '" ' + (reach ? 'data-click="rogueGo(' + i + ',' + j + ')"' : 'disabled') + ' title="' + N[1] + '"><span>' + assetTag('rogue/node-' + n.t, 'rg-nimg', N[0]) + '</span><small>' + N[1] + '</small></button>';
     });
     h += '</div>';
   }
@@ -90,8 +90,10 @@ function rgRecipes() {
 }
 
 // ---------- лавка / фонтан / событие / награда ----------
+// 2.4.8: картинка-сцена над лавкой, фонтаном, событием и итогом забега
+function rgScene(k) { return typeof assetTag === 'function' ? '<div class="rg-scene">' + assetTag('rogue/scene-' + k, 'rg-sceneimg', '') + '</div>' : ''; }
 function rgShopHTML(run) {
-  let h = '<div class="panel panel-b"><div class="sec-title">🛒 Лавка</div><div class="rg-shop">';
+  let h = '<div class="panel panel-b">' + rgScene('shop') + '<div class="sec-title">🛒 Лавка</div><div class="rg-shop">';
   run.pending.shop.forEach((s, i) => {
     const p = rgPrice(run, s.c);
     h += '<button class="rg-buy' + (s.sold ? ' sold' : '') + '" ' + (s.sold ? 'disabled' : 'data-click="rogueBuy(' + i + ')"') + '>' + imgTag(rgItemIcon(s.c)) + '<div><b>' + esc(RG_COMP[s.c][0]) + '</b><small>' + rgModsShort(RG_COMP[s.c][2]) + '</small></div><span class="' + (run.gold >= p ? 'rg-gold' : 'muted') + '">' + (s.sold ? '✓' : p + ' 💰') + '</span></button>';
@@ -106,13 +108,13 @@ function rgModsShort(m) {
 function rgRestHTML(run) {
   const m = rgStats(run).hp, heal = Math.round(m * ROGUE.restHeal * (1 - rgAbyssSum(run.abyss, 'rest')));
   const sk = getSkills(run.hero).filter(x => x.kind !== 'passive');
-  return '<div class="panel panel-b"><div class="sec-title">⛲ Фонтан</div><div class="muted">Отдохни или потренируйся. Выбрать можно что-то одно.</div><div class="rg-choices">' +
+  return '<div class="panel panel-b">' + rgScene('rest') + '<div class="sec-title">⛲ Фонтан</div><div class="muted">Отдохни или потренируйся. Выбрать можно что-то одно.</div><div class="rg-choices">' +
     '<button class="rg-choice" data-click="rogueRest(\'heal\',0)"><span>💚</span><b>Восстановить ' + heal + ' ❤</b><small>' + run.hp + ' → ' + Math.min(m, run.hp + heal) + '</small></button>' +
     sk.map((s, i) => (run.skillLv[i] || 0) < ROGUE.maxSkillLv ? '<button class="rg-choice" data-click="rogueRest(\'up\',' + i + ')">' + imgTag(skillIconChain(s.key, run.hero)) + '<b>Улучшить ' + esc(s.name) + '</b><small>ур. ' + (run.skillLv[i] || 0) + ' → ' + ((run.skillLv[i] || 0) + 1) + ': сила +25%' + ((run.skillLv[i] || 0) + 1 === 2 ? ', перезарядка −1' : '') + '</small></button>' : '').join('') + '</div></div>';
 }
 function rgEventHTML(run) {
   const ev = RG_EVENTS[run.pending.ev];
-  return '<div class="panel panel-b rg-event"><div class="sec-title">❓ ' + esc(ev.t) + '</div><p>' + esc(ev.d) + '</p><div class="rg-choices">' +
+  return '<div class="panel panel-b rg-event">' + rgScene('event') + '<div class="sec-title">❓ ' + esc(ev.t) + '</div><p>' + esc(ev.d) + '</p><div class="rg-choices">' +
     ev.c.map((c, i) => '<button class="rg-choice" data-click="rogueEvent(' + i + ')"' + (c.cost && run.gold < c.cost ? ' disabled' : '') + '><b>' + esc(c.t) + '</b>' + (c.ch != null ? '<small>шанс ' + Math.round(c.ch * 100) + '%</small>' : '') + '</button>').join('') + '</div></div>';
 }
 function rgRewardHTML(run) {
@@ -129,7 +131,9 @@ function rgRewardHTML(run) {
 function rogueShowLine(title, text, then, win) {
   const host = rgHost(); if (!host) { if (then) then(); return; }
   rgLineThen = then;
-  host.innerHTML = '<div class="panel panel-b rg-line' + (win ? ' win' : '') + '"><div class="cinzel rg-line-t">' + esc(title) + '</div><p>' + esc(text).replace(/\n/g, '<br>') + '</p>' +
+  let sc = win === true ? rgScene('win') : /оборвался|пал|погиб/i.test(title) ? rgScene('lose') : '';
+  if (!sc && /^⚠/.test(title)) { const bk = Object.keys(RG_ENEMY).find(k => RG_ENEMY[k].boss && title.includes(RG_ENEMY[k].n)); if (bk && RG_FOE_IMG[bk]) sc = '<div class="rg-bossintro">' + assetTag('rogue/' + RG_FOE_IMG[bk], 'rg-bossimg', '') + '</div>'; }
+  host.innerHTML = '<div class="panel panel-b rg-line' + (win ? ' win' : '') + '">' + sc + '<div class="cinzel rg-line-t">' + esc(title) + '</div><p>' + esc(text).replace(/\n/g, '<br>') + '</p>' +
     (RS().last && !RS().run ? '<button class="btn" data-click="rogueSaveBuild()">💾 Сохранить билд</button>' : '') + '<button class="btn green big" data-click="rgLineNext()">Дальше ➜</button></div>';
 }
 let rgLineThen = null;
@@ -204,7 +208,8 @@ function rgUnitHTML(u, i) {
   const st = []; const S2 = u.st;
   if (S2.stun > 0) st.push('💫' + S2.stun); if (S2.silence > 0) st.push('🤐'); if (S2.slow > 0) st.push('🐌'); if (S2.poison.length) st.push('☠'); if (S2.shield > 0) st.push('🛡' + S2.shield);
   if (S2.buff > 0) st.push('⬆'); if (S2.amp > 0) st.push('🔻'); if (S2.bkb > 0) st.push('🟡'); if (S2.dodge > 0) st.push('💨'); if (S2.pet) st.push('👥'); if (S2.illu > 0) st.push('👤');
-  const pic = u.hero ? imgTag(heroImgChain(u.id)) : u.img === 'treant' ? imgTag(heroImgChain('treant')) : u.img === 'roshan' ? imgTag([spellIcon('roshan_slam'), ITEM_ICON('aegis')]) : '<span class="rg-emo">' + u.ic + '</span>';
+  const fi = !u.hero && typeof RG_FOE_IMG !== 'undefined' && RG_FOE_IMG[u.key];   // 2.4.8: картинки врагов (игрока)
+  const pic = u.hero ? imgTag(heroImgChain(u.id)) : fi ? assetTag('rogue/' + fi, 'rg-foeimg', u.n) : u.img === 'treant' ? imgTag(heroImgChain('treant')) : u.img === 'roshan' ? imgTag([spellIcon('roshan_slam'), ITEM_ICON('aegis')]) : '<span class="rg-emo">' + u.ic + '</span>';
   let intent = '';
   if (!u.hero && u.alive) { const t = rgIntentText(u); intent = '<div class="rg-intent" style="color:' + t.c + '" title="' + t.n + '">' + t.i + (t.v ? ' ' + t.v : '') + '</div>'; }
   return '<div class="rg-unit' + (u.hero ? ' hero' : '') + (u.boss ? ' boss' : '') + (u.alive ? '' : ' dead') + (!u.hero && RF.target === i ? ' tgt' : '') + '" id="' + (u.hero ? 'rgu-h' : 'rgu-' + i) + '" ' + (!u.hero && u.alive ? 'data-click="rgSetTarget(' + i + ')"' : '') + '>' +
@@ -251,6 +256,8 @@ function rgElOf(u) { if (!RF) return null; return document.getElementById(u.hero
 function rgFloat(u, txt, col, big) {
   rgRenderUnits();
   const el = rgElOf(u); if (!el || SETTINGS.noanim) return;
+  const fxn = /^\+/.test(txt) ? 'fx-heal' : txt === '💫' ? 'fx-stun' : big ? 'fx-crit' : /^-/.test(String(txt).replace(/^[^-+]*/, '')) || /-\d/.test(txt) ? 'fx-hit' : '';
+  if (fxn) { const fx = document.createElement('div'); fx.className = 'rg-fx'; fx.innerHTML = assetTag('rogue/' + fxn, 'rg-fximg', ''); el.appendChild(fx); setTimeout(() => fx.remove(), 600); }
   const d = document.createElement('div'); d.className = 'rg-float' + (big ? ' big' : ''); d.textContent = txt; d.style.color = col || '#fff';
   d.style.left = (20 + Math.random() * 50) + '%'; el.appendChild(d); setTimeout(() => d.remove(), 900);
 }

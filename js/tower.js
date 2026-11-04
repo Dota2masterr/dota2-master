@@ -311,7 +311,9 @@ function twStart(mode, opts) {
     deck1 = opts.ghost.deck.map(c => twCardSpec(c.c, c.m));
   }
   const g = twNew({ seed, deck0, deck1, bot, boss, towerMul });
-  TB = { g, me: opts.me || 0, mode, floor, bot, botName: opts.botName || null, ghost: opts.ghost || null, online: opts.online || null, acc: 0, last: 0, sel: -1, drag: null, imgs: {}, pending: [], startedAt: Date.now() };
+  if (typeof twPreload === 'function') twPreload();
+  const arenaIx = mode === 'floor' ? Math.min(9, Math.floor((floor - 1) / 5)) : (typeof twArenaIdx === 'function' ? twArenaIdx(TS().cupsBest || 0) : 0);
+  TB = { arena: arenaIx, g, me: opts.me || 0, mode, floor, bot, botName: opts.botName || null, ghost: opts.ghost || null, online: opts.online || null, acc: 0, last: 0, sel: -1, drag: null, imgs: {}, pending: [], startedAt: Date.now() };
   twRenderShell();
   TB.last = performance.now();
   TB.raf = requestAnimationFrame(twFrame);
@@ -355,7 +357,7 @@ function twRenderShell() {
   const host = document.getElementById('games-host'); if (!host) return;
   host.innerHTML = '<div class="tw-wrap"><div class="tw-top"><span id="tw-crowns">👑 0 : 0</span><span id="tw-time">3:00</span><button class="btn sm ghost" data-click="twQuit()">✕</button></div>' +
     '<div class="tw-cv-box"><canvas id="tw-cv"></canvas><div class="tw-msg" id="tw-msg"></div></div>' + (typeof twEmoteBar === 'function' ? twEmoteBar() : '') +
-    '<div class="tw-mana"><div id="tw-mana-bar"></div><span id="tw-mana-n">5</span></div><div class="tw-hand" id="tw-hand"></div></div>';
+    '<div class="tw-mana">' + (typeof assetTag === 'function' ? assetTag('tower/icon-mana', 'tw-mico', '') : '') + '<div id="tw-mana-bar"></div><span id="tw-mana-n">5</span></div><div class="tw-hand" id="tw-hand"></div></div>';
   const cv = document.getElementById('tw-cv');
   const box = cv.parentElement;
   const maxH = Math.max(360, window.innerHeight - 190);
@@ -383,7 +385,7 @@ function twRenderHand() {
   const key = g.hand[me].join(',');
   if (h.dataset.k !== key && !TB.drag) {                   // во время перетаскивания карты не пересоздаём
     h.dataset.k = key;
-    h.innerHTML = g.hand[me].map((ci, i) => { const sp = g.deck[me][ci]; return '<button class="tw-card" data-slot="' + i + '">' + twCardFace(sp) + '<b>' + sp.cost + '</b><small>' + esc(sp.n) + '</small></button>'; }).join('') +
+    h.innerHTML = g.hand[me].map((ci, i) => { const sp = g.deck[me][ci]; return '<button class="tw-card ' + twFrameCls(sp.cost) + '" data-slot="' + i + '">' + twCardFace(sp) + '<b>' + sp.cost + '</b><small>' + esc(sp.n) + '</small></button>'; }).join('') +
       '<div class="tw-next">след.<br>' + twCardFace(g.deck[me][g.queue[me][0]]) + '</div>';
   }
   h.querySelectorAll('.tw-card').forEach((b, i) => { const ci = g.hand[me][i]; const sp = ci != null && g.deck[me][ci]; b.classList.toggle('off', !sp || g.mana[me] < sp.cost); b.classList.toggle('sel', TB.sel === i); });
@@ -391,9 +393,13 @@ function twRenderHand() {
   const mn = document.getElementById('tw-mana-n'); if (mn) mn.textContent = Math.floor(g.mana[me]);
   const t = Math.max(0, TW.TIME - g.tick / TW.FPS), ot = g.tick / TW.FPS > TW.TIME;
   const tm = document.getElementById('tw-time'); if (tm) tm.textContent = ot ? 'Овертайм ' + Math.ceil(TW.TIME + TW.OVERTIME - g.tick / TW.FPS) : Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0') + (t <= TW.DOUBLE ? ' ×2' : '');
-  const cr = document.getElementById('tw-crowns'); if (cr) cr.textContent = '👑 ' + g.crowns[me] + ' : ' + g.crowns[1 - me];
+  const cr = document.getElementById('tw-crowns'); if (cr) { const tx = g.crowns[me] + ' : ' + g.crowns[1 - me]; if (cr.dataset.v !== tx) { cr.dataset.v = tx; cr.innerHTML = assetTag('tower/icon-crown', 'tw-ico', '') + ' ' + tx; } }
 }
+// 2.4.8: рамка карты по цене: до 3 — обычная, 4–5 — редкая, 6+ — эпическая
+function twFrameCls(cost) { return cost >= 6 ? 'fr-epic' : cost >= 4 ? 'fr-rare' : 'fr-common'; }
 function twCardFace(sp) {
+  if (sp.spell && TW_SPELL_ICON[sp.c]) return '<img src="' + assetUrl('tower/' + TW_SPELL_ICON[sp.c]) + '" alt="" draggable="false">';
+  if (!sp.hero && TW_SPRITE[sp.ic]) return '<img src="' + assetUrl('tower/' + TW_SPRITE[sp.ic]) + '" alt="" draggable="false">';
   if (sp.hero) return '<img src="' + STEAM + 'heroes/icons/' + sp.hero + '.png" referrerpolicy="no-referrer" alt="">';
   return '<span class="tw-ic">' + sp.ic + '</span>';
 }
@@ -404,11 +410,15 @@ function twDraw() {
   c.fillStyle = '#20331b'; c.fillRect(0, 0, TW.W, TW.H);
   if (me === 1) c.setTransform(-k, 0, 0, -k, TW.W * k, TW.H * k);
   // поле
-  c.drawImage(texTowerField(TW.W, TW.H, TW.RIVER), 0, 0, TW.W, TW.H);   // 2.4: новая текстура поля
+  const fld = typeof assetImg === 'function' ? assetImg('tower/arena-' + TB.arena + '-' + TW_ARENA_FILE[TB.arena]) : null;   // 2.4.8: поле арены (картинка игрока)
+  // поле арены на весь холст (дорожки на картинках близко к линиям игры)
+  if (fld) { const sx = 1; c.drawImage(fld, -TW.W * (sx - 1) / 2, 0, TW.W * sx, TW.H); } else c.drawImage(texTowerField(TW.W, TW.H, TW.RIVER), 0, 0, TW.W, TW.H);
   if (TB.sel >= 0 || TB.drag) { const sp = g.deck[me][g.hand[me][TB.sel >= 0 ? TB.sel : TB.drag.slot]]; if (sp && !sp.spell) { c.fillStyle = 'rgba(255,211,106,.08)'; c.fillRect(0, me === 1 ? 0 : TW.RIVER + 20, TW.W, TW.RIVER - 20); } }
   // здания
   g.bld.forEach(b => {
-    drawTwBuilding(c, b, mine(b.side));
+    const bi = typeof assetImg === 'function' ? assetImg('tower/' + (b.kind === 'throne' ? 'throne' : 'tower') + '-' + (mine(b.side) ? 'blue' : 'red') + (b.alive ? '' : '-ruin')) : null;
+    if (bi) { c.fillStyle = 'rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(b.x, b.y + b.r * 0.7, b.r * 1.1, b.r * 0.45, 0, 0, 6.2832); c.fill(); twSprite(c, bi, b.x, b.y - b.r * 0.35, b.r * (b.kind === 'throne' ? 3 : 2.8)); }
+    else drawTwBuilding(c, b, mine(b.side));
     c.globalAlpha = b.alive ? 1 : 0.25; c.textAlign = 'center'; c.textBaseline = 'middle';
     if (b.alive) twBar(c, b.x, b.y - b.r - 7, b.r * 2, b.hp / b.max, mine(b.side) ? 0 : 1);
     c.globalAlpha = 1;
@@ -418,6 +428,7 @@ function twDraw() {
     c.beginPath(); c.arc(u.x, u.y, u.r, 0, 6.2832);
     const im = u.hero ? twImg(u.hero) : null;
     if (im) { c.save(); if (me === 1) { c.setTransform(k, 0, 0, k, (TW.W - u.x) * k, (TW.H - u.y) * k); c.beginPath(); c.arc(0, 0, u.r, 0, 6.2832); c.clip(); c.drawImage(im, -u.r, -u.r, u.r * 2, u.r * 2); } else { c.clip(); c.drawImage(im, u.x - u.r, u.y - u.r, u.r * 2, u.r * 2); } c.restore(); }
+    else if (TW_SPRITE[u.ic] && assetImg('tower/' + TW_SPRITE[u.ic])) { c.fillStyle = mine(u.side) ? 'rgba(40,110,40,.55)' : 'rgba(140,40,30,.55)'; c.fill(); twSprite(c, assetImg('tower/' + TW_SPRITE[u.ic]), u.x, u.y - u.r * 0.25, u.r * 2.7); }
     else if (u.ic === '🗡' || u.ic === '🏹') { drawCreep(c, u.x, u.y, u.r * 1.05, mine(u.side) ? 0 : 1, u.ic === '🏹'); }
     else { const gr = c.createRadialGradient(u.x - u.r * 0.3, u.y - u.r * 0.3, 1, u.x, u.y, u.r); gr.addColorStop(0, mine(u.side) ? '#7acf5a' : '#d0604a'); gr.addColorStop(1, mine(u.side) ? '#2a5a1c' : '#5a1810'); c.fillStyle = gr; c.fill(); if (u.ic) { c.font = (u.r * 1.2) + 'px sans-serif'; twText(c, u.ic, u.x, u.y + 1); } else if (!u.hero) { c.fillStyle = '#fff'; c.font = '9px sans-serif'; twText(c, u.bld ? '🪨' : '•', u.x, u.y); } }
     c.beginPath(); c.arc(u.x, u.y, u.r, 0, 6.2832); c.lineWidth = 2; c.strokeStyle = mine(u.side) ? '#6cff7a' : '#ff5a4a'; c.stroke();
@@ -425,11 +436,12 @@ function twDraw() {
     twBar(c, u.x, u.y - u.r - 4, u.r * 2, u.hp / u.max, mine(u.side) ? 0 : 1);
   });
   // заклинания и эффекты
-  g.spells.forEach(sp => { c.beginPath(); c.arc(sp.x, sp.y, sp.sp.r, 0, 6.2832); c.fillStyle = sp.sp.freeze ? 'rgba(160,120,255,.25)' : sp.sp.dps ? 'rgba(80,0,120,.35)' : 'rgba(255,200,60,.25)'; c.fill(); });
+  g.spells.forEach(sp => { const fi = TW_SPELL_FX[sp.key] && assetImg('tower/' + TW_SPELL_FX[sp.key]); if (fi) { c.globalAlpha = 0.85; c.drawImage(fi, sp.x - sp.sp.r * 1.15, sp.y - sp.sp.r * 1.15, sp.sp.r * 2.3, sp.sp.r * 2.3); c.globalAlpha = 1; return; } c.beginPath(); c.arc(sp.x, sp.y, sp.sp.r, 0, 6.2832); c.fillStyle = sp.sp.freeze ? 'rgba(160,120,255,.25)' : sp.sp.dps ? 'rgba(80,0,120,.35)' : 'rgba(255,200,60,.25)'; c.fill(); });
   g.fx.forEach(f => {
     c.globalAlpha = Math.min(1, f.life / 10);
     if (f.k === 'shot') { c.strokeStyle = mine(f.side) ? '#bfffb0' : '#ffb0a0'; c.lineWidth = f.big ? 2 : 1; c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(f.x2, f.y2); c.stroke(); }
     else if (f.k === 'num') { c.fillStyle = mine(f.side) ? '#ff8a7a' : '#fff'; c.font = 'bold 10px sans-serif'; twText(c, f.v, f.x, f.y - (20 - f.life)); }
+    else if (f.k === 'boom' && assetImg('tower/fx-explosion')) { const s2 = 70 * (1.3 - f.life / 30); c.drawImage(assetImg('tower/fx-explosion'), f.x - s2, f.y - s2, s2 * 2, s2 * 2); }
     else if (f.k === 'sun' || f.k === 'boom') { c.beginPath(); c.arc(f.x, f.y, (f.r || 40) * (1.2 - f.life / 30), 0, 6.2832); c.fillStyle = f.k === 'sun' ? 'rgba(255,220,80,.5)' : 'rgba(255,120,40,.5)'; c.fill(); }
     else if (f.k === 'heal') { c.beginPath(); c.arc(f.x, f.y, f.r * (1.2 - f.life / 30), 0, 6.2832); c.fillStyle = 'rgba(90,255,120,.35)'; c.fill(); }
     else if (f.k === 'ult') { c.strokeStyle = '#ffd36a'; c.lineWidth = 3; c.beginPath(); c.arc(f.x, f.y, 30 - f.life, 0, 6.2832); c.stroke(); }
@@ -438,6 +450,12 @@ function twDraw() {
   // призрак карты при перетаскивании
   c.setTransform(k, 0, 0, k, 0, 0);
   if (TB.drag && TB.drag.p && TB.drag.p.inside) { c.globalAlpha = 0.5; c.fillStyle = '#ffd36a'; c.beginPath(); c.arc(TB.drag.p.x, TB.drag.p.y, 16, 0, 6.2832); c.fill(); c.globalAlpha = 1; }
+}
+// 2.4.8: спрайт всегда «головой вверх», даже на перевёрнутом экране игрока b
+function twSprite(c, im, x, y, w, h) {
+  h = h || w;
+  if (TB.me !== 1) return c.drawImage(im, x - w / 2, y - h / 2, w, h);
+  const k = TB.scale; c.save(); c.setTransform(k, 0, 0, k, (TW.W - x) * k, (TW.H - y) * k); c.drawImage(im, -w / 2, -h / 2, w, h); c.restore();
 }
 function twText(c, t, x, y) {
   if (TB.me !== 1) return c.fillText(t, x, y);
@@ -474,7 +492,7 @@ function twFinish() {
   save(); updateTop();
   const host = document.getElementById('games-host');
   const ov = document.createElement('div'); ov.className = 'tw-over';
-  ov.innerHTML = '<div class="cinzel">' + esc(msg) + '</div><div class="rg-row2">' + (mode === 'floor' ? '<button class="btn green" data-click="twAgain()">' + (win ? 'Следующий этаж ➜' : 'Ещё раз') + '</button>' : mode === 'cupbot' || mode === 'ghost' ? '<button class="btn green" data-click="twStop();twGhostFight()">⚔ Ещё PvP</button>' : '') + '<button class="btn" data-click="twQuit()">В меню</button></div>';
+  ov.innerHTML = (typeof assetTag === 'function' ? assetTag('tower/banner-' + (win ? 'win' : draw ? 'draw' : 'lose'), 'tw-banner', '') : '') + '<div class="cinzel">' + esc(msg) + '</div><div class="rg-row2">' + (mode === 'floor' ? '<button class="btn green" data-click="twAgain()">' + (win ? 'Следующий этаж ➜' : 'Ещё раз') + '</button>' : mode === 'cupbot' || mode === 'ghost' ? '<button class="btn green" data-click="twStop();twGhostFight()">⚔ Ещё PvP</button>' : '') + '<button class="btn" data-click="twQuit()">В меню</button></div>';
   const box = host && host.querySelector('.tw-cv-box'); if (box) box.appendChild(ov);
   sfx(win ? 'win' : 'lose');
   TB.done = true;
@@ -501,7 +519,7 @@ function renderTowerMenu() {
     '<div class="rg-row2"><button class="btn green big" data-click="twStartFloor()">⚔ Бой за этаж ' + f + '</button></div>' +
     '<div class="rg-row2"><button class="btn" data-click="twGhostFight()">👻 PvP на кубки</button><button class="btn" data-click="twLiveQueue()">⚡ Живой PvP</button></div>' +
     '<div class="muted" style="font-size:.75rem">PvP: победа +' + TWM.cups.win + ' 🏆, поражение −' + TWM.cups.loss + ' (ниже начала своей арены не падаешь) · победы ' + T.w + ' / поражения ' + T.l + '</div>' +
-    '<div class="sec-sub">Колода (8 карт) — нажми карту, чтобы заменить</div><div class="tw-deck">' + deck.map((c, i) => { const sp = twCardSpec(c, 1); return '<button class="tw-card" data-click="twDeckSwap(' + i + ')">' + twCardFace(sp) + '<b>' + sp.cost + '</b><small>' + esc(sp.n) + '</small></button>'; }).join('') + '</div>' +
+    '<div class="sec-sub">Колода (8 карт) — нажми карту, чтобы заменить</div><div class="tw-deck">' + deck.map((c, i) => { const sp = twCardSpec(c, 1); return '<button class="tw-card ' + twFrameCls(sp.cost) + '" data-click="twDeckSwap(' + i + ')">' + twCardFace(sp) + '<b>' + sp.cost + '</b><small>' + esc(sp.n) + '</small></button>'; }).join('') + '</div>' +
     '<div class="muted" style="font-size:.75rem">Как играть: перетащи карту (или нажми карту, потом поле) на свою половину. Юниты сами идут по линиям. Сломай Трон или больше башен за 3 минуты. Последняя минута — мана ×2. Уровень героя даёт до +60% силы карты, уровень карты — до +56% (в PvP до +40%).</div></div>';
 }
 function twStartFloor() { twStart('floor', { floor: TS().floor }); }
@@ -511,8 +529,8 @@ function twDeckSwap(i) {
   const deck = twDeck();
   const heroes = HEROES.map(h => h.id).filter(id => !deck.includes('h:' + id)).sort((a, b) => S.heroes[b].level - S.heroes[a].level).slice(0, 40);
   const extra = TW_EXTRA.filter(c => !deck.includes(c) && twUnlocked(c));
-  showModal('🃏', 'Заменить карту', '<div class="tw-deck">' + extra.map(c => '<button class="tw-card" title="' + esc(TW_CARD_INFO[c] || '') + '" data-click="twDeckSet(\'' + c + '\')">' + twCardFace(twCardSpec(c, 1)) + '<b>' + TW_CARDS[c].cost + '</b><small>' + esc(TW_CARDS[c].n) + ' ур.' + twCard(c).l + '</small></button>').join('') +
-    heroes.map(id => { const sp = twCardSpec('h:' + id, 1); return '<button class="tw-card" data-click="twDeckSet(\'h:' + id + '\')">' + twCardFace(sp) + '<b>' + sp.cost + '</b><small>' + esc(sp.n) + ' ур.' + S.heroes[id].level + '</small></button>'; }).join('') + '</div>', '', { html: true });
+  showModal('🃏', 'Заменить карту', '<div class="tw-deck">' + extra.map(c => '<button class="tw-card ' + twFrameCls(TW_CARDS[c].cost) + '" title="' + esc(TW_CARD_INFO[c] || '') + '" data-click="twDeckSet(\'' + c + '\')">' + twCardFace(twCardSpec(c, 1)) + '<b>' + TW_CARDS[c].cost + '</b><small>' + esc(TW_CARDS[c].n) + ' ур.' + twCard(c).l + '</small></button>').join('') +
+    heroes.map(id => { const sp = twCardSpec('h:' + id, 1); return '<button class="tw-card ' + twFrameCls(sp.cost) + '" data-click="twDeckSet(\'h:' + id + '\')">' + twCardFace(sp) + '<b>' + sp.cost + '</b><small>' + esc(sp.n) + ' ур.' + S.heroes[id].level + '</small></button>'; }).join('') + '</div>', '', { html: true });
 }
 function twDeckSet(c) { if (!twCardOk(c) || twSwapI < 0) return; const d = twDeck().slice(); if (d.includes(c)) return; d[twSwapI] = c; TS().deck = d; save(); closeModal(); renderTowerMenu(); }
 

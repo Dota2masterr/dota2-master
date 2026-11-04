@@ -165,3 +165,30 @@ function texMysticURL() {
   return TEX.mystic;
 }
 function applyMysticBg(el) { if (!el) return; const u = texMysticURL(); if (u) { el.style.backgroundImage = 'url(' + u + ')'; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.classList.add('tex-mystic'); } }
+
+// ================= 2.4.8: КАРТИНКИ ИГРОКА (assets/tower, assets/rogue) =================
+// Картинки грузятся один раз и кэшируются. Пока картинка не загрузилась (или не нашлась) — рисуется старая графика кодом.
+const ASSET = { img: {} };
+function assetImg(path) {
+  const c = ASSET.img[path];
+  if (c) return c.ok ? c.im : null;
+  const im = new Image(); const rec = ASSET.img[path] = { im, ok: false };
+  im.onload = () => { rec.ok = true; }; im.onerror = () => { rec.bad = true; };
+  im.src = 'assets/' + path + '.webp';
+  return null;
+}
+function assetUrl(path) { return 'assets/' + path + '.webp'; }
+function assetTag(path, cls, alt) { return '<img class="' + (cls || 'a-ico') + '" src="' + assetUrl(path) + '" alt="' + (alt || '') + '" loading="lazy" draggable="false">'; }
+// «Защита башен»: юнит карты → спрайт (по значку карты), заклинание → эффект на поле, карта → иконка
+const TW_SPRITE = { '🗡': 'creep-melee', '🏹': 'creep-ranged', '🪨': 'catapult', '🐀': 'kobold', '🐺': 'wolf', '🌳': 'treant', '🕷': 'spider', '⚔': 'megacreep', '🔥': 'golem', '🗼': 'sentry', '✚': 'healward', '🪦': 'tombstone', '🧟': 'zombie' };
+const TW_SPELL_FX = { sunstrike: 'fx-sun', chrono: 'fx-chrono', blackhole: 'fx-blackhole', arrow: 'fx-explosion', ravage: 'fx-ravage', meteor: 'fx-meteor', freezing: 'fx-frost', mekansm: 'fx-heal' };
+const TW_SPELL_ICON = { sunstrike: 'spell-sunstrike', chrono: 'spell-chrono', blackhole: 'spell-blackhole', arrow: 'spell-arrow', ravage: 'spell-ravage', meteor: 'spell-meteor', freezing: 'spell-freezing', mekansm: 'spell-mekansm' };
+const TW_ARENA_FILE = ['forest', 'river', 'shop', 'camp', 'roshan', 'mid', 'sanctum', 'citadel', 'throne', 'immortal'];
+// заранее подгрузить всё для боя Башни, чтобы в первые секунды не мигало
+function twPreload() {
+  Object.values(TW_SPRITE).concat(Object.values(TW_SPELL_FX), ['tower-blue', 'tower-red', 'throne-blue', 'throne-red', 'tower-blue-ruin', 'tower-red-ruin', 'throne-blue-ruin', 'throne-red-ruin', 'fx-explosion'])
+    .forEach(n => assetImg('tower/' + n));
+  TW_ARENA_FILE.forEach((n, i) => assetImg('tower/arena-' + i + '-' + n));
+}
+// «Путь Древнего»: враг → картинка
+const RG_FOE_IMG = { kobold: 'foe-creep', wolf: 'foe-wolf', alpha: 'foe-wolf', satyr: 'foe-imp', troll: 'elite-2', ogre: 'elite-1', harpy: 'foe-ghost', golem: 'foe-golem', centaur: 'elite-3', dark_troll: 'elite-2', lizard: 'foe-spider', skeleton: 'foe-ghost', treant_s: 'boss-act1', rosh_pup: 'elite-1', treant: 'boss-act1', roshan: 'boss-act2', ancient: 'boss-act3' };
