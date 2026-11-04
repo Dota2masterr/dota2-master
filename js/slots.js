@@ -72,6 +72,7 @@ function symEl(sym) {
   return d;
 }
 function payX(m, x) { const v = x * (m.fx.pay || 1); return v >= 10 ? Math.round(v) : Math.round(v * 100) / 100; }
+function slotMachineById(id) { return MACHINES.find(x => x.id === id); }
 function slotPayRows(m) {
   const R = RARITIES.slice().reverse();
   if (m.reels === 3) return R.map(r => '<div><span class="pay-dot" style="background:' + RARITY_COLOR[r] + '"></span>' + RARITY_NAMES[r] + ' ×3 <b>×' + payX(m, m.full[r]) + '</b> · ×2 <b>×' + payX(m, m.pair[r]) + '</b></div>').join('');
@@ -96,7 +97,7 @@ function renderSlotTab() {
     '<div style="margin-top:12px"><button class="btn green big" id="slot-btn" data-click="spinSlots()">КРУТИТЬ</button></div><div id="fs-row" class="fs-row" style="display:none"></div><div id="auto-row"></div><div id="auto-info"></div>' +
     '<div class="muted" style="font-size:.72rem;margin-top:4px">ставка на все ' + m.lines + ' линий · мин. ' + m.minBet + ' · макс ' + fmt(maxB) + ' · <kbd>Пробел</kbd> · только кристаллы, без предметов</div>' +
     '<div class="last-win" id="last-win"></div>' +
-    '<div class="paytable"><h4>Бонусы</h4><div class="slot-bonus-info"><div><span class="sp-mini sp-sc">⭐</span> 3+ BONUS в любом месте — <b>' + B.fsSpins + ' фриспинов</b>, каждый выигрыш ×2…×10; ещё 3+ во время фриспинов — +' + B.fsRetrig + '</div>' +
+    '<div class="paytable"><h4>Бонусы</h4><div class="slot-bonus-info">' + (m.fx && m.fx.minWin ? '<div>💰 Любой выигрыш вне фриспинов — <b>не меньше ×' + m.fx.minWin + ' ставки</b></div>' : '') + '<div><span class="sp-mini sp-sc">⭐</span> 3+ BONUS в любом месте — <b>' + B.fsSpins + ' фриспинов</b>, каждый выигрыш ×2…×10; ещё 3+ во время фриспинов — +' + B.fsRetrig + '</div>' +
     '<div><span class="sp-mini sp-pk">🎯</span> 3+ ВЫБОР — <b>бонус-игра</b>: открой ' + B.pick.open + ' из ' + B.pick.n + ' сундуков, в каждом множитель ставки ×1…×' + Math.max(...B.pick.vals.map(v => v[0])) + '</div>' +
     (m.fx.mx ? '<div><span class="sp-mini sp-mx">⚡</span> Молния ×2…×10 — если крутка выигрышная, все молнии на экране складываются и умножают выигрыш</div>' : '') + '</div>' +
     '<h4 style="margin-top:10px">Выплаты за линию · ставка/' + m.lines + ' × множитель</h4><div class="paygrid">' + slotPayRows(m) + '</div>' +
@@ -237,6 +238,8 @@ function slotSpinResult(m, grid, free, fsMulRoll) {
   let x = wins.reduce((a, w) => a + w.mult, 0);
   const orbs = flat.filter(s => s.sp === 'mx').reduce((a, s) => a + s.mul, 0);
   if (x > 0 && orbs > 0) x *= orbs;
+  // 2.11.1: на автоматах 3×5 любой выигрыш в основной игре — не меньше minWin × ставка (отдача всё равно ~95%)
+  if (!free && x > 0 && m.fx && m.fx.minWin) x = Math.max(x, m.fx.minWin);
   const fsMul = free && x > 0 ? (fsMulRoll != null ? fsMulRoll : rollW(CONFIG.slotBonus.fsMul)) : 1;
   x *= fsMul;
   return { wins, x, orbs, fsMul, sc: flat.filter(s => s.sp === 'sc').length, pk: flat.filter(s => s.sp === 'pk').length };

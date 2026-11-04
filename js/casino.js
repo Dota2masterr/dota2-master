@@ -113,7 +113,7 @@ const OLY = {
     ['gem4', () => CS_ITEM('energy_booster'), 22, [0.4, 0.9, 4], '#8a8f98'],
     ['gem5', () => CS_ITEM('vitality_booster'), 23, [0.25, 0.75, 2], '#8a8f98']
   ],
-  sc: 0.018, orbBase: 0.004, orbFs: 0.007,
+  sc: 0.023, orbBase: 0.004, orbFs: 0.007,
   orbs: [[2, 30], [3, 20], [4, 14], [5, 11], [6, 8], [8, 6], [10, 4], [12, 3], [15, 2], [20, 1], [25, 0.6], [50, 0.25]]
 };
 function olySym(free) {
