@@ -52,7 +52,7 @@ function itemCard(it, acts) {
   const inf = document.createElement('div'); inf.className = 'info';
   inf.innerHTML = '<div class="nm"></div><div class="rr"></div><div class="hh"></div>';
   inf.querySelector('.nm').textContent = it.name;
-  inf.querySelector('.rr').textContent = RARITY_NAMES[it.rarity] + (it.type === 'eq' ? ' · +' + fmt(EQ_POWER[it.rarity]) + ' ⚔' : '');
+  inf.querySelector('.rr').textContent = RARITY_NAMES[it.rarity] + (it.type === 'eq' ? ' · ' + eqPctText(it.rarity) : '');
   inf.querySelector('.hh').textContent = HERO_BY_ID[it.heroId] ? HERO_BY_ID[it.heroId].name : '';
   c.appendChild(inf);
   if (acts) { const a = document.createElement('div'); a.className = 'acts'; acts.forEach(x => { const b = document.createElement('button'); b.className = x.c; b.textContent = x.t; b.onclick = ev => { ev.stopPropagation(); x.f(ev); }; a.appendChild(b); }); c.appendChild(a); }
@@ -100,7 +100,7 @@ function renderLoadout() {
   const hid = document.getElementById('f-equip-hero').value || mainHeroId();
   const box = document.getElementById('loadout-box');
   const h = HERO_BY_ID[hid];
-  box.innerHTML = '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start"><div id="lo-img"></div><div style="flex:1;min-width:260px"><div class="cinzel" style="font-size:1.1rem;color:#fff">' + esc(h.name) + '</div><div class="muted" style="font-size:.85rem;margin-bottom:8px">Сила ' + fmt(heroPower(hid)) + ' · от снаряжения +' + fmt(equipPower(hid)) + '</div><div class="inv-grid" id="lo-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))"></div></div></div>';
+  box.innerHTML = '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start"><div id="lo-img"></div><div style="flex:1;min-width:260px"><div class="cinzel" style="font-size:1.1rem;color:#fff">' + esc(h.name) + '</div><div class="muted" style="font-size:.85rem;margin-bottom:8px">Сила ' + fmt(heroPower(hid)) + ' · от снаряжения +' + fmt(equipPower(hid)) + ' (+' + Math.round(equipPct(hid) * 100) + '%)</div><div class="inv-grid" id="lo-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))"></div></div></div>';
   const im = mkImg(heroLookModel(hid), h.name, 'lo-model'); const sk = heroSkin(hid); if (sk && sk.path) im.title = sk.name;
   document.getElementById('lo-img').appendChild(im);
   const g = document.getElementById('lo-grid');

@@ -38,7 +38,7 @@ const ARENA_MAX = 200;
 function arenaLocs() { return LOCS; }   // для тестов
 function locOf(L) { return LOCS.find(l => L >= l.from && L <= l.to); }
 // 2.8: после 100-го уровня сила растёт медленно (reqGrowthAfter), иначе 200-й был бы недостижим
-function reqPower(L) { const A = CONFIG.arena, c = A.reqCapLevel || 1e9; return Math.round(A.reqBase * Math.pow(A.reqGrowth, Math.min(L, c) - 1) * Math.pow(A.reqGrowthAfter || A.reqGrowth, Math.max(0, L - c))); }
+function reqPower(L) { const A = CONFIG.arena, c = A.reqCapLevel || 1e9, c2 = A.reqCap2Level || 1e9; return Math.round(A.reqBase * Math.pow(A.reqGrowth, Math.min(L, c) - 1) * Math.pow(A.reqGrowthAfter || A.reqGrowth, Math.max(0, Math.min(L, c2) - c)) * Math.pow(A.reqGrowthAfter2 || A.reqGrowthAfter || A.reqGrowth, Math.max(0, L - c2))); }
 // 2.4: после уровня rewardCapLevel награда растёт медленно (rewardGrowthAfter), а не ×1.085 за уровень
 function lvlReward(L) { const A = CONFIG.arena, c = A.rewardCapLevel || 1e9, c2 = A.rewardCap2Level || 1e9; return Math.round(A.rewardBase * Math.pow(A.rewardGrowth, Math.min(L, c) - 1) * Math.pow(A.rewardGrowthAfter || A.rewardGrowth, Math.max(0, Math.min(L, c2) - c)) * Math.pow(A.rewardGrowthAfter2 || A.rewardGrowthAfter || A.rewardGrowth, Math.max(0, L - c2))); }
 function seeded(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

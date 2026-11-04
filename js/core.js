@@ -245,14 +245,20 @@ function importLegacy(st) {
 // ---------- power ----------
 function calcPower(l) { const P = CONFIG.power; return Math.round(P.base * Math.pow(P.growth, l - 1) + P.perLevel * l); }
 function spinCost(l) { const P = CONFIG.spin; return Math.round((P.base + P.perLevel * l) * Math.pow(P.growth, l - 1)); }
-const EQ_POWER = { common: 20, uncommon: 50, rare: 120, mythical: 280, immortal: 600, arcana: 1300 };
-function equipPower(id) {
-  const lo = S.loadout[id]; if (!lo) return 0;
-  let s = 0;
-  for (const slot in lo) { const it = S.items.find(x => x.uid === lo[slot]); if (it) s += EQ_POWER[it.rarity] || 0; }
-  return s;
-}
-function heroPower(id) { const h = S.heroes[id]; return Math.round((calcPower(h.level) + equipPower(id)) * (typeof setBonusMul === 'function' ? setBonusMul(id) : 1)); }
+// 2.10: снаряжение — процент от базовой силы героя, но не меньше старого фиксированного бонуса
+// (на низких уровнях работает фикс, на высоких — процент; раньше Arcana на 50 ур. давала всего ~9%)
+const EQ_PCT = { common: 0.02, uncommon: 0.04, rare: 0.07, mythical: 0.11, immortal: 0.16, arcana: 0.25 };
+const EQ_FLAT = { common: 20, uncommon: 50, rare: 120, mythical: 280, immortal: 600, arcana: 1300 };
+const EQ_POWER = EQ_FLAT;   // старое имя — для совместимости
+function eqPctText(r) { return '+' + Math.round((EQ_PCT[r] || 0) * 100) + '% силы (мин. +' + fmt(EQ_FLAT[r] || 0) + ')'; }
+function eqItems(id) { const lo = S.loadout[id]; if (!lo) return []; const out = []; for (const slot in lo) { const it = S.items.find(x => x.uid === lo[slot]); if (it && it.type === 'eq') out.push(it); } return out; }
+function equipPct(id) { return eqItems(id).reduce((a, it) => a + (EQ_PCT[it.rarity] || 0), 0); }
+function equipPower(id) { const h = S.heroes[id]; if (!h) return 0; const base = calcPower(h.level); return Math.round(eqItems(id).reduce((a, it) => a + Math.max(EQ_FLAT[it.rarity] || 0, base * (EQ_PCT[it.rarity] || 0)), 0)); }
+// 2.10: скин героя (лучший из своих) даёт небольшой бонус силы: Common +1% … Arcana +5%
+const SKIN_PCT = { common: 0.01, uncommon: 0.015, rare: 0.02, mythical: 0.03, immortal: 0.04, arcana: 0.05 };
+function skinBest(id) { let best = null; for (const x of S.items) if (x.type === 'skin' && x.heroId === id && (!best || rarityIdx(x.rarity) > rarityIdx(best.rarity))) best = x; return best; }
+function skinMul(id) { const b = skinBest(id); return 1 + (b ? SKIN_PCT[b.rarity] || 0 : 0); }
+function heroPower(id) { const h = S.heroes[id]; return Math.round((calcPower(h.level) + equipPower(id)) * (typeof setBonusMul === 'function' ? setBonusMul(id) : 1) * skinMul(id)); }
 function totalPower() { return HEROES.reduce((a, h) => a + heroPower(h.id), 0); }
 function sortedByPower() { return HEROES.slice().sort((a, b) => heroPower(b.id) - heroPower(a.id)); }
 function mainHeroId() { return S.mainHero && HERO_BY_ID[S.mainHero] ? S.mainHero : sortedByPower()[0].id; }

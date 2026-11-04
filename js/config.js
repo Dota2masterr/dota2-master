@@ -13,7 +13,7 @@ const CONFIG = {
   heroOfDay: { spinMul: 1, powerMul: 1, wins: 3, rewardMul: 1.5 },
   arena: {
     reqBase: 55, reqGrowth: 1.0755,         // требуемая сила уровня
-    reqCapLevel: 100, reqGrowthAfter: 1.0052,   // 2.8: уровни 101–200 — сила растёт на 0.52% за уровень (200-й ≈ ×1.7 от 100-го)
+    reqCapLevel: 100, reqGrowthAfter: 1.0102, reqCap2Level: 150, reqGrowthAfter2: 1.005,   // 2.10: снаряжение стало сильнее → 101–150 +1.02%/ур., 151–200 +0.5%/ур. (200-й ≈ ×2.1 от 100-го; по тесту: Common-сет ≈ до 125, Rare ≈ 150, Mythical ≈ 175, Immortal ≈ 200)
     rewardBase: 70, rewardGrowth: 1.085,    // награда за уровень
     rewardCap2Level: 100, rewardGrowthAfter2: 1.01,   // 2.8: после 100-го награда +1% за уровень
     rewardCapLevel: 40, rewardGrowthAfter: 1.03,   // 2.4: с 40-го уровня награда растёт на 3% за уровень (было 8.5%)
@@ -106,6 +106,8 @@ const CONFIG = {
     arc5: { sc: 0.027, pk: 0.025, pay: 0.88 }, cos5: { sc: 0.027, pk: 0.025, pay: 0.98 },
     zeus: { sc: 0.027, pk: 0.025, mx: 0.03, pay: 0.51 }
   },
+  // 2.10: 4 игры в стиле популярных слотов (js/casino.js): pay — общий множитель выплат, fs — число фриспинов, edge — отдача Мин
+  casino: { dog: { pay: 1.07 }, maze: { pay: 0.62, fs: 10 }, oly: { pay: 2.4, fs: 15 }, mines: { edge: 0.97 } },
   slots: {
     imm3: { minBet: 50, lines: 5, full: { arcana: 294, immortal: 88.1, mythical: 39.1, rare: 19.6, uncommon: 12.7, common: 7.83 }, pair: { arcana: 4.89, immortal: 2.45, mythical: 1.57, rare: 0.98, uncommon: 0.68, common: 0.48 } },   // 2.7.2: ×0.95 — запас под бонусные спины 2.8: +3%
     arc5: { minBet: 100, lines: 10, p5: { arcana: 8806, immortal: 2202, mythical: 665, rare: 274, uncommon: 132, common: 78.3 }, p4: { arcana: 665, immortal: 220, mythical: 88.1, rare: 44.1, uncommon: 21.5, common: 13.2 }, p3: { arcana: 66.5, immortal: 27.4, mythical: 13.2, rare: 7.83, uncommon: 4.89, common: 3.33 }, boost: 0.3 },   // 2.7.2: ×0.95 — запас под бонусные спины 2.8: +3%

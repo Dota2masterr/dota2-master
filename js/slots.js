@@ -34,10 +34,12 @@ function initSlots() {
   st.innerHTML = '';
   MACHINES.forEach(m => {
     const b = document.createElement('button'); b.textContent = m.name; b.dataset.m = m.id;
-    b.onclick = () => { if (busy.slot || autoTotal || fsActive() || pickActive()) return; curMachine = m; renderSlotTab(); };
+    b.onclick = () => { if (busy.slot || autoTotal || fsActive() || pickActive() || (typeof casLocked === 'function' && casLocked())) return; if (typeof casClose === 'function') casClose(); curMachine = m; renderSlotTab(); };
     st.appendChild(b);
     bets[m.id] = bets[m.id] || m.minBet;
   });
+  // 2.10: ещё 4 игры (js/casino.js)
+  if (typeof CAS !== 'undefined') CAS.forEach(g => { const b = document.createElement('button'); b.textContent = g.name; b.dataset.m = 'cas:' + g.id; b.className = 'cas-tab'; b.onclick = () => casOpen(g.id); st.appendChild(b); });
 }
 function rollW(list, r) { const tot = list.reduce((a, x) => a + x[1], 0); let x = (r == null ? Math.random() : r) * tot; for (const [v, w] of list) { x -= w; if (x < 0) return v; } return list[list.length - 1][0]; }
 // символ на барабане: обычный (по редкости) или особый — ⭐ скаттер, 🎯 выбор, ⚡ молния-множитель
@@ -76,6 +78,7 @@ function slotPayRows(m) {
   return R.map(r => '<div><span class="pay-dot" style="background:' + RARITY_COLOR[r] + '"></span>' + RARITY_NAMES[r] + ' 5 <b>×' + payX(m, m.p5[r]) + '</b> · 4 <b>×' + payX(m, m.p4[r]) + '</b> · 3 <b>×' + payX(m, m.p3[r]) + '</b></div>').join('');
 }
 function renderSlotTab() {
+  if (typeof casCur !== 'undefined' && casCur && !fsActive() && !pickActive()) return casRender();
   const fs = fsActive(), pk = pickActive();
   const lock = fs || pk; if (lock) { const mm = MACHINES.find(x => x.id === lock.m); if (mm) curMachine = mm; }
   const m = curMachine;
@@ -177,6 +180,7 @@ function pickFinish() {
 // сетка 3 ряда × N барабанов: grid[барабан][ряд]
 function rollGrid(m, free) { const g = []; for (let r = 0; r < m.reels; r++) g.push([pickSlotSym(m.kind, m, free), pickSlotSym(m.kind, m, free), pickSlotSym(m.kind, m, free)]); return g; }
 function spinSlots() {
+  if (typeof casCur !== 'undefined' && casCur && !fsActive() && !pickActive()) return casSpin();
   if (pickActive()) return openPick();
   const fs = fsActive();
   if (fs && curMachine.id !== fs.m) { curMachine = MACHINES.find(x => x.id === fs.m); renderSlotTab(); }
