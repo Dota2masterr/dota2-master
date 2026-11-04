@@ -46,8 +46,9 @@ async function loadBots(force) {
   return list;
 }
 // 2.5: уровень бота по его MMR: лёгкий / средний / сложный / элитный
-function botTier(mmr) { let t = CONFIG.botTiers[0]; CONFIG.botTiers.forEach(x => { if (mmr >= x.from) t = x; }); return t; }
-function botTierIdx(mmr) { return CONFIG.botTiers.indexOf(botTier(mmr)); }
+// 2.5.1: часть ботов (каждый CONFIG.botHardEvery-й) — «Сложные» и на низком MMR
+function botTier(mmr, i) { let t = CONFIG.botTiers[0]; CONFIG.botTiers.forEach(x => { if (mmr >= x.from) t = x; }); if (i != null && CONFIG.botHardEvery && i % CONFIG.botHardEvery === CONFIG.botHardEvery - 1 && CONFIG.botTiers.indexOf(t) < 2) t = CONFIG.botTiers[2]; return t; }
+function botTierIdx(mmr, i) { return CONFIG.botTiers.indexOf(botTier(mmr, i)); }
 function rankIdx(mmr) { return RANKS.indexOf(rankOf(mmr)); }
 // стак бота: герои по номеру бота, сила — около твоей и растёт с уровнем бота и твоим рангом
 function botStack(b) {
@@ -64,7 +65,7 @@ function botStack(b) {
     const cand = want && ids.length < 3 ? pool.filter(id => want.includes(heroRole(id))) : pool;
     const id = cand[Math.floor(r() * cand.length)]; if (!ids.includes(id)) ids.push(id);
   }
-  const tier = botTier(b.mmr), rk = rankIdx(S.pvp.mmr);
+  const tier = botTier(b.mmr, b.i), rk = rankIdx(S.pvp.mmr);
   // сила: около твоей, × уровень бота, +0.4% за каждый твой ранг; разброс у сильных ботов меньше (они стабильнее)
   const spread = tier.ai >= 2 ? 0.08 : 0.16;
   const power = Math.max(50, stackPower()) * (1 + Math.max(-0.2, Math.min(0.2, (b.mmr - S.pvp.mmr) / C.powerPerMmr))) * tier.pow * (1 + 0.004 * rk) * (1 - spread / 2 + r() * spread);
@@ -77,7 +78,7 @@ async function pickBotOpponent() {
   const list = await loadBots();
   // 2.5: на высоких рангах — только сильные боты (CONFIG.botMinTier по рангу игрока)
   const minT = CONFIG.botMinTier[rankIdx(S.pvp.mmr)] || 0;
-  let pool = list.filter(b => botTierIdx(b.mmr) >= minT); if (!pool.length) pool = list.slice().sort((a, b) => b.mmr - a.mmr).slice(0, 6);
+  let pool = list.filter(b => botTierIdx(b.mmr, b.i) >= minT); if (!pool.length) pool = list.slice().sort((a, b) => b.mmr - a.mmr).slice(0, 6);
   const near = pool.filter(b => Math.abs(b.mmr - S.pvp.mmr) <= CONFIG.bots.window).sort((a, b) => Math.abs(a.mmr - S.pvp.mmr) - Math.abs(b.mmr - S.pvp.mmr));
   const cand = near.length ? near.slice(0, 6) : pool.slice().sort((a, b) => Math.abs(a.mmr - S.pvp.mmr) - Math.abs(b.mmr - S.pvp.mmr)).slice(0, 1);
   return botStack(pick(cand));

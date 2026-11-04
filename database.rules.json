@@ -16,6 +16,7 @@
         "stack",
         "mmr",
         "inv",
+        "surv",
         "at"
       ],
       "$uid": {
@@ -35,6 +36,9 @@
         },
         "inv": {
           ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 1000000"
+        },
+        "surv": {
+          ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() > 0 && newData.val() <= 400"
         },
         "items": {
           ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"

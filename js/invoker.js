@@ -40,6 +40,7 @@ function invSetMode(m) {
   if (invRun) return;
   invMode = m;
   ['tutorial', 'race', 'infinite', 'survival'].forEach(x => document.getElementById('im-' + x).classList.toggle('active', x === m));
+  invSurvBoard();
 }
 function invOrbsRender() {
   for (let i = 0; i < 3; i++) {
@@ -72,6 +73,31 @@ function invCastFx(sp, ok) {
   host.style.position = 'relative'; host.appendChild(fx); setTimeout(() => fx.remove(), 800);
 }
 let invDeadline = 0;
+// 2.5.1: рекорд выживания (заклинаний подряд) и таблица лидеров режима прямо во вкладке
+function invSurvBest() { return Math.min(400, Math.floor((S && S.gameBest && S.gameBest.invoker) || 0)); }
+let invSurvAt = 0, invSurvRows = null;
+async function invSurvBoard(force) {
+  const box = document.getElementById('inv-surv-board'); if (!box) return;
+  box.style.display = invMode === 'survival' ? '' : 'none';
+  if (invMode !== 'survival') return;
+  const me = invSurvBest();
+  const head = '<div class="sec-title" style="margin-top:0">🔮 Таблица выживания</div><div class="muted" style="font-size:.8rem;margin-bottom:6px">Твой рекорд: <b style="color:var(--gold2)">' + (me || '—') + '</b> заклинаний подряд</div>';
+  if (typeof cloud !== 'function' || !fbOn() || !cloud()) { box.innerHTML = head + '<div class="muted">Таблица работает после входа в облачный аккаунт (вкладка «Онлайн»).</div>'; return; }
+  if (!invSurvRows || force || Date.now() - invSurvAt > 60000) {
+    box.innerHTML = head + '<div class="muted">Загружаю…</div>';
+    try {
+      if (force) await cloudPush();
+      const raw = await db('GET', 'board', undefined, false, { orderBy: 'surv', startAt: 1, limitToLast: 50 }) || {};
+      invSurvRows = Object.entries(raw).filter(([u, r]) => isObj(r) && r.surv > 0 && (r.at || 0) >= CONFIG.wipe.at && !(typeof LIVE !== 'undefined' && LIVE.banned && LIVE.banned[u]))
+        .map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, surv: Math.floor(num(r.surv, 0, 400, 0)) })).sort((a, b) => b.surv - a.surv);
+      invSurvAt = Date.now();
+    } catch (e) { box.innerHTML = head + '<div class="auth-err">Не удалось загрузить: ' + esc(e.message) + '</div>'; return; }
+  }
+  const c = cloud(), top = invSurvRows.slice(0, 20), place = invSurvRows.findIndex(r => r.uid === c.uid);
+  box.innerHTML = head + (top.length ? '<table class="board"><tr><th>#</th><th>Игрок</th><th>Заклинаний</th></tr>' + top.map((r, i) => '<tr class="' + (r.uid === c.uid ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(r.nick) + titleHTML(r.title) + '</td><td>' + r.surv + '</td></tr>').join('') +
+    (place >= 20 ? '<tr class="me"><td>' + (place + 1) + '</td><td>' + esc(USER.nick) + ' (ты)</td><td>' + invSurvRows[place].surv + '</td></tr>' : '') + '</table>' : '<div class="muted">Пока никто не сыграл. Будь первым!</div>') +
+    '<button class="btn ghost sm" style="margin-top:6px" data-click="invSurvBoard(true)">🔄 Обновить</button>';
+}
 function invSurvivalEnd(reason) {
   invStop();
   const n = invOk;
@@ -81,6 +107,7 @@ function invSurvivalEnd(reason) {
   document.getElementById('inv-spell-hint').textContent = reason;
   showModal('🔮', 'Выживание: ' + n + ' заклинаний', reason + (rec ? ' · НОВЫЙ РЕКОРД!' : '') + (g ? ' · +' + fmt(g) + ' 🔶' : ''), 'ok');
   if (rec && n >= 20) hype('НИШТЯК');
+  if (rec) setTimeout(() => invSurvBoard(true), 600);
 }
 function invStats() {
   if (invRun && invMode === 'survival') { const left = invDeadline - Date.now(); document.getElementById('inv-spell-hint').textContent = '⏱ ' + Math.max(0, left / 1000).toFixed(1) + 's · ' + invOk; if (left <= 0) return invSurvivalEnd('Не успел!'); }

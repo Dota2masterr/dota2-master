@@ -208,7 +208,7 @@ function publicRows(c) {
   const ct = currentTitle(), mmr = (S.pvp && S.pvp.mmr) || 0;
   const bt = buildTeam({ noCons: true });
   return {
-    ['board/' + c.uid]: { nick: USER.nick, title: ct ? { name: String(ct.name).slice(0, 24), color: ct.color, icon: ct.icon || null } : null, arena: S.arena.cleared, stack: Math.round(stackPower()), inv: S.invBest || null, mmr, items: S.items.length, at: SV_TIME },
+    ['board/' + c.uid]: { nick: USER.nick, title: ct ? { name: String(ct.name).slice(0, 24), color: ct.color, icon: ct.icon || null } : null, arena: S.arena.cleared, stack: Math.round(stackPower()), inv: S.invBest || null, surv: invSurvBest() || null, mmr, items: S.items.length, at: SV_TIME },
     ['stacks/' + c.uid]: { nick: USER.nick, mmr, team: bt.team.map(t => ({ id: t.id, p: Math.round(t.p), mods: t.mods })), tm: bt.tm, at: SV_TIME }
   };
 }
@@ -233,8 +233,12 @@ function mmrDelta(win, exp, mmr, gainToday, hist) {
   if (!win) return { delta: -Math.round((20 + 20 * exp) * M.lossMul * (M.lossByRank[rk] || 1)), note: '' };
   let d = (15 + 5 * (1 - exp)) * (M.winByRank[rk] || 1), note = '';
   // дневной лимит: после dailyCap прирост резко падает до завтра
-  const room = Math.max(0, M.dailyCap - gainToday);
-  if (d > room) { d = room + (d - room) * M.afterCap; note = ' · дневной лимит MMR (' + M.dailyCap + ') — дальше прирост ×' + M.afterCap; }
+  // кусочно: до dailyCap — полный прирост, до hardCap — ×afterCap, дальше — ×afterHard
+  const seg = [[M.dailyCap, 1], [M.hardCap || 1e9, M.afterCap], [1e9, M.afterHard != null ? M.afterHard : M.afterCap]];
+  let raw = d, g = gainToday, got = 0;
+  for (const [lim, k] of seg) { if (raw <= 0) break; if (g >= lim) continue; const room = (lim - g) / k; const use = Math.min(raw, room); got += use * k; g += use * k; raw -= use; }
+  if (got < d - 0.01) note = gainToday + got > (M.hardCap || 1e9) ? ' · сегодня набрано больше ' + M.hardCap + ' MMR — прирост ×' + M.afterHard + ' до завтра' : ' · дневной лимит MMR (' + M.dailyCap + ') — дальше прирост ×' + M.afterCap;
+  d = got;
   d = Math.max(1, Math.round(d));
   // высокие ранги: повышение в следующий ранг — только при винрейте > 50% за последние 50 матчей
   if (rk >= M.promoFrom && rk < RANKS.length - 1) {
@@ -549,11 +553,11 @@ async function renderOnline(force) {
   ensurePvp();
   const rk = rankOf(S.pvp.mmr), nx = rankNext(S.pvp.mmr);
   botDailyMatches().catch(() => {});
-  host.innerHTML = '<div class="online-grid"><div class="panel panel-b"><div class="cinzel" style="color:' + rk[2] + ';font-size:1.4rem;letter-spacing:2px">' + rankName(S.pvp.mmr) + '</div>' + (nx ? '<div class="muted" style="font-size:.75rem">до следующей ступени: ' + nx + ' MMR · ранг = 1000 MMR, 5 ступеней</div>' : '') + '<div>MMR <b>' + S.pvp.mmr + '</b> · побед ' + S.pvp.w + ' · поражений ' + S.pvp.l + '</div><div class="muted" style="font-size:.78rem">Набрано MMR сегодня: <b>' + Math.max(0, S.pvp.gain || 0) + '</b>/' + CONFIG.mmr.dailyCap + ' (после лимита прирост ×' + CONFIG.mmr.afterCap + ') · винрейт за последние ' + Math.min(CONFIG.mmr.promoWindow, (S.pvp.hist || '').length) + ': ' + Math.round(pvpWinrate() * 100) + '%' + (RANKS.indexOf(rk) >= CONFIG.mmr.promoFrom ? ' · для повышения ранга нужно больше 50%' : '') + '</div><div class="muted" style="font-size:.8rem">Наградных PvP-боёв сегодня: ' + Math.max(0, CONFIG.pvp.rewardedPerDay - S.pvp.fights) + '/' + CONFIG.pvp.rewardedPerDay + '</div><button class="btn red big" style="margin-top:10px" data-click="pvpFight()">⚔ НАЙТИ СОПЕРНИКА</button><div class="muted" style="font-size:.75rem;margin-top:6px">Твой стак сражается с сохранённым стаком другого игрока.</div></div>' +
+  host.innerHTML = '<div class="online-grid"><div class="panel panel-b"><div class="cinzel" style="color:' + rk[2] + ';font-size:1.4rem;letter-spacing:2px">' + rankName(S.pvp.mmr) + '</div>' + (nx ? '<div class="muted" style="font-size:.75rem">до следующей ступени: ' + nx + ' MMR · ранг = 1000 MMR, 5 ступеней</div>' : '') + '<div>MMR <b>' + S.pvp.mmr + '</b> · побед ' + S.pvp.w + ' · поражений ' + S.pvp.l + '</div><div class="muted" style="font-size:.78rem">Набрано MMR сегодня: <b>' + Math.max(0, S.pvp.gain || 0) + '</b>/' + CONFIG.mmr.dailyCap + ' (после лимита прирост ×' + CONFIG.mmr.afterCap + ', после ' + CONFIG.mmr.hardCap + ' — ×' + CONFIG.mmr.afterHard + ') · винрейт за последние ' + Math.min(CONFIG.mmr.promoWindow, (S.pvp.hist || '').length) + ': ' + Math.round(pvpWinrate() * 100) + '%' + (RANKS.indexOf(rk) >= CONFIG.mmr.promoFrom ? ' · для повышения ранга нужно больше 50%' : '') + '</div><div class="muted" style="font-size:.8rem">Наградных PvP-боёв сегодня: ' + Math.max(0, CONFIG.pvp.rewardedPerDay - S.pvp.fights) + '/' + CONFIG.pvp.rewardedPerDay + '</div><button class="btn red big" style="margin-top:10px" data-click="pvpFight()">⚔ НАЙТИ СОПЕРНИКА</button><div class="muted" style="font-size:.75rem;margin-top:6px">Твой стак сражается с сохранённым стаком другого игрока.</div></div>' +
     '<div class="panel panel-b"><h3 class="cinzel" style="color:var(--gold2)">Подарок другу</h3><div class="field"><label>Ник</label><input type="text" id="gift-nick" maxlength="20"></div><div style="display:flex;gap:6px;flex-wrap:wrap"><select id="gift-kind"><option value="gems">Кристаллы</option><option value="item">Предмет</option></select><input type="number" id="gift-amount" placeholder="сколько" style="width:110px" min="' + CONFIG.gifts.min + '" max="' + CONFIG.gifts.maxOne + '"><select id="gift-item" style="display:none;max-width:220px"><option value="">— выбери предмет —</option>' +
     S.items.filter(x => !equippedOn(x.uid)).slice(0, 200).map(x => '<option value="' + x.uid + '">' + esc(x.name) + ' (' + RARITY_NAMES[x.rarity] + ')</option>').join('') + '</select><button class="btn gold" data-click="sendGift()">Отправить</button></div>' +
     '<div class="muted" style="font-size:.72rem;margin-top:4px">До ' + CONFIG.gifts.dayCount + ' подарков и ' + fmt(CONFIG.gifts.daySum) + ' 🔶 в сутки, не чаще раза в ' + (CONFIG.gifts.cooldownMs / 1000) + ' с.</div><div class="auth-err" id="gift-err"></div></div></div>' +
-    leagueHTML() + '<div class="sec-title">Таблица лидеров</div><div class="seg" style="margin-bottom:8px">' + [['arena', 'Арена'], ['stack', 'Сила стака'], ['mmr', 'MMR'], ['inv', 'Invoker'], ['tower', '🏯 Башня']].map(([k, n]) => '<button class="' + (boardSort === k ? 'active' : '') + '" data-click="setBoardSort(\'' + k + '\')">' + n + '</button>').join('') + '</div><div class="panel" id="board"><div class="muted" style="padding:14px">Загрузка…</div></div>' +
+    leagueHTML() + '<div class="sec-title">Таблица лидеров</div><div class="seg" style="margin-bottom:8px">' + [['arena', 'Арена'], ['stack', 'Сила стака'], ['mmr', 'MMR'], ['inv', 'Invoker'], ['surv', '🔮 Выживание'], ['tower', '🏯 Башня']].map(([k, n]) => '<button class="' + (boardSort === k ? 'active' : '') + '" data-click="setBoardSort(\'' + k + '\')">' + n + '</button>').join('') + '</div><div class="panel" id="board"><div class="muted" style="padding:14px">Загрузка…</div></div>' +
     '<div class="muted" style="font-size:.75rem;margin-top:8px">☁ Облачное сохранение включено. <button class="btn ghost sm" data-click="manualCloudSave()">Сохранить сейчас</button> <button class="btn ghost sm" data-click="askNewRecovery()">🔑 Код восстановления</button></div>';
   document.getElementById('gift-kind').onchange = e => { document.getElementById('gift-amount').style.display = e.target.value === 'gems' ? '' : 'none'; document.getElementById('gift-item').style.display = e.target.value === 'gems' ? 'none' : ''; };
   if (boardSort === 'tower') { const bx = document.getElementById('board'); if (bx) { bx.id = 'tw-board'; await twLoadBoard(); bx.id = 'board'; } return; }
@@ -569,20 +573,20 @@ async function renderOnline(force) {
       Object.defineProperty(boardCache, '_mine', { value: mine, enumerable: false });
       boardAt = Date.now();
     }
-    const rows = Object.entries(boardCache).filter(([u, r]) => isObj(r) && (r.at || 0) >= CONFIG.wipe.at && !(boardSort === 'inv' && !(r.inv > 0)) && !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, arena: Math.floor(num(r.arena, 0, 100, 0)), stack: num(r.stack, 0, 1e12, 0), mmr: Math.round(num(r.mmr, 0, CONFIG.bots.mmrMax, 0)), inv: r.inv > 0 ? num(r.inv, 0, 1e6, 0) : null }));
+    const rows = Object.entries(boardCache).filter(([u, r]) => isObj(r) && (r.at || 0) >= CONFIG.wipe.at && !(boardSort === 'inv' && !(r.inv > 0)) && !(boardSort === 'surv' && !(r.surv > 0)) && !(typeof LIVE !== 'undefined' && LIVE.banned[u])).map(([uid, r]) => ({ uid, nick: String(r.nick || '?').slice(0, 20), title: r.title, arena: Math.floor(num(r.arena, 0, 100, 0)), stack: num(r.stack, 0, 1e12, 0), mmr: Math.round(num(r.mmr, 0, CONFIG.bots.mmrMax, 0)), inv: r.inv > 0 ? num(r.inv, 0, 1e6, 0) : null, surv: r.surv > 0 ? Math.floor(num(r.surv, 0, 400, 0)) : null }));
     if (boardSort === 'mmr') { try { (await loadBots()).forEach(b => rows.push({ uid: b.id, nick: '🤖 ' + b.nick, bot: true, title: null, arena: 0, stack: 0, mmr: b.mmr, inv: null })); } catch (e) { } }
     const inTop = rows.some(r => r.uid === c.uid);
-    const key = { arena: r => -r.arena * 1e9 - r.stack, stack: r => -r.stack, mmr: r => -r.mmr, inv: r => r.inv || 1e9 }[boardSort];
+    const key = { arena: r => -r.arena * 1e9 - r.stack, stack: r => -r.stack, mmr: r => -r.mmr, inv: r => r.inv || 1e9, surv: r => -(r.surv || 0) }[boardSort];
     rows.sort((a, b) => key(a) - key(b));
-    document.getElementById('board').innerHTML = '<table class="board"><tr><th>#</th><th>Игрок</th><th>Арена</th><th>Сила стака</th><th>MMR</th><th>Invoker</th></tr>' +
-      rows.slice(0, 100).map((r, i) => '<tr class="' + (r.uid === c.uid ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(r.nick) + titleHTML(r.title) + (r.uid !== c.uid && !r.bot ? ' <button class="rep-btn" aria-label="Пожаловаться на игрока" title="Пожаловаться" data-click="openReport(\'' + r.uid + '\',\'' + esc(r.nick).replace(/'/g, '') + '\')">⚑</button>' : '') + (r.bot ? ' <span class="bot-tag">бот</span>' : '') + '</td><td>' + (r.bot ? '—' : r.arena + '/100') + '</td><td>' + (r.bot ? '—' : fmt(r.stack)) + '</td><td style="color:' + rankOf(r.mmr)[2] + '">' + r.mmr + ' ' + rankName(r.mmr) + '</td><td>' + (r.inv ? r.inv.toFixed(2) + 's' : '—') + '</td></tr>').join('') + myPlaceRow(inTop, boardCache._mine) + '</table>';
+    document.getElementById('board').innerHTML = '<table class="board"><tr><th>#</th><th>Игрок</th><th>Арена</th><th>Сила стака</th><th>MMR</th><th>Invoker</th><th>Выживание</th></tr>' +
+      rows.slice(0, 100).map((r, i) => '<tr class="' + (r.uid === c.uid ? 'me' : '') + '"><td>' + (i + 1) + '</td><td>' + esc(r.nick) + titleHTML(r.title) + (r.uid !== c.uid && !r.bot ? ' <button class="rep-btn" aria-label="Пожаловаться на игрока" title="Пожаловаться" data-click="openReport(\'' + r.uid + '\',\'' + esc(r.nick).replace(/'/g, '') + '\')">⚑</button>' : '') + (r.bot ? ' <span class="bot-tag">бот</span>' : '') + '</td><td>' + (r.bot ? '—' : r.arena + '/100') + '</td><td>' + (r.bot ? '—' : fmt(r.stack)) + '</td><td style="color:' + rankOf(r.mmr)[2] + '">' + r.mmr + ' ' + rankName(r.mmr) + '</td><td>' + (r.inv ? r.inv.toFixed(2) + 's' : '—') + '</td><td>' + (r.surv ? r.surv : '—') + '</td></tr>').join('') + myPlaceRow(inTop, boardCache._mine) + '</table>';
   } catch (e) { document.getElementById('board').innerHTML = '<div class="auth-err" style="padding:14px">Не удалось загрузить: ' + esc(e.message) + '</div>'; }
 }
 // «моё место»: если меня нет в топ-100 — отдельная строка внизу
 function myPlaceRow(inTop, m) {
   if (inTop || !isObj(m)) return '';
   const mmr = Math.round(num(m.mmr, 0, CONFIG.bots.mmrMax, 0));
-  return '<tr class="me"><td>100+</td><td>' + esc(String(m.nick || USER.nick).slice(0, 20)) + ' (ты)</td><td>' + Math.floor(num(m.arena, 0, 100, 0)) + '/100</td><td>' + fmt(num(m.stack, 0, 1e12, 0)) + '</td><td style="color:' + rankOf(mmr)[2] + '">' + mmr + ' ' + rankName(mmr) + '</td><td>' + (m.inv > 0 ? (+m.inv).toFixed(2) + 's' : '—') + '</td></tr>';
+  return '<tr class="me"><td>100+</td><td>' + esc(String(m.nick || USER.nick).slice(0, 20)) + ' (ты)</td><td>' + Math.floor(num(m.arena, 0, 100, 0)) + '/100</td><td>' + fmt(num(m.stack, 0, 1e12, 0)) + '</td><td style="color:' + rankOf(mmr)[2] + '">' + mmr + ' ' + rankName(mmr) + '</td><td>' + (m.inv > 0 ? (+m.inv).toFixed(2) + 's' : '—') + '</td><td>' + (m.surv > 0 ? Math.floor(+m.surv) : '—') + '</td></tr>';
 }
 function saveFb() {
   const k = document.getElementById('fb-key').value.trim(), d = document.getElementById('fb-db').value.trim();
