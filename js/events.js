@@ -63,7 +63,7 @@ function evBuy(id) {
   st.cur -= it.price; st.bought[id] = (st.bought[id] || 0) + 1;
   let msg = '';
   if (it.kind === 'gems') { const g = Math.round(rewardScale() * it.mul); addGems(g); msg = '+' + fmt(g) + ' 🔶'; }
-  else if (it.kind === 'item') { const x = addEquipment(mainHeroId(), it.rarity); msg = x.name + ' (' + RARITY_NAMES[x.rarity] + ')'; }
+  else if (it.kind === 'item') { const g = Math.round(rewardScale() * 2); addGems(g); msg = '+' + fmt(g) + ' 🔶 (предметы — только из сундуков героев)'; }
   else if (it.kind === 'title') { grantTitle(it.title); msg = 'Титул «' + it.title.name + '» — выбери его в профиле'; hype('НИШТЯК'); }
   else if (it.kind === 'cons') { ensureShop(); S.cons[it.cons] = (S.cons[it.cons] || 0) + 1; msg = '+1 ' + it.cons; }
   save(); updateTop(); renderEventBox(); showModal(ev.cur.icon, it.name, msg, 'ok', { auto: it.kind !== 'title' });
@@ -72,9 +72,9 @@ function evChest() {
   const ev = currentEvent(), st = evState(); if (!ev || !st) return;
   if (st.cur < ev.chest.price) return showModal(ev.cur.icon, 'Не хватает', 'Нужно ' + ev.chest.price + ' ' + ev.cur.icon, 'bad');
   st.cur -= ev.chest.price;
-  const r = weightedRarity(ev.chest.w); const x = addEquipment(mainHeroId(), r);
+  const g = Math.round(rewardScale() * 2); addGems(g);
   sfx('open'); save(); renderEventBox();
-  showModal('🎁', ev.chest.name, x.name + ' (' + RARITY_NAMES[x.rarity] + ')', 'ok', { auto: true });
+  showModal('🎁', ev.chest.name, '+' + fmt(g) + ' 🔶', 'ok', { auto: true });
 }
 function oddsLine(w) { const t = Object.values(w).reduce((a, b) => a + b, 0); return Object.keys(w).reverse().map(r => '<span style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + ' ' + (Math.round(w[r] / t * 1000) / 10) + '%</span>').join(' · '); }
 function renderEventBox() {
@@ -131,7 +131,7 @@ function slotOddsHTML(m) {
 function openSlotOdds() { showModal('🎰', 'Шансы и выплаты · ' + curMachine.name, slotOddsHTML(curMachine), '', { html: true }); }
 function openWheelOdds() {
   const t = SEGMENTS.reduce((a, s) => a + s.weight, 0);
-  showModal('🎯', 'Шансы рулетки героя', '<table class="board" style="text-align:left">' + SEGMENTS.map(s => '<tr><td>' + esc(s.label) + (s.sub ? ' <span class="muted">' + esc(s.sub) + '</span>' : '') + '</td><td>' + (s.weight / t * 100).toFixed(0) + '%</td></tr>').join('') + '</table><p class="muted" style="font-size:.8rem;margin-top:6px">Плюс 12% шанс бонусного скина при любом исходе, кроме «БИЧ».</p>', '', { html: true });
+  showModal('🎯', 'Шансы рулетки героя', '<table class="board" style="text-align:left">' + SEGMENTS.map(s => '<tr><td>' + esc(s.label) + (s.sub ? ' <span class="muted">' + esc(s.sub) + '</span>' : '') + '</td><td>' + (s.weight / t * 100).toFixed(0) + '%</td></tr>').join('') + '</table><p class="muted" style="font-size:.8rem;margin-top:6px">Предметы с рулетки не выпадают — только из сундуков героев.</p>', '', { html: true });
 }
 
 (function hookEvents() {

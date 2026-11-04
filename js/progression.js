@@ -13,7 +13,7 @@ const MONTHS_RU = ['Январь', 'Февраль', 'Март', 'Апрель',
 function seasonId() { return todayStr().slice(0, 7); }                       // сезон = календарный месяц (по Москве)
 function seasonName(id) { const [y, m] = (id || seasonId()).split('-'); return MONTHS_RU[+m - 1] + ' ' + y; }
 function daysLeftInSeason() { const t = todayStr(); const [y, m] = t.split('-').map(Number); const end = new Date(Date.UTC(y, m, 1)); return Math.max(1, Math.round((end - new Date(t + 'T00:00:00Z')) / 864e5)); }
-function giveRewardItem(r) { return addEquipment(mainHeroId(), r); }
+function giveRewardItem(r) { return addEquipment(mainHeroId(), r); }   // 2.9: вернёт null — предметов вне сундуков нет
 
 // ---------- недельные задания ----------
 const WEEKLY_POOL = [
@@ -42,7 +42,7 @@ function claimWeekly(i) {
   const w = ensureWeekly(), q = w.quests[i]; if (!q || q.claimed || q.prog < q.n) return;
   q.claimed = true; addGems(weeklyReward()); seasonXp(CONFIG.progression.xp.weekly, 'weekly');
   let msg = '+' + fmt(weeklyReward()) + ' 🔶 · +' + CONFIG.progression.xp.weekly + ' XP сезона';
-  if (!w.bonus && w.quests.every(x => x.claimed)) { w.bonus = true; const it = giveRewardItem('immortal'); msg += ' · все 3 выполнены: ' + it.name + ' (Immortal)'; hype('НИШТЯК'); }
+  if (!w.bonus && w.quests.every(x => x.claimed)) { w.bonus = true; const g2 = Math.round(rewardScale() * 3); addGems(g2); msg += ' · все 3 выполнены: +' + fmt(g2) + ' 🔶'; hype('НИШТЯК'); }
   save(); renderQuests(); showModal('📆', 'Недельное задание', msg, 'ok', { auto: true });
 }
 
@@ -56,7 +56,7 @@ function ensureSeason() {
 function seasonLevel() { return Math.min(CONFIG.progression.levels, Math.floor(S.season.xp / CONFIG.progression.xpPerLevel)); }
 function seasonLevelReward(L) {
   const P = CONFIG.progression;
-  const r = { gems: Math.round(rewardScale() * P.levelGemsMul), item: P.itemLevels[L] || null, title: null };
+  const r = { gems: Math.round(rewardScale() * P.levelGemsMul), item: null, title: null };   // 2.9: без предметов
   if (L === 15) r.title = { id: 'season-' + S.season.id + '-15', name: 'Ветеран ' + seasonName(S.season.id), color: '#7ad3ff', icon: '🎖' };
   if (L === P.levels) r.title = { id: 'season-' + S.season.id + '-30', name: 'Чемпион ' + seasonName(S.season.id), color: '#ffd36a', icon: '🏆' };
   return r;
@@ -75,7 +75,7 @@ function claimSeason() {
   let gems = 0; const got = [];
   for (let L = s.claimed + 1; L <= lvl; L++) {
     const r = seasonLevelReward(L); gems += r.gems;
-    if (r.item) { const it = giveRewardItem(r.item); got.push(it.name + ' (' + RARITY_NAMES[it.rarity] + ')'); }
+    if (r.item) { const it = giveRewardItem(r.item); if (it) got.push(it.name + ' (' + RARITY_NAMES[it.rarity] + ')'); }
     if (r.title) { grantTitle(r.title); got.push('титул «' + r.title.name + '»'); }
   }
   s.claimed = lvl; addGems(gems); save(); renderQuests();
@@ -102,6 +102,8 @@ function seasonRollover(newId) {
     S.pvp.mmr = nm; S.pvp.peak = nm; S.pvp.seasonW = 0; S.pvp.seasonL = 0;
   }
   S.season = { id: newId, xp: 0, claimed: 0, dayXp: {} };
+  // 2.9: топ-3 по MMR прошлого сезона — награды на выбор
+  if (typeof leagueTopReward === 'function') setTimeout(() => leagueTopReward(old).catch(() => {}), 4000);
   if (lines.length) setTimeout(() => showModal('🏁', 'Сезон «' + seasonName(old) + '» завершён', lines.join(' · '), 'ok'), 1500);
 }
 
@@ -111,7 +113,7 @@ const ONBOARDING = [
   { id: 'arena1', t: 'Пройди 1-й уровень арены', ok: () => S.arena.cleared >= 1, gems: 1500, tab: 'arena' },
   { id: 'claim', t: 'Забери награду за вход в «Заданиях»', ok: () => S.daily && S.daily.login.claimed === S.daily.day, gems: 500, tab: 'quests' },
   { id: 'slot', t: 'Прокрути слоты', ok: () => st('slotSpins') >= 1, gems: 800, tab: 'slots' },
-  { id: 'arena5', t: 'Пройди 5-й уровень арены', ok: () => S.arena.cleared >= 5, gems: 2000, item: 'immortal', tab: 'arena' }
+  { id: 'arena5', t: 'Пройди 5-й уровень арены', ok: () => S.arena.cleared >= 5, gems: 2000, tab: 'arena' }
 ];
 function onboardingActive() { return S && !(S.onb && S.onb.done) && !(S.arena.cleared > 15); }
 function claimOnb(id) {
@@ -119,7 +121,7 @@ function claimOnb(id) {
   const st0 = ONBOARDING.find(x => x.id === id); if (!st0 || S.onb.got[id] || !st0.ok()) return;
   S.onb.got[id] = true; addGems(st0.gems);
   let msg = '+' + fmt(st0.gems) + ' 🔶';
-  if (st0.item) { const it = addSkin(mainHeroId(), st0.item); msg += ' · ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'; hype('НИШТЯК'); }
+  if (st0.item) { const it = addSkin(mainHeroId(), st0.item); if (it) { msg += ' · ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'; hype('НИШТЯК'); } }
   if (ONBOARDING.every(x => S.onb.got[x.id])) { S.onb.done = true; msg += ' · Первые шаги пройдены!'; }
   save(); renderHome(); updateTop(); showModal('🚀', 'Первые шаги', msg, 'ok', { auto: !st0.item });
 }

@@ -18,11 +18,22 @@ function renderGames() {
     ['sunstrike', '☀', 'Sun Strike', 'Предскажи, где будет враг через 1.7 секунды, и попади Sun Strike. 10 кастов.'],
     ['guess', '❓', 'Угадай героя', 'По кусочку портрета или иконке ульты. 10 вопросов.'],
     ['invgame', '🧙', 'Invoker Game', 'Все режимы: гонка, бесконечный, обучение и выживание. Старт/стоп — пробел.'],
-    ['invoker', '🔮', 'Invoker: выживание', 'Таймер всё короче. Ошибся или не успел — конец.'],
     ['tower', '🏰', 'Битва за Башню', 'Карточная стратегия: 50 этажей против ботов и PvP. Лучший этаж: ' + (S.tower ? S.tower.best : 0) + '.']
   ];
-  host.innerHTML = '<div class="home-grid" style="margin-top:0">' + games.map(([id, ic, n, d]) => '<div class="panel home-card' + (curGame === id ? ' sel' : '') + '" data-click="startGame_(\'' + id + '\')"><div class="ic">' + ic + '</div><h3>' + n + '</h3><p>' + d + '</p><p class="muted" style="font-size:.72rem;margin-top:4px">' + (S.gameBest && S.gameBest[id] != null ? ' рекорд ' + S.gameBest[id] : '') + '</p></div>').join('') + '</div><div id="game-stage" class="panel panel-b" style="margin-top:14px;min-height:120px"><div class="muted" style="text-align:center;padding:30px">Выбери мини-игру</div></div>';
+  host.innerHTML = '<div class="home-grid" style="margin-top:0">' + games.map(([id, ic, n, d]) => '<div class="panel home-card mg-card' + (curGame === id ? ' sel' : '') + '" data-click="startGame_(\'' + id + '\')"><div class="ic mg-ic">' + mgIconHTML(id, ic) + '</div><h3>' + n + '</h3><p>' + d + '</p><p class="muted" style="font-size:.72rem;margin-top:4px">' + (S.gameBest && S.gameBest[id] != null ? ' рекорд ' + S.gameBest[id] : '') + '</p></div>').join('') + '</div><div id="game-stage" class="panel panel-b" style="margin-top:14px;min-height:120px"><div class="muted" style="text-align:center;padding:30px">Выбери мини-игру</div></div>';
 }
+// 2.9: картинки на карточках мини-игр (если картинка не загрузилась — остаётся значок)
+const MG_ICONS = { lasthit: () => ITEM_ICON('quelling_blade'), hook: () => spellIcon('pudge_meat_hook'), sunstrike: () => spellIcon('invoker_sun_strike'), guess: () => spellIcon('rubick_spell_steal'), invgame: () => spellIcon('invoker_invoke'), tower: () => ITEM_ICON('ward_observer') };
+function mgIconHTML(id, ic) { let src = ''; try { src = MG_ICONS[id] ? MG_ICONS[id]() : ''; } catch (e) { } return src ? '<img src="' + src + '" referrerpolicy="no-referrer" alt="" loading="lazy">' : ic; }
+// 2.9: сложность Pudge Hook и Sun Strike
+const MG_DIFF = {
+  hook: { easy: { n: 'Easy', tgt: 0.6, hook: 1.25, pay: 0.6 }, medium: { n: 'Medium', tgt: 1, hook: 1, pay: 1 }, hard: { n: 'Hard', tgt: 1.45, hook: 0.9, pay: 1.4 }, insane: { n: 'Insane', tgt: 2, hook: 0.8, pay: 1.9 }, turbo: { n: '⚡ Турбо', tgt: 2.6, hook: 1, pay: 2.2, turbo: true } },
+  sunstrike: { easy: { n: 'Easy', spd: 0.7, delay: 1300, r: 56, pay: 0.6 }, medium: { n: 'Medium', spd: 1, delay: 1700, r: 48, pay: 1 }, hard: { n: 'Hard', spd: 1.35, delay: 2000, r: 42, pay: 1.4 }, insane: { n: 'Insane', spd: 1.8, delay: 2400, r: 36, pay: 1.9 } }
+};
+function mgDiff(g) { S.mgDiff = S.mgDiff || {}; const d = S.mgDiff[g]; return MG_DIFF[g][d] ? d : 'medium'; }
+function setMgDiff(g, d) { if (!MG_DIFF[g] || !MG_DIFF[g][d]) return; S.mgDiff = S.mgDiff || {}; S.mgDiff[g] = d; save(); startGame_(g); }
+function mgDiffBar(g) { const cur = mgDiff(g); return '<div class="mg-diff">' + Object.entries(MG_DIFF[g]).map(([k, v]) => '<button class="chip' + (k === cur ? ' active' : '') + '" data-click="setMgDiff(\'' + g + '\',\'' + k + '\')">' + v.n + (v.pay !== 1 ? ' <small>×' + v.pay + '</small>' : '') + '</button>').join('') + '</div>'; }
+function mgBestKey(g) { const d = mgDiff(g); return d === 'medium' ? g : g + '_' + d; }
 function setBest(g, v, higherBetter) {
   S.gameBest = S.gameBest || {};
   const cur = S.gameBest[g];
@@ -146,17 +157,20 @@ function gameResult(name, line, g, rec, id) {
 let HK = null;
 function hookStart() {
   const st = document.getElementById('game-stage');
-  st.innerHTML = '<div class="muted" style="text-align:center;margin-bottom:6px">Кликни по полю — Pudge бросит хук в эту точку. Цель бежит! Хуков: <b id="hk-left" style="color:#fff">10</b> · попаданий: <b id="hk-hit" style="color:var(--ok)">0</b></div><canvas id="hk-cv" width="760" height="360" style="width:100%;max-width:760px;display:block;margin:0 auto;border:1px solid #000;border-radius:4px;cursor:crosshair"></canvas>';
+  const D = MG_DIFF.hook[mgDiff('hook')];
+  st.innerHTML = mgDiffBar('hook') + '<div class="muted" style="text-align:center;margin-bottom:6px">' + (D.turbo ? '⚡ Турбо: цель носится, хук летит непредсказуемо! ' : '') + 'Кликни по полю — Pudge бросит хук в эту точку. Цель бежит! Хуков: <b id="hk-left" style="color:#fff">10</b> · попаданий: <b id="hk-hit" style="color:var(--ok)">0</b></div><canvas id="hk-cv" width="760" height="360" style="width:100%;max-width:760px;display:block;margin:0 auto;border:1px solid #000;border-radius:4px;cursor:crosshair"></canvas>';
   const cv = document.getElementById('hk-cv'), ctx = cv.getContext('2d');
   const pudge = new Image(); pudge.referrerPolicy = 'no-referrer'; pudge.src = STEAM + 'heroes/pudge.png';
   const tgtId = pick(['antimage', 'phantom_assassin', 'juggernaut', 'storm_spirit', 'slark', 'invoker', 'lina', 'riki']);
   const tgt = new Image(); tgt.referrerPolicy = 'no-referrer'; tgt.src = STEAM + 'heroes/' + tgtId + '.png';
-  HK = { left: 10, hit: 0, hook: null, t: { x: 100, y: 120, vx: 3.2, vy: 1.4 }, ctx, cv, pudge, tgt, msg: '', msgT: 0 };
+  HK = { left: 10, hit: 0, hook: null, t: { x: 100, y: 120, vx: 3.2 * D.tgt, vy: 1.4 * D.tgt }, ctx, cv, pudge, tgt, msg: '', msgT: 0, D };
   cv.onclick = e => {
     if (!HK || HK.hook || HK.left <= 0) return;
     const r = cv.getBoundingClientRect(); const x = (e.clientX - r.left) * cv.width / r.width, y = (e.clientY - r.top) * cv.height / r.height;
     const ox = 380, oy = 330; const d = Math.hypot(x - ox, y - oy) || 1;
-    HK.hook = { x: ox, y: oy, dx: (x - ox) / d, dy: (y - oy) / d, dist: 0, max: 420, back: false };
+    let dx = (x - ox) / d, dy = (y - oy) / d, sp = 11 * HK.D.hook;
+    if (HK.D.turbo) { const a = (Math.random() - 0.5) * 0.42, c = Math.cos(a), s2 = Math.sin(a); [dx, dy] = [dx * c - dy * s2, dx * s2 + dy * c]; sp = 8 + Math.random() * 12; }   // турбо: случайный разброс угла и скорости
+    HK.hook = { x: ox, y: oy, dx, dy, dist: 0, max: 420, back: false, sp };
     HK.left--; document.getElementById('hk-left').textContent = HK.left; sfx('hit');
   };
   const loop = () => {
@@ -164,7 +178,7 @@ function hookStart() {
     const { ctx, t } = HK;
     // движение цели со сменой направления
     t.x += t.vx; t.y += t.vy;
-    if (Math.random() < 0.02) { t.vx = (Math.random() < 0.5 ? -1 : 1) * (2.5 + Math.random() * 2.5); t.vy = (Math.random() - 0.5) * 3; }
+    if (Math.random() < (HK.D.turbo ? 0.05 : 0.02)) { t.vx = (Math.random() < 0.5 ? -1 : 1) * (2.5 + Math.random() * 2.5) * HK.D.tgt; t.vy = (Math.random() - 0.5) * 3 * HK.D.tgt; }
     if (t.x < 40 || t.x > 720) t.vx *= -1; if (t.y < 30 || t.y > 220) t.vy *= -1;
     t.x = Math.max(40, Math.min(720, t.x)); t.y = Math.max(30, Math.min(220, t.y));
     hookBg(ctx, HK.bgT = (HK.bgT || 0) + 1);
@@ -175,7 +189,7 @@ function hookStart() {
     hookPudge(ctx, HK);
     const h = HK.hook;
     if (h) {
-      const sp = 11;
+      const sp = h.sp || 11;
       if (!h.back) { h.dist += sp; h.x += h.dx * sp; h.y += h.dy * sp; if (Math.abs(h.x - t.x) < 40 && Math.abs(h.y - t.y) < 24) { h.back = true; h.caught = true; HK.hit++; document.getElementById('hk-hit').textContent = HK.hit; HK.msg = 'GET OVER HERE!'; HK.msgT = 50; sfx('coin'); } else if (h.dist > h.max) h.back = true; }
       else { h.dist -= sp; h.x -= h.dx * sp; h.y -= h.dy * sp; if (h.caught) { t.x = h.x; t.y = h.y; } if (h.dist <= 0) { HK.hook = null; if (h.caught) { t.x = 100 + Math.random() * 560; t.y = 60 + Math.random() * 120; } if (HK.left <= 0) return hookEnd(); } }
       hookChain(ctx, 380, 318, h.x, h.y);
@@ -186,10 +200,10 @@ function hookStart() {
   loop();
 }
 function hookEnd() {
-  const hits = HK.hit; HK = null;
-  const g = gamePay('hook', hits * rewardScale() * CONFIG.minigames.pay.hook);
-  const rec = setBest('hook', hits, true);
-  document.getElementById('game-stage').innerHTML = gameResult('Pudge Hook', hits + '/10 попаданий', g, rec, 'hook');
+  const hits = HK.hit, D = HK.D; HK = null;
+  const g = gamePay('hook', hits * rewardScale() * CONFIG.minigames.pay.hook * D.pay);
+  const rec = setBest(mgBestKey('hook'), hits, true);
+  document.getElementById('game-stage').innerHTML = mgDiffBar('hook') + gameResult('Pudge Hook · ' + D.n, hits + '/10 попаданий', g, rec, 'hook');
   if (hits >= 8) { hype('НИШТЯК'); announce('Fresh meat!', { pitch: 0.3, rate: 0.8 }); }
 }
 
@@ -238,11 +252,12 @@ function hookChain(ctx, x0, y0, x1, y1) {
 let SS = null;
 function ssStart() {
   const st = document.getElementById('game-stage');
-  st.innerHTML = '<div class="muted" style="text-align:center;margin-bottom:6px">Нажми на поле — через 1.7 с туда ударит Sun Strike. Кастов: <b id="ss-left" style="color:#fff">10</b> · попаданий: <b id="ss-hit" style="color:var(--ok)">0</b></div><canvas id="ss-cv" width="760" height="360" style="width:100%;max-width:760px;display:block;margin:0 auto;border:1px solid #000;border-radius:4px;cursor:crosshair;touch-action:manipulation"></canvas>';
+  const D = MG_DIFF.sunstrike[mgDiff('sunstrike')];
+  st.innerHTML = mgDiffBar('sunstrike') + '<div class="muted" style="text-align:center;margin-bottom:6px">Нажми на поле — через ' + (D.delay / 1000).toFixed(1) + ' с туда ударит Sun Strike. Кастов: <b id="ss-left" style="color:#fff">10</b> · попаданий: <b id="ss-hit" style="color:var(--ok)">0</b></div><canvas id="ss-cv" width="760" height="360" style="width:100%;max-width:760px;display:block;margin:0 auto;border:1px solid #000;border-radius:4px;cursor:crosshair;touch-action:manipulation"></canvas>';
   const cv = document.getElementById('ss-cv'), ctx = cv.getContext('2d');
   const ids = HEROES.map(h => h.id).sort(() => Math.random() - 0.5).slice(0, 3);
   const mk = id => { const im = new Image(); im.referrerPolicy = 'no-referrer'; im.src = STEAM + 'heroes/' + id + '.png'; return { id, im, x: 80 + Math.random() * 600, y: 60 + Math.random() * 240, vx: 0, vy: 0, turn: 0, dead: 0 }; };
-  SS = { left: 10, hit: 0, casts: [], foes: ids.map(mk), fx: [], ctx, cv, last: performance.now() };
+  SS = { left: 10, hit: 0, casts: [], foes: ids.map(mk), fx: [], ctx, cv, last: performance.now(), D };
   cv.onclick = e => {
     if (!SS || SS.left <= 0) return;
     const r = cv.getBoundingClientRect(); const x = (e.clientX - r.left) * cv.width / r.width, y = (e.clientY - r.top) * cv.height / r.height;
@@ -254,18 +269,18 @@ function ssStart() {
     const dt = Math.min(50, now - SS.last); SS.last = now;
     SS.foes.forEach(f => {
       if (f.dead > 0) { f.dead -= dt; if (f.dead <= 0) { f.x = 80 + Math.random() * 600; f.y = 60 + Math.random() * 240; } return; }
-      f.turn -= dt; if (f.turn <= 0) { f.turn = 600 + Math.random() * 1400; const a = Math.random() * 6.283, sp = 0.06 + Math.random() * 0.1; f.vx = Math.cos(a) * sp; f.vy = Math.sin(a) * sp; }
+      f.turn -= dt; if (f.turn <= 0) { f.turn = 600 + Math.random() * 1400; const a = Math.random() * 6.283, sp = (0.06 + Math.random() * 0.1) * SS.D.spd; f.vx = Math.cos(a) * sp; f.vy = Math.sin(a) * sp; }
       f.x += f.vx * dt; f.y += f.vy * dt;
       if (f.x < 30 || f.x > 730) { f.vx *= -1; f.x = Math.max(30, Math.min(730, f.x)); } if (f.y < 30 || f.y > 330) { f.vy *= -1; f.y = Math.max(30, Math.min(330, f.y)); }
     });
     SS.casts = SS.casts.filter(c => {
       c.t += dt;
-      if (c.t >= 1700 && !c.done) {
+      if (c.t >= SS.D.delay && !c.done) {
         c.done = true; let got = 0;
-        SS.foes.forEach(f => { if (f.dead <= 0 && Math.hypot(f.x - c.x, f.y - c.y) < 48) { f.dead = 1200; got++; } });
+        SS.foes.forEach(f => { if (f.dead <= 0 && Math.hypot(f.x - c.x, f.y - c.y) < SS.D.r) { f.dead = 1200; got++; } });
         if (got) { SS.hit += got; document.getElementById('ss-hit').textContent = SS.hit; SS.fx.push({ x: c.x, y: c.y - 40, t: got > 1 ? 'ДВОЙНОЙ!' : 'ПОПАЛ!', life: 50 }); sfx('coin'); } else sfx('lose');
       }
-      return c.t < 2100;
+      return c.t < SS.D.delay + 400;
     });
     ssDraw(now);
     if (SS.left <= 0 && !SS.casts.length) return ssEnd();
@@ -284,16 +299,17 @@ function ssDraw(now) {
     ctx.globalAlpha = 1;
   });
   SS.casts.forEach(c => {
-    if (c.t < 1700) { const k = c.t / 1700; ctx.strokeStyle = 'rgba(255,200,60,' + (0.4 + k * 0.6) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, 48, 0, 6.3); ctx.stroke(); ctx.fillStyle = 'rgba(255,180,40,' + k * 0.35 + ')'; ctx.beginPath(); ctx.arc(c.x, c.y, 48 * k, 0, 6.3); ctx.fill(); }
-    else { const k = 1 - (c.t - 1700) / 400; const g = ctx.createLinearGradient(c.x, 0, c.x, c.y); g.addColorStop(0, 'rgba(255,255,220,0)'); g.addColorStop(1, 'rgba(255,230,120,' + k + ')'); ctx.fillStyle = g; ctx.fillRect(c.x - 30, 0, 60, c.y); ctx.fillStyle = 'rgba(255,200,60,' + k + ')'; ctx.beginPath(); ctx.arc(c.x, c.y, 52, 0, 6.3); ctx.fill(); }
+    const DL = SS.D.delay, RR = SS.D.r;
+    if (c.t < DL) { const k = c.t / DL; ctx.strokeStyle = 'rgba(255,200,60,' + (0.4 + k * 0.6) + ')'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c.x, c.y, RR, 0, 6.3); ctx.stroke(); ctx.fillStyle = 'rgba(255,180,40,' + k * 0.35 + ')'; ctx.beginPath(); ctx.arc(c.x, c.y, RR * k, 0, 6.3); ctx.fill(); }
+    else { const k = 1 - (c.t - DL) / 400; const g = ctx.createLinearGradient(c.x, 0, c.x, c.y); g.addColorStop(0, 'rgba(255,255,220,0)'); g.addColorStop(1, 'rgba(255,230,120,' + k + ')'); ctx.fillStyle = g; ctx.fillRect(c.x - 30, 0, 60, c.y); ctx.fillStyle = 'rgba(255,200,60,' + k + ')'; ctx.beginPath(); ctx.arc(c.x, c.y, 52, 0, 6.3); ctx.fill(); }
   });
   SS.fx = SS.fx.filter(f => { f.life--; ctx.fillStyle = '#ffd36a'; ctx.font = 'bold 24px Cinzel, serif'; ctx.textAlign = 'center'; ctx.globalAlpha = Math.min(1, f.life / 20); ctx.fillText(f.t, f.x, f.y - (50 - f.life) * 0.5); ctx.globalAlpha = 1; return f.life > 0; });
 }
 function ssEnd() {
-  const hits = SS.hit; cancelAnimationFrame(SS.raf); SS = null;
-  const g = gamePay('sunstrike', Math.min(10, hits) * rewardScale() * CONFIG.minigames.pay.sunstrike);
-  const rec = setBest('sunstrike', hits, true);
-  document.getElementById('game-stage').innerHTML = gameResult('Sun Strike', hits + '/10 попаданий', g, rec, 'sunstrike');
+  const hits = SS.hit, D = SS.D; cancelAnimationFrame(SS.raf); SS = null;
+  const g = gamePay('sunstrike', Math.min(10, hits) * rewardScale() * CONFIG.minigames.pay.sunstrike * D.pay);
+  const rec = setBest(mgBestKey('sunstrike'), hits, true);
+  document.getElementById('game-stage').innerHTML = mgDiffBar('sunstrike') + gameResult('Sun Strike · ' + D.n, hits + '/10 попаданий', g, rec, 'sunstrike');
   if (hits >= 7) { hype('НИШТЯК'); }
 }
 

@@ -178,7 +178,7 @@ function renderLevelInfo() {
     '<div style="font-size:.85rem">Шанс победы ≈ <b style="color:' + chCol + '">' + Math.round(ch * 100) + '%</b></div>' + rolePanelHTML(def) + '</div>' +
     '<div class="wave-strip" id="wave-strip"></div>' +
     '<div style="flex:1;min-width:180px;font-size:.82rem"><div>Награда: ' + gemHTML(replay ? Math.round(def.reward * CONFIG.arena.replayMul) : def.reward) + (replay ? ' <span class="muted">(повтор, без предметов)</span>' : '') + '</div>' +
-    (!replay ? '<div>' + (def.skin ? '🎨 Скин за босса' : '') + (def.skin && def.eq ? ' + ' : '') + (def.eq ? '🛡 Снаряжение' : '') + (!def.skin && !def.eq ? '<span class="muted">Скин — каждый 4-й босс, снаряжение — каждый 2-й</span>' : '') + '</div>' : '') + '</div>' +
+    (!replay ? '<div><span class="muted">Предметы — только из сундуков героев (Лавка → Сундуки)</span></div>' : '') + '</div>' +
     '<div style="display:flex;flex-direction:column;gap:6px"><button class="btn green big" data-click="startBattle(' + L + ',false)">⚔ В БОЙ</button>' +
     (!replay && L < ARENA_MAX && arenaMode === 'normal' ? '<button class="btn sm" data-click="startBattle(' + L + ',true)" title="Сражаться с уровнями подряд, пока не проиграешь">▶ Цепочка уровней</button>' : '') + '</div>';
   const ws = document.getElementById('wave-strip');
@@ -555,9 +555,8 @@ function endBattle() {
     if (!replay) {
       S.arena.cleared = L;
       const ri = Math.max(0, Math.min(5, Math.floor(L / 17) + (Math.random() < 0.3 ? 1 : 0) - (Math.random() < 0.25 ? 1 : 0)));
-      if (def.eq) got.push(addEquipment(BT.team[0].id, RARITIES[ri]));
+      // 2.9: предметы с арены больше не падают (только из сундуков героев)
       if (L % 10 === 0 && Math.random() < 0.5) { S.cons = S.cons || { aegis: 0, cheese: 0 }; S.cons.cheese++; got.push({ name: 'Cheese', rarity: 'immortal' }); }
-      if (def.skin) got.push(addSkin(def.waves[def.waves.length - 1].id, RARITIES[Math.min(5, ri + 1)]));
     } else S.arena.replays++;
     msg = 'Уровень ' + L + ' пройден! +' + fmt(g) + ' 🔶' + (got.length ? ' · ' + got.map(x => x.name + ' (' + RARITY_NAMES[x.rarity] + ')').join(', ') : '') + hodWin(BT.team.map(t => t.id));
     arenaLog('win', '🏆 ' + msg);
@@ -597,9 +596,8 @@ function endSpecialBattle(def, result, st) {
       r.killed = true;
       S.cons = S.cons || { aegis: 0, cheese: 0 }; S.cons.aegis++; S.cons.cheese++;
       const g = Math.round(rewardScale() * CONFIG.roshan.rewardMul); addGems(g);
-      const it = addEquipment(mainHeroId(), 'immortal');
       st.textContent = '🏆 РОШАН ПОВЕРЖЕН'; st.style.color = 'var(--ok)'; sfx('win'); announce('Roshan has fallen to the Radiant!');
-      msg = 'Рошан повержен! Aegis + Cheese + ' + fmt(g) + ' 🔶 + ' + it.name; track('roshanKills');
+      msg = 'Рошан повержен! Aegis + Cheese + ' + fmt(g) + ' 🔶'; track('roshanKills');
     } else {
       st.textContent = '⏳ РОШАН ЖИВ'; st.style.color = 'var(--gold2)';
       msg = 'Нанесено ' + fmt(result.dmgDealt) + ' урона. У Рошана осталось ' + Math.round((1 - r.dealt / r.pool) * 100) + '% здоровья. Попыток: ' + r.tries;

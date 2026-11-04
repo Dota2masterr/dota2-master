@@ -15,9 +15,8 @@ function hodWin(ids) {
   if (st.n < CONFIG.heroOfDay.wins) return ' · ☀ Испытание дня ' + st.n + '/' + CONFIG.heroOfDay.wins;
   st.done = true;
   const g = Math.round(rewardScale() * CONFIG.heroOfDay.rewardMul); addGems(g);
-  const sk = addSkin(id, weightedRarity({ rare: 50, mythical: 32, immortal: 15, arcana: 3 }));
-  if (typeof toast === 'function') toast('☀ Испытание дня выполнено', HERO_BY_ID[id].name + ': ' + sk.name + ' (' + RARITY_NAMES[sk.rarity] + ') + ' + fmt(g) + ' кристаллов');
-  return ' · ☀ Испытание дня выполнено: ' + sk.name + ' + ' + fmt(g) + ' 🔶';
+  if (typeof toast === 'function') toast('☀ Испытание дня выполнено', HERO_BY_ID[id].name + ': +' + fmt(g) + ' кристаллов');
+  return ' · ☀ Испытание дня выполнено: +' + fmt(g) + ' 🔶';
 }
 function hodTake() {
   const id = heroOfDay(); const cs = getStack();

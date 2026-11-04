@@ -200,9 +200,8 @@ function coopResult(def, result, st) {
     st.textContent = '🏆 БОСС ПОВЕРЖЕН'; st.style.color = 'var(--ok)'; sfx('win');
     if (!cs.got[B.id]) {
       cs.got[B.id] = 1;
-      const it = addEquipment(mainHeroId(), 'arcana'); it.name = B.item + ' · ' + it.name; it.coop = B.id;
       const g = Math.round(rewardScale() * 3); addGems(g);
-      msg = B.n + ' повержен вдвоём! ' + it.name + ' + ' + fmt(g) + ' 🔶';
+      msg = B.n + ' повержен вдвоём! +' + fmt(g) + ' 🔶';
       if (typeof track === 'function') track('coopKills');
     } else msg = B.n + ' повержен! Награду за этого босса ты уже получил сегодня.';
   } else { st.textContent = '💀 ПОРАЖЕНИЕ'; st.style.color = 'var(--danger)'; sfx('lose'); msg = B.n + ' устоял. Договоритесь: кто держит агро, и жмите ульты в один ход, чтобы сломать щит.'; }

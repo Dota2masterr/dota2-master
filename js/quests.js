@@ -10,7 +10,7 @@ const QUEST_POOL = [
   { id: 'arenaWins', t: 'Выиграй {n} боя на арене', n: [2, 3, 5], icon: '⚔️', mult: 1.4 },
   { id: 'upgradesTry', t: 'Попробуй апгрейд {n} раз', n: [2, 3, 5], icon: '🔧', mult: 1 },
   { id: 'invokerRuns', t: 'Пройди Invoker Game {n} раз', n: [1, 2], icon: '🔮', mult: 1.2 },
-  { id: 'itemsSold', t: 'Продай {n} предметов', n: [5, 10, 20], icon: '💰', mult: 0.8 },
+  { id: 'itemsSold', t: 'Продай {n} предметов', n: [5, 10, 20], icon: '💰', mult: 0.8, off: true },   // 2.9: больше не выпадает — предметы редкие (только из сундуков героев)
   { id: 'nishtyak', t: 'Поймай НИШТЯК {n} раз', n: [1], icon: '🌈', mult: 2 },
   { id: 'heroLevels', t: 'Подними героям {n} уровней', n: [10, 20, 40], icon: '⬆️', mult: 1.2 }
 ];
@@ -23,14 +23,14 @@ const ACHIEVEMENTS = [
   { id: 'nish1', icon: '🌈', name: 'НИШТЯК!', d: 'Поймай первый НИШТЯК', ok: () => st('nishtyak') >= 1, r: 1000 },
   { id: 'nish10', icon: '🌈', name: 'Вечный НИШТЯК', d: '10 раз НИШТЯК', ok: () => st('nishtyak') >= 10, r: 10000 },
   { id: 'arena10', icon: '🛤', name: 'Лайнер', d: 'Пройди 10 уровней арены', ok: () => S.arena.cleared >= 10, r: 2000 },
-  { id: 'arena25', icon: '🗼', name: 'Хозяин топа', d: 'Захвати верхний лайн (25)', ok: () => S.arena.cleared >= 25, r: 6000, item: 'mythical' },
-  { id: 'arena50', icon: '🗼', name: 'Хозяин бота', d: 'Захвати нижний лайн (50)', ok: () => S.arena.cleared >= 50, r: 30000, item: 'immortal' },
-  { id: 'arena75', icon: '🌲', name: 'Властелин леса', d: 'Пройди лес (75)', ok: () => S.arena.cleared >= 75, r: 60000, item: 'immortal' },
-  { id: 'arena100', icon: '🏛', name: 'Древний пал', d: 'Пройди 100 уровней арены', ok: () => S.arena.cleared >= 100, r: 250000, item: 'arcana' },
-  { id: 'arena150', icon: '🩸', name: 'Хозяин Рошпита', d: 'Пройди 150 уровней арены', ok: () => S.arena.cleared >= 150, r: 350000, item: 'arcana' },
-  { id: 'arena200', icon: '🌑', name: 'Трон Тьмы пал', d: 'Пройди все 200 уровней арены', ok: () => S.arena.cleared >= 200, r: 500000, item: 'arcana' },
+  { id: 'arena25', icon: '🗼', name: 'Хозяин топа', d: 'Захвати верхний лайн (25)', ok: () => S.arena.cleared >= 25, r: 6000 },
+  { id: 'arena50', icon: '🗼', name: 'Хозяин бота', d: 'Захвати нижний лайн (50)', ok: () => S.arena.cleared >= 50, r: 30000 },
+  { id: 'arena75', icon: '🌲', name: 'Властелин леса', d: 'Пройди лес (75)', ok: () => S.arena.cleared >= 75, r: 60000 },
+  { id: 'arena100', icon: '🏛', name: 'Древний пал', d: 'Пройди 100 уровней арены', ok: () => S.arena.cleared >= 100, r: 250000 },
+  { id: 'arena150', icon: '🩸', name: 'Хозяин Рошпита', d: 'Пройди 150 уровней арены', ok: () => S.arena.cleared >= 150, r: 350000 },
+  { id: 'arena200', icon: '🌑', name: 'Трон Тьмы пал', d: 'Пройди все 200 уровней арены', ok: () => S.arena.cleared >= 200, r: 500000 },
   { id: 'lvl25', icon: '⭐', name: 'Опытный', d: 'Подними героя до 25 уровня', ok: () => HEROES.some(h => S.heroes[h.id].level >= 25), r: 5000 },
-  { id: 'lvl50', icon: '🌟', name: 'Максимум', d: 'Подними героя до 50 уровня', ok: () => HEROES.some(h => S.heroes[h.id].level >= 50), r: 50000, item: 'immortal' },
+  { id: 'lvl50', icon: '🌟', name: 'Максимум', d: 'Подними героя до 50 уровня', ok: () => HEROES.some(h => S.heroes[h.id].level >= 50), r: 50000 },
   { id: 'all10', icon: '👥', name: 'Весь пул', d: 'Все герои 10+ уровня', ok: () => HEROES.every(h => S.heroes[h.id].level >= 10), r: 40000 },
   { id: 'stack10k', icon: '⚔️', name: 'Сильный стак', d: 'Сила стака 10 000', ok: () => stackPower() >= 10000, r: 8000 },
   { id: 'stack50k', icon: '⚔️', name: 'Непобедимые', d: 'Сила стака 50 000', ok: () => stackPower() >= 50000, r: 80000 },
@@ -39,30 +39,30 @@ const ACHIEVEMENTS = [
   { id: 'loadout6', icon: '🛡', name: 'Полный комплект', d: 'Заполни все 6 слотов снаряжения героя', ok: () => Object.values(S.loadout).some(l => Object.keys(l).length >= 6), r: 6000 },
   { id: 'ug10', icon: '🔧', name: 'Кузнец', d: '10 успешных апгрейдов', ok: () => st('upgradesOk') >= 10, r: 5000 },
   { id: 'inv20', icon: '🔮', name: 'Карл', d: 'Invoker Race быстрее 20 с', ok: () => S.invBest && S.invBest < 20, r: 3000 },
-  { id: 'inv12', icon: '🔮', name: 'Арсенал магии', d: 'Invoker Race быстрее 12 с', ok: () => S.invBest && S.invBest < 12, r: 15000, item: 'mythical' },
+  { id: 'inv12', icon: '🔮', name: 'Арсенал магии', d: 'Invoker Race быстрее 12 с', ok: () => S.invBest && S.invBest < 12, r: 15000 },
   { id: 'sell100', icon: '💰', name: 'Торговец', d: 'Продай 100 предметов', ok: () => st('itemsSold') >= 100, r: 5000 },
-  { id: 'streak7', icon: '📅', name: 'Неделя в игре', d: 'Заходи 7 дней подряд', ok: () => S.daily && S.daily.login && S.daily.login.streak >= 7, r: 10000, item: 'immortal' },
+  { id: 'streak7', icon: '📅', name: 'Неделя в игре', d: 'Заходи 7 дней подряд', ok: () => S.daily && S.daily.login && S.daily.login.streak >= 7, r: 10000 },
   // 2.3: новые достижения
   { id: 'bich10', icon: '🤬', name: 'BITCH!', d: '10 раз поймай БИЧ', ok: () => st('bich') >= 10, r: 1500 },
   { id: 'tw21', icon: '🃏', name: 'Twenty One', d: '21 раз выпадет «21»', ok: () => st('twentyone') >= 21, r: 2100 },
-  { id: 'spin5000', icon: '🎡', name: 'Вечный двигатель', d: '5000 круток героев', ok: () => st('heroSpins') >= 5000, r: 150000, item: 'arcana' },
+  { id: 'spin5000', icon: '🎡', name: 'Вечный двигатель', d: '5000 круток героев', ok: () => st('heroSpins') >= 5000, r: 150000 },
   { id: 'slot2000', icon: '🎰', name: 'Однорукий бандит', d: '2000 прокрутов слотов', ok: () => st('slotSpins') >= 2000, r: 60000 },
-  { id: 'lvl50x5', icon: '🌟', name: 'Пятёрка максимумов', d: '5 героев 50 уровня', ok: () => HEROES.filter(h => S.heroes[h.id].level >= 50).length >= 5, r: 200000, item: 'arcana' },
+  { id: 'lvl50x5', icon: '🌟', name: 'Пятёрка максимумов', d: '5 героев 50 уровня', ok: () => HEROES.filter(h => S.heroes[h.id].level >= 50).length >= 5, r: 200000 },
   { id: 'arcana10', icon: '💚', name: 'Коллекция Arcana', d: '10 предметов Arcana', ok: () => S.items.filter(x => x.rarity === 'arcana').length >= 10, r: 50000 },
   { id: 'items500', icon: '📦', name: 'Склад', d: '500 предметов в коллекции', ok: () => S.items.length >= 500, r: 20000 },
   { id: 'pvp10', icon: '🥊', name: 'Боец', d: '10 побед в PvP', ok: () => S.pvp && S.pvp.w >= 10, r: 10000 },
-  { id: 'pvp100', icon: '🏆', name: 'Гладиатор', d: '100 побед в PvP', ok: () => S.pvp && S.pvp.w >= 100, r: 100000, item: 'immortal' },
+  { id: 'pvp100', icon: '🏆', name: 'Гладиатор', d: '100 побед в PvP', ok: () => S.pvp && S.pvp.w >= 100, r: 100000 },
   { id: 'rosh5', icon: '🦍', name: 'Охотник на Рошана', d: 'Убей Рошана 5 раз', ok: () => st('roshanKills') >= 5, r: 25000 },
   { id: 'fights6', icon: '⚔', name: 'Файтер', d: 'Выиграй 6 файтов', ok: () => st('fightsWon') >= 6, r: 15000 },
-  { id: 'rogue1', icon: '🌀', name: 'Путь пройден', d: 'Победи Древнего в «Пути Древнего»', ok: () => S.rogue && S.rogue.wins >= 1, r: 20000, item: 'mythical' },
-  { id: 'rogue5', icon: '🌀', name: 'Бездна зовёт', d: 'Открой 5-й уровень Бездны', ok: () => S.rogue && Object.values(S.rogue.abyss || {}).some(v => v >= 5), r: 60000, item: 'immortal' },
+  { id: 'rogue1', icon: '🌀', name: 'Путь пройден', d: 'Победи Древнего в «Пути Древнего»', ok: () => S.rogue && S.rogue.wins >= 1, r: 20000 },
+  { id: 'rogue5', icon: '🌀', name: 'Бездна зовёт', d: 'Открой 5-й уровень Бездны', ok: () => S.rogue && Object.values(S.rogue.abyss || {}).some(v => v >= 5), r: 60000 },
   { id: 'tower10', icon: '🏰', name: 'Штурмовик', d: 'Пройди 10 этажей Башни', ok: () => S.tower && S.tower.best >= 10, r: 15000 },
-  { id: 'tower50', icon: '🏯', name: 'Покоритель Башни', d: 'Пройди все 50 этажей Башни', ok: () => S.tower && S.tower.best >= 50, r: 300000, item: 'arcana' },
+  { id: 'tower50', icon: '🏯', name: 'Покоритель Башни', d: 'Пройди все 50 этажей Башни', ok: () => S.tower && S.tower.best >= 50, r: 300000 },
   { id: 'craft10', icon: '⚒', name: 'Ремесленник', d: '10 крафтов', ok: () => st('crafts') >= 10, r: 8000 },
   { id: 'gift5', icon: '🎁', name: 'Щедрый', d: 'Отправь 5 подарков', ok: () => st('gifts') >= 5, r: 5000 },
   { id: 'fav5', icon: '⭐', name: 'Любимчики', d: 'Добавь 5 героев в избранное', ok: () => (S.fav || []).length >= 5, r: 1000 },
   { id: 'ss10', icon: '☀', name: 'Exort-мастер', d: 'Попади всеми 10 Sun Strike', ok: () => S.gameBest && S.gameBest.sunstrike >= 10, r: 10000 },
-  { id: 'streak30', icon: '📅', name: 'Месяц в игре', d: 'Заходи 30 дней подряд', ok: () => S.daily && S.daily.login && S.daily.login.streak >= 30, r: 100000, item: 'arcana' }
+  { id: 'streak30', icon: '📅', name: 'Месяц в игре', d: 'Заходи 30 дней подряд', ok: () => S.daily && S.daily.login && S.daily.login.streak >= 30, r: 100000 }
 ];
 function st(k) { return (S.stats && S.stats[k]) || 0; }
 function ensureMeta() {
@@ -72,7 +72,7 @@ function ensureMeta() {
   if (isNewDay(S.daily.day, today)) {
     S.daily.day = today;
     const r = seeded(dayDiff('2026-01-01', today) * 131 + (USER ? USER.key.length * 7 : 0));
-    const pool = QUEST_POOL.slice();
+    const pool = QUEST_POOL.filter(q => !q.off);
     S.daily.quests = [];
     for (let i = 0; i < 3; i++) {
       const q = pool.splice(Math.floor(r() * pool.length), 1)[0];
@@ -122,7 +122,7 @@ function toast(title, text) {
   t.onclick = () => { switchTab('quests'); t.remove(); };
   box.appendChild(t); setTimeout(() => t.classList.add('out'), 4200); setTimeout(() => t.remove(), 4700);
 }
-function loginReward(day) { const d = ((day - 1) % 7) + 1; return { gems: Math.round(rewardScale() * (CONFIG.login.base + CONFIG.login.perDay * d)), item: d === 7 ? 'immortal' : d === 4 ? 'mythical' : null }; }
+function loginReward(day) { const d = ((day - 1) % 7) + 1; return { gems: Math.round(rewardScale() * (CONFIG.login.base + CONFIG.login.perDay * d)), item: null }; }   // 2.9: без предметов
 
 function renderQuests() {
   ensureMeta();
@@ -163,7 +163,7 @@ async function claimLogin() {
   const rw = loginReward(lg.streak);
   lg.claimed = S.daily.day; addGems(rw.gems);
   let msg = '+' + fmt(rw.gems) + ' 🔶';
-  if (rw.item) { const it = addEquipment(mainHeroId(), rw.item); msg += ' · ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'; }
+  if (rw.item) { const it = addEquipment(mainHeroId(), rw.item); if (it) msg += ' · ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'; }
   save(); renderQuests(); showModal('📅', 'День ' + (((lg.streak - 1) % 7) + 1), msg, 'ok', { auto: true });
 }
 function claimQuest(i) {
@@ -175,7 +175,7 @@ function claimAch(id) {
   const a = ACHIEVEMENTS.find(x => x.id === id); if (!a || S.ach[id] || !safeOk(a)) return;
   S.ach[id] = Date.now(); addGems(a.r);
   let msg = '+' + fmt(a.r) + ' 🔶';
-  if (a.item) { const it = addEquipment(mainHeroId(), a.item); msg += ' · ' + it.name; }
+  if (a.item) { const it = addEquipment(mainHeroId(), a.item); if (it) msg += ' · ' + it.name; }
   save(); renderQuests(); showModal(a.icon, a.name, msg, 'ok', { auto: true });
   if (a.item === 'arcana') hype('НИШТЯК');
 }

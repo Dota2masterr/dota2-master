@@ -134,8 +134,8 @@ async function referralTick() {
       if (!isObj(r) || r.claimed || (S.ref.claimed || 0) >= CONFIG.social.refMax) continue;
       await db('PUT', 'refs/' + c.uid + '/' + fuid + '/claimed', true);
       S.ref.claimed = (S.ref.claimed || 0) + 1;
-      addGems(Math.round(rewardScale() * CONFIG.social.refMul)); const it = addEquipment(mainHeroId(), 'immortal');
-      save(); toast('🎉 Друг ' + String(r.nick || '').slice(0, 20) + ' прошёл 10-й уровень', '+' + fmt(Math.round(rewardScale() * CONFIG.social.refMul)) + ' 🔶 и ' + it.name);
+      addGems(Math.round(rewardScale() * CONFIG.social.refMul));
+      save(); toast('🎉 Друг ' + String(r.nick || '').slice(0, 20) + ' прошёл 10-й уровень', '+' + fmt(Math.round(rewardScale() * CONFIG.social.refMul)) + ' 🔶');
     }
   } catch (e) { }
 }

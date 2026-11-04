@@ -479,7 +479,7 @@ function twFinish() {
     msg += ' · этаж ' + floor + (g2 ? ' · +' + fmt(g2) + ' 🔶' : ' · дневной лимит наград исчерпан');
     if (first) {
       T.floor = Math.min(TW.floors, floor + 1); T.best = Math.max(T.best, floor);
-      if (floor % 10 === 0 && typeof addEquipment === 'function') { const rar = floor >= 40 ? 'immortal' : floor >= 20 ? 'mythical' : 'rare'; const it = addEquipment(mainHeroId(), rar); msg += ' · 🎁 ' + it.name; }
+      if (floor % 10 === 0 && typeof addEquipment === 'function') { const rar = floor >= 40 ? 'immortal' : floor >= 20 ? 'mythical' : 'rare'; const it = addEquipment(mainHeroId(), rar); if (it) msg += ' · 🎁 ' + it.name; }
       if (floor === TW.floors) msg += ' · Башня покорена!';
     }
     twSaveGhost(g);

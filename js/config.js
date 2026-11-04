@@ -36,8 +36,7 @@ const CONFIG = {
   // Дневной лимит считается по чистому приросту за день (поражения его уменьшают): после dailyCap прирост ×afterCap,
   // после hardCap — ×afterHard (защита от марафонов по 15+ часов: высший ранг за один день недостижим).
   // На рангах от promoFrom повышение в следующий ранг — только при винрейте выше 50% за последние 50 матчей (минимум promoMin матчей).
-  mmr: { lossMul: 1.25, winByRank: [1, 0.95, 0.88, 0.8, 0.72, 0.64, 0.56, 0.48], lossByRank: [0.6, 0.7, 0.8, 0.9, 0.95, 1, 1.05, 1.1],
-    dailyCap: 500, afterCap: 0.5, hardCap: 1500, afterHard: 0.1, promoFrom: 4, promoWindow: 50, promoMin: 20, promoWr: 0.5 },
+  mmr: { win: 20, loss: 25, dailyCap: 1000, overWinMul: 0.5, overLossMul: 2, promoWindow: 50 },   // 2.9: +20/−25; после 1000 за день — прирост ×0.5, потеря ×2 (множители рангов и проверка винрейта убраны)
   // 2.5: уровни ботов (по их MMR) — сила стака, бонус атаки и ИИ (0 — простой, 3 — элитный)
   // 2.5.3: сила снижена (×0.7–0.76 от твоего стака): раньше боты почти всегда побеждали. Цель — шанс победы ~50–75% внизу и ~40–45% на верхних рангах
   botTiers: [
@@ -48,13 +47,15 @@ const CONFIG = {
   ],
   botMinTier: [0, 0, 1, 1, 2, 2, 3, 3],
   botHardEvery: 4,                          // 2.5.1: каждый 4-й бот — «Сложный» даже на низком MMR (чтобы и на малых рангах были сильные соперники)      // по рангу игрока: на высоких рангах — только сильные боты
-  sell: { common: 30, uncommon: 70, rare: 180, mythical: 450, immortal: 1100, arcana: 3000 },
-  sellEqMul: 1.2,
-  sellSkinMul: 2,
+  sell: { common: 3000, uncommon: 10000, rare: 40000, mythical: 70000, immortal: 100000, arcana: 1000000 },   // 2.9: фиксированные цены (было 30 … 3000)
+  dropW: { common: 31.7, uncommon: 27.2, rare: 22.7, mythical: 15.9, immortal: 2, arcana: 0.5 },   // 2.9: шансы редкости в сундуках героев (сумма 100)
+  heroChest: { cost: 50000 },
+  sellEqMul: 1,   // 2.9: цена одна для скинов и снаряжения (было ×1.2)
+  sellSkinMul: 1,   // 2.9: цена одна (было ×2 для скинов)
   talentReset: { freePerWeek: 1, baseMul: 1, growth: 2 },   // 2.4: сброс талантов: 1 бесплатно в неделю, потом rewardScale × 1, ×2, ×4…                // 2.3: скины продаются дороже
   upgrade: {
     cost: { common: 150, uncommon: 350, rare: 800, mythical: 1800, immortal: 4000 },
-    base: { common: 0.55, uncommon: 0.45, rare: 0.35, mythical: 0.27, immortal: 0.2 },
+    base: { common: 0.55, uncommon: 0.45, rare: 0.35, mythical: 0.27 },   // 2.9: Immortal → Arcana убран
     fuelBase: 0.03, fuelPerRarity: 0.025, maxChance: 0.85
   },
   login: { base: 0.35, perDay: 0.25 },       // награда за вход = rewardScale·(base + perDay·день)
@@ -97,18 +98,25 @@ const CONFIG = {
   // 3×3: full — 3 одинаковых на линии, pair — 2 одинаковых слева. 3×5: p5/p4/p3 — 5/4/3 одинаковых подряд слева.
   // Отдача (RTP) как у старых автоматов: 86% / 88% / 76% / 76% плюс выпадающие предметы.
   slotsMaxBet: 1000000,
-  // 2.7.2: бонусные спины — шанс за платную крутку, затем рулетка на 1–10 бесплатных спинов (веса: меньше — чаще, в среднем ≈3.7)
-  slotsBonus: { chance: 0.02, w: [22, 18, 15, 12, 10, 8, 6, 4, 3, 2] },
+  // 2.9: бонусы слотов. sc/pk/mx — шанс особого символа в клетке (⭐ скаттер, 🎯 выбор, ⚡ молния), pay — общий множитель выплат линий
+  slotBonus: { fsSpins: 10, fsRetrig: 5, fsMul: [[2, 40], [3, 25], [5, 20], [10, 15]], orbs: [[2, 50], [3, 25], [5, 17], [10, 8]],
+    pick: { n: 12, open: 3, vals: [[1, 30], [2, 25], [3, 18], [5, 12], [10, 8], [20, 5], [50, 2]] } },
+  slotFx: {
+    imm3: { sc: 0.046, pk: 0.043, pay: 0.97 }, cos3: { sc: 0.046, pk: 0.043, pay: 1.06 },
+    arc5: { sc: 0.027, pk: 0.025, pay: 0.88 }, cos5: { sc: 0.027, pk: 0.025, pay: 0.98 },
+    zeus: { sc: 0.027, pk: 0.025, mx: 0.03, pay: 0.51 }
+  },
   slots: {
     imm3: { minBet: 50, lines: 5, full: { arcana: 294, immortal: 88.1, mythical: 39.1, rare: 19.6, uncommon: 12.7, common: 7.83 }, pair: { arcana: 4.89, immortal: 2.45, mythical: 1.57, rare: 0.98, uncommon: 0.68, common: 0.48 } },   // 2.7.2: ×0.95 — запас под бонусные спины 2.8: +3%
     arc5: { minBet: 100, lines: 10, p5: { arcana: 8806, immortal: 2202, mythical: 665, rare: 274, uncommon: 132, common: 78.3 }, p4: { arcana: 665, immortal: 220, mythical: 88.1, rare: 44.1, uncommon: 21.5, common: 13.2 }, p3: { arcana: 66.5, immortal: 27.4, mythical: 13.2, rare: 7.83, uncommon: 4.89, common: 3.33 }, boost: 0.3 },   // 2.7.2: ×0.95 — запас под бонусные спины 2.8: +3%
     cos3: { minBet: 50, lines: 5, full: { arcana: 268, immortal: 80.3, mythical: 36.1, rare: 17.5, uncommon: 11.3, common: 7.21 }, pair: { arcana: 4.53, immortal: 2.27, mythical: 1.44, rare: 0.93, uncommon: 0.62, common: 0.45 } },  // 2.8: +3%
-    cos5: { minBet: 100, lines: 10, p5: { arcana: 8034, immortal: 2008, mythical: 597, rare: 247, uncommon: 121, common: 70 }, p4: { arcana: 597, immortal: 201, mythical: 80.3, rare: 40.2, uncommon: 19.6, common: 12.1 }, p3: { arcana: 59.7, immortal: 24.7, mythical: 12.1, rare: 7, uncommon: 4.53, common: 2.99 } }  // 2.8: +3%
+    cos5: { minBet: 100, lines: 10, p5: { arcana: 8034, immortal: 2008, mythical: 597, rare: 247, uncommon: 121, common: 70 }, p4: { arcana: 597, immortal: 201, mythical: 80.3, rare: 40.2, uncommon: 19.6, common: 12.1 }, p3: { arcana: 59.7, immortal: 24.7, mythical: 12.1, rare: 7, uncommon: 4.53, common: 2.99 } },   // 2.8: +3%
+    zeus: { minBet: 100, lines: 10, p5: { arcana: 8806, immortal: 2202, mythical: 665, rare: 274, uncommon: 132, common: 78.3 }, p4: { arcana: 665, immortal: 220, mythical: 88.1, rare: 44.1, uncommon: 21.5, common: 13.2 }, p3: { arcana: 66.5, immortal: 27.4, mythical: 13.2, rare: 7.83, uncommon: 4.89, common: 3.33 } },   // 2.9: слот «Зевс» (таблица как у Arcana 3×5)
   },
   // прогресс: сезонный пропуск, недельные задания, лиги PvP (этап 3)
   progression: {
     levels: 30, xpPerLevel: 300, levelGemsMul: 1.05,         // награда уровня пропуска = rewardScale × levelGemsMul
-    itemLevels: { 5: 'rare', 10: 'mythical', 15: 'immortal', 20: 'mythical', 25: 'immortal', 30: 'arcana' },
+    itemLevels: {},   // 2.9: предметы только из сундуков героев (было 5 rare … 30 arcana)
     xp: { daily: 60, weekly: 300, login: 40, arenaWin: 8, gameRound: 4, pvp: 12, roshan: 15 },
     dailyCap: { arena: 150, game: 80 },                      // XP в сутки за арену и мини-игры не больше этого
     weeklyMul: 4.2,                                           // награда недельного задания = rewardScale × 6

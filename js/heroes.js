@@ -7,19 +7,18 @@ const SEGMENTS = [
   { label: '+2 УР', type: 'level', value: 2, color: '#2a5fa8', weight: 14 },
   { label: 'БИЧ', sub: 'провал', type: 'fail', value: 0, color: '#3a3f46', weight: 24 },   // 2.8: чаще БИЧ (было 18)
   { label: '+3 УР', type: 'level', value: 3, color: '#6a3fb8', weight: 7 },
-  { label: '🎨 СКИН', type: 'skin', value: 1, color: '#9a2f86', weight: 5 },
+  { label: '🔶 ×2', type: 'gems', value: 2, color: '#9a2f86', weight: 5 },   // 2.9: был «СКИН» — предметы только из сундуков героев
   { label: '🔶 ×1.5', type: 'gems', value: 1.5, color: '#178f9e', weight: 6 },
-  { label: '🛡 ВЕЩЬ', type: 'eq', value: 1, color: '#8a5a20', weight: 3 },
+  { label: '🔶 ×3', type: 'gems', value: 3, color: '#8a5a20', weight: 3 },   // 2.9: был «ВЕЩЬ»
   { label: '+5 УР', sub: 'ДЖЕКПОТ', type: 'jackpot', value: 5, color: '#c8331f', weight: 3 },
   { label: '×3', sub: '3 СТРЕЛКИ', type: 'triple', value: 3, color: '#d6a01c', weight: 3 }
 ];
 // 2.8: у героя 50-го уровня уровни на рулетке заменены на кристаллы-осколки и слабое снаряжение (не выше Rare)
 const SEGMENTS_MAX = SEGMENTS.map(s => {
   if (s.type === 'level' && s.value === 1) return Object.assign({}, s, { label: '🔶 ×0.5', sub: 'осколки', type: 'gems', value: 0.5 });
-  if (s.type === 'level' && s.value === 2) return Object.assign({}, s, { label: '🛡 ВЕЩЬ', sub: 'до Uncommon', type: 'eqlow', value: 1 });
+  if (s.type === 'level' && s.value === 2) return Object.assign({}, s, { label: '🔶 ×0.8', sub: 'осколки', type: 'gems', value: 0.8 });
   if (s.type === 'level' && s.value === 3) return Object.assign({}, s, { label: '🔶 ×1', sub: 'осколки', type: 'gems', value: 1 });
-  if (s.type === 'jackpot') return Object.assign({}, s, { label: '🛡 RARE', sub: 'вещь', type: 'eqrare', value: 1 });
-  if (s.type === 'eq') return Object.assign({}, s, { label: '🛡 ВЕЩЬ', sub: 'до Rare', type: 'eqmax', value: 1 });
+  if (s.type === 'jackpot') return Object.assign({}, s, { label: '🔶 ×2', sub: 'осколки', type: 'gems', value: 2 });   // 2.9: без предметов
   return s;
 });
 let wheelSegs = SEGMENTS, wheelMode = '';
@@ -128,10 +127,10 @@ function renderPreview() {
   box.appendChild(vis);
   const m = document.createElement('div'); m.className = 'meta';
   m.innerHTML = '<div class="nm">' + esc(h.name) + '</div><div class="sub"><img src="' + ATTR_ICON[h.attr] + '" referrerpolicy="no-referrer" style="width:14px;vertical-align:-2px"> ' + ATTR_NAME[h.attr] + ' · ' + (h.ranged ? 'дальний бой' : 'ближний бой') + '</div>' +
-    '<div class="sub">Уровень <b style="color:var(--gold2)">' + st.level + '</b>/' + CONFIG.maxLevel + ' · Сила <b style="color:#fff">' + fmt(heroPower(h.id)) + '</b>' + (st.bonus ? ' <span style="color:var(--ok)">(+' + fmt(st.bonus) + ' бонус)</span>' : '') + '</div>' +
+    '<div class="sub">Уровень <b style="color:var(--gold2)">' + st.level + '</b>/' + CONFIG.maxLevel + ' · Сила <b style="color:#fff">' + fmt(heroPower(h.id)) + '</b></div>' +
     '<div class="sub" id="pv-ult"></div>' +
     '<div class="xpbar"><div style="width:' + (st.level / CONFIG.maxLevel * 100) + '%"></div></div>' +
-    (st.level >= CONFIG.maxLevel ? '<div class="sub" style="color:var(--gold2)">🏅 Максимальный уровень: на рулетке вместо уровней — кристаллы-осколки и снаряжение (не выше Rare)</div>' : '');
+    (st.level >= CONFIG.maxLevel ? '<div class="sub" style="color:var(--gold2)">🏅 Максимальный уровень: на рулетке вместо уровней — кристаллы-осколки</div>' : '');
   box.appendChild(m);
   const ul = ultOf(h.id), pu = document.getElementById('pv-ult');
   const ui = mkImg(ultIconChain(h.id), ul.name); ui.style.cssText = 'width:20px;height:20px;vertical-align:-5px;border-radius:3px;margin-right:4px';
@@ -215,14 +214,11 @@ function applySegment(seg, cost) {
   if (seg.type === 'level') { const g = lvlUp(seg.value); if (g) heroLog('win', h.name + ': +' + g + ' ур. → ' + st.level); }
   else if (seg.type === 'jackpot') { const g = lvlUp(5); heroLog('win', '★ ДЖЕКПОТ ' + h.name + ': +' + g + ' ур.'); hype('НИШТЯК'); }
   else if (seg.type === 'gems') { const g = Math.round(cost * seg.value); addGems(g); heroLog('gold', '+' + fmt(g) + ' 🔶'); }
-  else if (seg.type === 'power') { const b = Math.max(3, Math.round(calcPower(st.level) * seg.value)); st.bonus = (st.bonus || 0) + b; heroLog('win', h.name + ': бонус силы +' + fmt(b)); }
   else if (seg.type === 'skin') { const it = addSkin(h.id, weightedRarity()); heroLog('win', '🎨 ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'); }
   else if (seg.type === 'triple') { S.tripleNext = Math.min(3, (S.tripleNext || 0) + 1); heroLog('win', '×3! На следующей крутке будет 3 стрелки'); hype('НИШТЯК'); setTimeout(() => setExtraPointers(true), 300); }
-  else if (seg.type === 'eqlow' || seg.type === 'eqrare' || seg.type === 'eqmax') { const it = addEquipment(h.id, seg.type === 'eqrare' ? 'rare' : lowRarity(seg.type === 'eqlow' ? 1 : 2)); heroLog('win', '🛡 ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'); }
   else if (seg.type === 'eq') { const it = addEquipment(h.id, weightedRarity()); heroLog('win', '🛡 ' + it.name + ' (' + RARITY_NAMES[it.rarity] + ')'); }
   else { heroLog('lose', 'Провал на ' + h.name); hype('БИЧ'); }
-  // небольшой шанс бонусного дропа
-  if (seg.type !== 'fail' && Math.random() < 0.12) { const it = addSkin(h.id, st.level >= CONFIG.maxLevel ? lowRarity(2) : weightedRarity()); heroLog('win', '+ скин ' + it.name); }
+  // 2.9: бонусного скина больше нет — предметы только из сундуков героев
 }
 function finishHeroBatch() {
   busy.hero = false; spinCounterUI(0, 0);

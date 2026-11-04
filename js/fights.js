@@ -43,8 +43,8 @@ function fightMilestone(f, L) {
   if (f.boss === 'tormentor') { if ((S.shards || 0) < 5) { S.shards = (S.shards || 0) + 1; return 'Aghanim\'s Shard (' + S.shards + '/5)'; } const g = Math.round(rewardScale() * 2); addGems(g); return '+' + fmt(g) + ' 🔶 (все Shard уже собраны)'; }
   if (f.rosh) { S.cons = S.cons || { aegis: 0, cheese: 0 }; S.cons.aegis++; S.cons.cheese = (S.cons.cheese || 0) + 1; return 'Aegis + Cheese'; }
   if (f.xp) { const ids = getStack().filter(x => S.heroes[x].level < CONFIG.maxLevel); if (ids.length) { const h = pick(ids); S.heroes[h].level = Math.min(CONFIG.maxLevel, S.heroes[h].level + 2); return HERO_BY_ID[h].name + ' +2 ур.'; } return ''; }
-  const rar = L >= 50 ? 'arcana' : L >= 40 ? 'immortal' : L >= 20 ? 'mythical' : 'rare';
-  const it = addEquipment(mainHeroId(), rar); return it.name + ' (' + RARITY_NAMES[it.rarity] + ')';
+  // 2.9: вместо снаряжения — кристаллы (предметы только из сундуков героев)
+  const g = Math.round(rewardScale() * (L >= 50 ? 8 : L >= 40 ? 5 : L >= 20 ? 3 : 2)); addGems(g); return '+' + fmt(g) + ' 🔶';
 }
 function endFightBattle(def, result, st) {
   const f = FIGHTS.find(x => x.id === def.fight), day = fightsDay(), L = def.fl || 1;

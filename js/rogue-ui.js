@@ -66,7 +66,9 @@ function rgInvHTML(run) {
     const id = run.items[i];
     h += id ? '<button class="rg-slot' + (RG_ITEMS[id] ? ' big' : '') + '" ' + (shop ? 'data-click="rogueSell(' + i + ')"' : 'data-click="rgItemInfo(\'' + id + '\')"') + ' title="' + esc(rgItemName(id)) + '">' + imgTag(rgItemIcon(id)) + '</button>' : '<div class="rg-slot empty"></div>';
   }
-  h += '<button class="rg-slot neutral" ' + (run.neutral ? 'data-click="rgItemInfo(\'' + run.neutral + '\')"' : 'disabled') + ' title="Нейтральный слот">' + (run.neutral ? imgTag(rgItemIcon(run.neutral)) : '🌿') + '</button></div>';
+  h += '<button class="rg-slot neutral" ' + (run.neutral ? 'data-click="rgItemInfo(\'' + run.neutral + '\')"' : 'disabled') + ' title="Нейтральный слот">' + (run.neutral ? imgTag(rgItemIcon(run.neutral)) : '🌿') + '</button>';
+  // 2.9: рюкзак — 3 закрытых слота на будущее (как в Dota 2)
+  h += '<div class="rg-bag" title="Рюкзак — откроется в следующих обновлениях">' + [0, 1, 2].map(() => '<div class="rg-slot bag locked">🔒</div>').join('') + '</div></div>';
   if (can.length) h += '<div class="rg-build">' + can.map(id => '<button class="btn sm gold" data-click="rogueBuild(\'' + id + '\')">🔨 Собрать ' + esc(RG_ITEMS[id][0]) + (RG_ITEMS[id][2] ? ' (' + RG_ITEMS[id][2] + ' 💰)' : '') + '</button>').join('') + '</div>';
   // что можно собрать почти
   const near = Object.keys(RG_ITEMS).map(id => { const have = run.items.slice(); const miss = RG_ITEMS[id][1].filter(c => { const i = have.indexOf(c); if (i < 0) return true; have.splice(i, 1); return false; }); return [id, miss]; }).filter(x => x[1].length && x[1].length < RG_ITEMS[x[0]][1].length).slice(0, 4);

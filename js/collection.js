@@ -169,6 +169,7 @@ function renderUgSlots() {
   const it = S.items.find(x => x.uid === ugMain);
   if (!it) ugMain = null;
   ugFuel = ugFuel.filter(u => S.items.some(x => x.uid === u));
+  const sel = document.getElementById('ug-select'); if (sel) sel.innerHTML = ugSelectHTML();
   const box = document.getElementById('ug-main');
   box.innerHTML = ''; box.className = 'slotbox' + (it ? ' filled' : '');
   if (it) {
@@ -178,7 +179,7 @@ function renderUgSlots() {
     const d = document.createElement('div'); d.style.textAlign = 'left';
     d.innerHTML = '<div style="font-weight:700;color:#fff">' + esc(it.name) + '</div><div style="color:' + RARITY_COLOR[it.rarity] + ';font-size:.8rem;font-weight:700">' + RARITY_NAMES[it.rarity] + ' → <span style="color:' + RARITY_COLOR[nx] + '">' + RARITY_NAMES[nx] + '</span></div>';
     box.appendChild(d);
-  } else box.innerHTML = '<span>Кликни предмет в инвентаре ниже</span>';
+  } else box.innerHTML = '<span>Выбери предмет в списке или кликни его в инвентаре ниже</span>';
   const fr = document.getElementById('ug-fuel'); fr.innerHTML = '';
   ugFuel.forEach(u => {
     const f = S.items.find(x => x.uid === u);
@@ -209,10 +210,18 @@ function renderUgGrid() {
     return c;
   });
 }
+// 2.9: апгрейд максимум до Immortal — Immortal → Arcana запрещён
+const UG_MAX_FROM = 3;   // индекс редкости, с которой ещё можно улучшать (Mythical → Immortal)
+function ugSelectHTML() {
+  const list = S.items.filter(x => rarityIdx(x.rarity) <= UG_MAX_FROM).sort((a, b) => rarityIdx(b.rarity) - rarityIdx(a.rarity) || a.name.localeCompare(b.name));
+  return '<option value="">— выбери предмет (' + list.length + ') —</option>' + list.map(x => '<option value="' + x.uid + '"' + (x.uid === ugMain ? ' selected' : '') + '>' + esc(RARITY_NAMES[x.rarity] + ' · ' + x.name + (HERO_BY_ID[x.heroId] ? ' (' + HERO_BY_ID[x.heroId].name + ')' : '')) + ' → ' + Math.round(ugChanceFor(x) * 100) + '%</option>').join('');
+}
+function ugChanceFor(it) { return Math.min(CONFIG.upgrade.maxChance, CONFIG.upgrade.base[it.rarity] || 0); }
 function setUgMain(uid) {
   if (busy.ug) return;
+  uid = +uid; if (!uid) { ugMain = null; return renderUpgrade(); }
   const it = S.items.find(x => x.uid === uid); if (!it) return;
-  if (rarityIdx(it.rarity) >= 5) return showModal('🔧', 'Максимум', 'Arcana уже высшая редкость.', '');
+  if (rarityIdx(it.rarity) > UG_MAX_FROM) return showModal('🔧', 'Нельзя улучшить', RARITY_NAMES[it.rarity] + ' — это максимум для апгрейдера: Immortal → Arcana улучшить нельзя. Arcana бывает только из сундуков героев.', '');
   ugMain = uid; ugFuel = ugFuel.filter(x => x !== uid);
   renderUpgrade();
 }
@@ -225,6 +234,7 @@ function clearUpgrade() { if (busy.ug) return; ugMain = null; ugFuel = []; docum
 function spinUpgrade(ok) {
   const it = S.items.find(x => x.uid === ugMain);
   if (busy.ug || !it) return;
+  if (rarityIdx(it.rarity) > UG_MAX_FROM) return;   // 2.9: Immortal → Arcana запрещён
   // 2.3: предмет надет на героя — сначала спросить (при провале он сгорит)
   const worn = [it.uid].concat(ugFuel).filter(u => equippedOn(u));
   if (worn.length && ok !== true) return confirmBox('Предмет надет', 'В апгрейде участвует надетое снаряжение (' + worn.length + ' шт.). При провале или как донор оно пропадёт с героя. Продолжить?', () => spinUpgrade(true));
@@ -252,7 +262,7 @@ function spinUpgrade(ok) {
       res.className = 'ug-result win'; res.textContent = 'УСПЕХ! ' + RARITY_NAMES[nx];
       showModal('⬆', 'Успех!', old + ' → ' + it.name + ' (' + RARITY_NAMES[nx] + ')', 'ok', { auto: true });
       if (nx === 'arcana') hype('НИШТЯК');
-      if (rarityIdx(it.rarity) >= 5) ugMain = null;
+      if (rarityIdx(it.rarity) > UG_MAX_FROM) ugMain = null;
     } else {
       removeItem(it.uid); ugMain = null;
       res.className = 'ug-result lose'; res.textContent = 'ПРОВАЛ! Предмет сгорел';

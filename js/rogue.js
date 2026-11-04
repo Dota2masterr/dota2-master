@@ -605,7 +605,7 @@ function rogueEnd(win) {
   if (typeof track === 'function') { track('rogueRuns'); if (win) track('rogueWins'); }
   save(); updateTop();
   if (typeof rogueSubmit === 'function') rogueSubmit(res);
-  rogueShowLine(win ? '🏆 ПОБЕДА' : '💀 Путь оборвался', (win ? RG_LINES.win : RG_LINES.lose) + '\n\nПройдено актов: ' + acts + ' · глубина ' + depth + '\nНаграда: +' + fmt(gems) + ' 🔶 · +' + shards + ' осколков' + (R.day.n > ROGUE.reward.fullPerDay ? '\n(сегодня уже ' + ROGUE.reward.fullPerDay + ' забега с полной наградой — дальше награда ×0.25)' : ''), () => renderRogue(), win);
+  rogueShowLine(win ? '🏆 ПОБЕДА' : '💀 Путь оборвался', (win ? RG_LINES.win : RG_LINES.lose) + '\n\nПройдено актов: ' + acts + ' · глубина ' + depth + '\nНаграда: +' + fmt(gems) + ' 🔶 · +' + shards + ' осколков' + (R.day.n > ROGUE.reward.fullPerDay ? '\n(сегодня уже ' + ROGUE.reward.fullPerDay + ' забега с полной наградой — дальше награда ×0.25)' : '') + (win ? '\n🎁 Выбери предмет-награду (1 из 5)' : ''), () => { renderRogue(); if (win && typeof rogueRewardPick === 'function') rogueRewardPick(); }, win);
 }
 function rogueAbandon() {
   showModal('⚠', 'Сдаться?', 'Забег закончится, награда — за пройденные акты.', 'bad', { buttons: [{ t: 'Сдаться', c: 'red', f: () => { closeModal(); if (RF) { RF.over = true; RF = null; } rogueEnd(false); } }, { t: 'Отмена', f: closeModal }] });

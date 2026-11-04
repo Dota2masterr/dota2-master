@@ -143,7 +143,7 @@ function doCraft() {
   const nx = RARITIES[rarityIdx(craftR) + 1];
   const hero = pick(list).heroId;
   list.forEach(x => removeItem(x.uid));
-  const it = Math.random() < 0.5 ? addEquipment(HERO_BY_ID[hero] ? hero : pick(HEROES).id, nx) : addSkin(HERO_BY_ID[hero] ? hero : pick(HEROES).id, nx);
+  const it = grantItems(() => Math.random() < 0.5 ? addEquipment(HERO_BY_ID[hero] ? hero : pick(HEROES).id, nx) : addSkin(HERO_BY_ID[hero] ? hero : pick(HEROES).id, nx));   // 2.9: крафт — разрешённый источник
   track('crafts'); save(); sfx('open'); renderCraft(); updateTop();
   if (nx === 'arcana') hype('НИШТЯК');
   showModal('⚒', 'Крафт: ' + RARITY_NAMES[nx], '<div class="craft-won" style="border-color:' + RARITY_COLOR[nx] + '"><img src="' + itemImgChain(it)[0] + '" referrerpolicy="no-referrer" alt=""></div><b style="color:' + RARITY_COLOR[nx] + '">' + esc(it.name) + '</b>', 'ok', { html: true });

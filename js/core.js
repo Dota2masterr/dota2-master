@@ -9,7 +9,7 @@ function freshState() {
   const heroes = {};
   HEROES.forEach(h => heroes[h.id] = { level: 1, bonus: 0 });
   return { version: SAVE_VERSION, gems: CONFIG.startGems, spins: 0, heroes, items: [], uid: 1, loadout: {}, mainHero: null,
-    arena: { cleared: 0, replays: 0, wins: 0, losses: 0 }, invBest: null, avatar: 'invoker', created: Date.now(), freeAt: 0, wipe: CONFIG.wipe.id };
+    arena: { cleared: 0, replays: 0, wins: 0, losses: 0 }, invBest: null, avatar: 'invoker', created: Date.now(), freeAt: 0, wipe: CONFIG.wipe.id, inv29: { at: Date.now(), had: 0, arc: 0, shown: true } };
 }
 
 // ---------- storage helpers ----------
@@ -194,6 +194,21 @@ function migrate(st) {
   }
   // 2.4.9: выдуманные вещи → настоящие вещи своих героев (один раз)
   if (typeof cosMigrate === 'function' && !st._newer) cosMigrate(st);
+  // 2.9: новая экономика — все старые предметы сбрасываются (один раз), накопленный бонус силы обнуляется.
+  // У кого было больше 2 Arcana — 10 фриспинов на слоте «Зевс» по ставке 10 000.
+  if (!st.inv29 && !st._newer) {
+    const arc = (st.items || []).filter(x => x && x.rarity === 'arcana').length;
+    st.inv29 = { at: Date.now(), had: (st.items || []).length, arc, shown: false, gift: arc > 2 };
+    st.items = []; st.loadout = {};
+    if (arc > 2) st.slotFs = { m: 'zeus', bet: 10000, left: 10, total: 10, win: 0, mul: 0, gift: true };
+  }
+  if (st.heroes) for (const id in st.heroes) if (st.heroes[id] && st.heroes[id].bonus) st.heroes[id].bonus = 0;
+}
+// 2.9: окно про новую экономику
+function inv29Modal() {
+  const z = S.inv29; z.shown = true; save();
+  showModal('📦', 'Новая экономика 2.9', 'Предметы теперь выпадают только из <b>сундуков героев</b> (вкладка «Лавка → Сундуки») и стоят дорого: Common 3 000 … Arcana 1 000 000 при продаже. Поэтому все старые предметы сброшены' + (z.had ? ' (у тебя было ' + z.had + ')' : '') + '. Герои, уровни и кристаллы остались.' +
+    (z.gift ? '<br><br>⚡ У тебя было ' + z.arc + ' Arcana — держи <b>10 фриспинов на слоте «Зевс»</b> по ставке 10 000! Открой «Лавка → Слоты».' : ''), 'ok', { html: true });
 }
 // 2.4: окно с объяснением сброса и награда ветеранам
 function season24Modal() {
@@ -202,7 +217,7 @@ function season24Modal() {
   if (z.vet && !z.gift) {
     z.gift = 1;
     grantTitle({ id: 'veteran-2-3', name: 'Ветеран 2.3', color: '#ff9a3a', icon: '🎖' });
-    const it = addSkin(mainHeroId(), 'rare');
+    const it = addSkin(mainHeroId(), 'rare') || { name: '—' };
     gift = '<br><br>🎖 Ты был среди богатых игроков 2.3, поэтому получаешь титул <b style="color:#ff9a3a">«Ветеран 2.3»</b> и скин <b style="color:' + RARITY_COLOR.rare + '">' + esc(it.name) + '</b>.';
   }
   save();
@@ -237,7 +252,7 @@ function equipPower(id) {
   for (const slot in lo) { const it = S.items.find(x => x.uid === lo[slot]); if (it) s += EQ_POWER[it.rarity] || 0; }
   return s;
 }
-function heroPower(id) { const h = S.heroes[id]; return Math.round((calcPower(h.level) + (h.bonus || 0) + equipPower(id)) * (typeof setBonusMul === 'function' ? setBonusMul(id) : 1)); }
+function heroPower(id) { const h = S.heroes[id]; return Math.round((calcPower(h.level) + equipPower(id)) * (typeof setBonusMul === 'function' ? setBonusMul(id) : 1)); }
 function totalPower() { return HEROES.reduce((a, h) => a + heroPower(h.id), 0); }
 function sortedByPower() { return HEROES.slice().sort((a, b) => heroPower(b.id) - heroPower(a.id)); }
 function mainHeroId() { return S.mainHero && HERO_BY_ID[S.mainHero] ? S.mainHero : sortedByPower()[0].id; }
@@ -288,7 +303,11 @@ function skinName(heroId, rarity) {
   const p = pick(SKIN_PREFIX[rarity]), s = pick(SKIN_SUFFIX[rarity]);
   return Math.random() < 0.4 ? p + ' ' + s + ' of ' + HERO_BY_ID[heroId].name : p + ' ' + s;
 }
+// 2.9: предметы выдаются только из сундуков героев, крафта, наград Пути Древнего и лиги (grantItems). Остальные источники — без предметов.
+let ITEM_GRANT = 0;
+function grantItems(fn) { ITEM_GRANT++; try { return fn(); } finally { ITEM_GRANT--; } }
 function addSkin(heroId, rarity) {
+  if (!ITEM_GRANT) return null;
   if (!HERO_BY_ID[heroId]) heroId = pick(HEROES).id;
   const st = typeof pickSet === 'function' && Math.random() < 0.8 ? pickSet(heroId, rarity) : null;
   const it = { uid: S.uid++, type: 'skin', heroId, rarity, name: st ? st.name : skinName(heroId, rarity), path: st ? st.path : undefined, ts: Date.now() };
@@ -296,6 +315,7 @@ function addSkin(heroId, rarity) {
   return it;
 }
 function addEquipment(heroId, rarity, slot) {
+  if (!ITEM_GRANT) return null;
   if (!HERO_BY_ID[heroId]) heroId = pick(HEROES).id;
   const c = pickCatalog(rarity, slot, heroId, true);
   const it = eqFromCatalog(c, S.uid++);
@@ -323,7 +343,7 @@ function unequipItem(uid) {
 }
 function removeItem(uid) { unequipItem(uid); S.items = S.items.filter(x => x.uid !== uid); }
 function weightedRarity(w) {
-  w = w || { common: 28, uncommon: 24, rare: 20, mythical: 14, immortal: 9, arcana: 5 };   // 2.3: редкость выше
+  w = w || CONFIG.dropW;   // 2.9: Arcana 0.5%, Immortal 2% (было 5% и 9%)
   const tot = Object.values(w).reduce((a, b) => a + b, 0);
   let r = Math.random() * tot;
   for (const k in w) { r -= w[k]; if (r <= 0) return k; }
@@ -690,12 +710,14 @@ function startGame() {
   switchTab(['home','heroes','slots','collection','upgrade','arena','invoker','quests','chests','games','online'].includes(h) ? h : 'home');
   setTimeout(() => startTutorial(false), 600);
   setTimeout(() => { if (typeof applyGrants === 'function') applyGrants(); }, 4000);
+  setTimeout(() => { if (typeof showNextPick === 'function') showNextPick(); }, 6500);   // 2.9: невыбранные награды
   if (typeof cloud === 'function' && fbOn() && cloud() && !bootSynced) { bootSynced = true; setTimeout(async () => { try { await syncServerTime(); } catch (e) { } try { await ensureNickClaim(); } catch (e) { } try { await cloudSync(); } catch (e) { } checkGifts(); checkPvpHits(); }, 1200); }
   if (S._wipeBackup) { try { if (USER) localStorage.setItem('d2m_prewipe_' + USER.key, S._wipeBackup); } catch (e) { } delete S._wipeBackup; }
   if (S._wiped) { const w = S._wiped; delete S._wiped; save(); if (typeof schedulePush === 'function') schedulePush();
     if (w.arena || w.items || w.gems > CONFIG.startGems)
     showModal('🚀', 'Релиз 2.4: новый старт для всех', 'В честь выхода 2.4 прогресс всех игроков сброшен: герои, предметы, кристаллы, арена, MMR, Башня, рекорды и таблицы лидеров начинаются с нуля. Все стартуют на равных.<br><br>У тебя было: арена ' + w.arena + '/100, предметов ' + w.items + ', кристаллов ' + fmt(w.gems) + '.<br>Титулы ГОМО сохранены.', 'ok', { html: true }); }
   if (S.season24 && !S.season24.shown) season24Modal();
+  else if (S.inv29 && !S.inv29.shown) inv29Modal();
   if (S._imported) { delete S._imported; save(); showModal('📦', 'Прогресс перенесён', 'Уровни героев, золото (теперь кристаллы) и предметы из старой версии перенесены в этот аккаунт.', 'ok'); }
 }
 
