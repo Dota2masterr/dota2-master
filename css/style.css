@@ -1021,3 +1021,42 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;user-sel
   .topnav .userbox .btn.ghost.sm{padding:2px 6px;min-width:0}
   .topnav .userbox .hstat{padding:2px 5px;font-size:.68rem}
 }
+/* 2.9: сундуки героев */
+.hc-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;align-items:start}
+.hc-pick input{width:100%;margin-bottom:8px}
+.hc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;max-height:420px;overflow:auto}
+.hc-h{background:#0e1218;border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:3px;cursor:pointer;color:#c9c2b0;min-height:0}
+.hc-h img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:4px;display:block}
+.hc-h small{display:block;font-size:.62rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.hc-h.on{border-color:#d8b56d;box-shadow:0 0 0 1px #d8b56d}
+.hc-top{display:flex;gap:10px;align-items:center;margin-bottom:8px}.hc-top img{width:120px;border-radius:6px;border:1px solid #d8b56d}
+.hc-name{font-size:1.15rem;color:#f1d99a}
+.hc-odds td,.hc-odds th{padding:5px 8px}
+@media (max-width:800px){.hc-layout{grid-template-columns:1fr}.hc-grid{max-height:240px}}
+/* 2.9: награды на выбор */
+.pick-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.pick-opt{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px;border:2px solid var(--rc);border-radius:8px;background:#0e1218;color:#fff;cursor:pointer;min-height:0}
+.pick-opt img{width:100%;aspect-ratio:4/3;object-fit:contain}.pick-opt b{font-size:.78rem;line-height:1.2}.pick-opt small{font-size:.68rem}
+.pick-opt:hover{transform:translateY(-2px);box-shadow:0 0 14px var(--rc)}
+/* 2.9: особые символы слотов */
+.ritem.sp{display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,#3a2a08,#120c02);border:2px solid #ffd36a}
+.ritem.sp .sp-ic{font-size:1.9rem;line-height:1}.ritem.sp .sp-t{font-family:Cinzel,serif;font-weight:800;font-size:.72rem;color:#ffd36a;letter-spacing:1px}
+.ritem.sp-pk{background:radial-gradient(circle,#0b3a2a,#03120c);border-color:#6cff7a}.ritem.sp-pk .sp-t{color:#6cff7a}
+.ritem.sp-mx{background:radial-gradient(circle,#0b2a4a,#030a14);border-color:#7ad3ff}.ritem.sp-mx .sp-t{color:#7ad3ff;font-size:.95rem}
+.ritem.zeus img{object-fit:contain;background:#081626}
+.slot-bonus-info{display:grid;gap:4px;font-size:.78rem;text-align:left}
+.sp-mini{display:inline-block;width:22px;text-align:center}
+.theme-zeus{background:linear-gradient(180deg,#0d1f36,#050b16);border:2px solid #7ad3ff;box-shadow:0 0 0 4px #050b16,0 0 0 6px #1e4f7a,0 0 50px rgba(122,211,255,.35)}
+.theme-zeus .sm-title{color:#bfe9ff;text-shadow:0 0 14px #7ad3ff}
+.pk-box{width:min(620px,100%)}
+.pk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}
+.pk-cell{height:70px;border-radius:8px;border:2px solid #d8b56d;background:linear-gradient(180deg,#3a2a10,#1a1206);font-size:1.8rem;cursor:pointer;color:#fff}
+.pk-cell.open{background:linear-gradient(180deg,#14532d,#0a2a16);border-color:#6cff7a;font-family:Cinzel,serif;font-size:1.3rem;color:#d4ffd9}
+.pk-cell.rest{opacity:.45;font-size:1rem;cursor:default}
+/* 2.9: мини-игры — картинки и сложность */
+.mg-ic img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid rgba(216,181,109,.45);box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.mg-diff{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:8px}.mg-diff small{opacity:.7}
+/* 2.9: рюкзак в Пути Древнего и апгрейдер */
+.rg-bag{display:flex;gap:4px;margin-left:8px;padding-left:8px;border-left:1px dashed rgba(255,255,255,.18)}
+.rg-slot.bag{display:flex;align-items:center;justify-content:center;font-size:.9rem;opacity:.55;cursor:not-allowed}
+.ug-pick-l{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);margin-bottom:8px}.ug-pick-l select{width:100%}
