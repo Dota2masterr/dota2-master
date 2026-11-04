@@ -20,7 +20,7 @@ function renderGames() {
     ['invoker', '🔮', 'Invoker: выживание', 'Таймер всё короче. Ошибся или не успел — конец.'],
     ['tower', '🏰', 'Битва за Башню', 'Карточная стратегия: 50 этажей против ботов и PvP. Лучший этаж: ' + (S.tower ? S.tower.best : 0) + '.']
   ];
-  host.innerHTML = '<div class="home-grid" style="margin-top:0">' + games.map(([id, ic, n, d]) => '<div class="panel home-card' + (curGame === id ? ' sel' : '') + '" data-click="startGame_(\'' + id + '\')"><div class="ic">' + ic + '</div><h3>' + n + '</h3><p>' + d + '</p><p class="muted" style="font-size:.72rem;margin-top:4px">Наградных раундов сегодня: ' + Math.max(0, CONFIG.minigames.dailyCap - ((S.gameDay && S.gameDay.day === todayStr() && S.gameDay[id]) || 0)) + '/' + CONFIG.minigames.dailyCap + (S.gameBest && S.gameBest[id] != null ? ' · рекорд ' + S.gameBest[id] : '') + '</p></div>').join('') + '</div><div id="game-stage" class="panel panel-b" style="margin-top:14px;min-height:120px"><div class="muted" style="text-align:center;padding:30px">Выбери мини-игру</div></div>';
+  host.innerHTML = '<div class="home-grid" style="margin-top:0">' + games.map(([id, ic, n, d]) => '<div class="panel home-card' + (curGame === id ? ' sel' : '') + '" data-click="startGame_(\'' + id + '\')"><div class="ic">' + ic + '</div><h3>' + n + '</h3><p>' + d + '</p><p class="muted" style="font-size:.72rem;margin-top:4px">' + (S.gameBest && S.gameBest[id] != null ? ' рекорд ' + S.gameBest[id] : '') + '</p></div>').join('') + '</div><div id="game-stage" class="panel panel-b" style="margin-top:14px;min-height:120px"><div class="muted" style="text-align:center;padding:30px">Выбери мини-игру</div></div>';
 }
 function setBest(g, v, higherBetter) {
   S.gameBest = S.gameBest || {};

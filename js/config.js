@@ -20,6 +20,7 @@ const CONFIG = {
     bossMechPowerMul: 1,                    // сила боссов 25/50/75/100 (с механиками) относительно обычных
     replayRewardedPerDay: 30,               // 2.4: наградных повторов в день (было без лимита)
     replayOverMul: 0.1,                     // повторы сверх лимита — 10% от и так уменьшенной награды
+    cycleH: 36,                             // 2.7.1: лимиты арены и бонусы файтов обновляются раз в 36 ч (было раз в сутки)
     pity: 0.02, pityPerDay: 10              // 2.4: утешение за поражение 2% награды (было 8%) и не больше 10 раз в день
   },
   seasonReset: { keep: 20000, vetFrom: 300000 },
@@ -36,11 +37,12 @@ const CONFIG = {
   mmr: { lossMul: 1.25, winByRank: [1, 0.95, 0.88, 0.8, 0.72, 0.64, 0.56, 0.48], lossByRank: [0.6, 0.7, 0.8, 0.9, 0.95, 1, 1.05, 1.1],
     dailyCap: 500, afterCap: 0.5, hardCap: 1500, afterHard: 0.1, promoFrom: 4, promoWindow: 50, promoMin: 20, promoWr: 0.5 },
   // 2.5: уровни ботов (по их MMR) — сила стака, бонус атаки и ИИ (0 — простой, 3 — элитный)
+  // 2.5.3: сила снижена (×0.7–0.76 от твоего стака): раньше боты почти всегда побеждали. Цель — шанс победы ~50–75% внизу и ~40–45% на верхних рангах
   botTiers: [
-    { id: 'easy', n: 'Лёгкий', from: 0, pow: 0.95, atk: 1, ai: 0, c: '#8ac26a' },
-    { id: 'mid', n: 'Средний', from: 2000, pow: 1, atk: 1, ai: 1, c: '#6ab8e0' },
-    { id: 'hard', n: 'Сложный', from: 4000, pow: 1.015, atk: 1.01, ai: 2, c: '#c88aff' },
-    { id: 'elite', n: 'Элитный', from: 6000, pow: 1.03, atk: 1.02, ai: 3, c: '#ff7a4a' }
+    { id: 'easy', n: 'Лёгкий', from: 0, pow: 0.76, atk: 1, ai: 0, c: '#8ac26a' },
+    { id: 'mid', n: 'Средний', from: 2000, pow: 0.74, atk: 1, ai: 1, c: '#6ab8e0' },
+    { id: 'hard', n: 'Сложный', from: 4000, pow: 0.71, atk: 1.01, ai: 2, c: '#c88aff' },
+    { id: 'elite', n: 'Элитный', from: 6000, pow: 0.7, atk: 1.02, ai: 3, c: '#ff7a4a' }
   ],
   botMinTier: [0, 0, 1, 1, 2, 2, 3, 3],
   botHardEvery: 4,                          // 2.5.1: каждый 4-й бот — «Сложный» даже на низком MMR (чтобы и на малых рангах были сильные соперники)      // по рангу игрока: на высоких рангах — только сильные боты
@@ -55,6 +57,14 @@ const CONFIG = {
   },
   login: { base: 0.35, perDay: 0.25 },       // награда за вход = rewardScale·(base + perDay·день)
   minigames: { dailyCap: 15, pay: { lasthit: 0.024, hook: 0.028, guess: 0.02, invoker: 0.012, sunstrike: 0.028 } },   // 2.4: ×0.4
+  // 2.6: заработок. Мини-игры платят ×minigameMul; по раундам за день: 1–8 — ×1, 9–20 — ×0.4, дальше ×0.1 (не ноль).
+  // Invoker: «Гонка» — до invRace × базовой награды (быстрее и без ошибок — больше), «Бесконечный» — invInf за заклинание.
+  // Экспедиции: slots героев уровня minLevel+ уходят на [часы, × базовой награды]. Всё считается от rewardScale.
+  // 2.7: файты — разделы арены по 50 уровней. step — сколько уровней арены по сложности в одном уровне файта,
+  // powMul — общий множитель силы врагов, rwMul — доля награды арены за первое прохождение, dailyMul — бонус дня × базовая награда
+  fightsLadder: { levels: 50, step: 2, powMul: 0.95, rwMul: 0.3, dailyMul: 0.6,
+    lp: { trio: 1.4, five: 0.95, tormentor: 0.82, roshpit: 0.8, wisdom: 1.15, actives: 1.05 } },   // подстройка силы каждого файта, чтобы шанс был как на арене
+  earn: { minigameMul: 3, tiers: [[8, 1], [20, 0.4], [1e9, 0.1]], invRace: 0.35, invInf: 0.012, exp: { slots: 2, minLevel: 10, opts: [[1, 1.2], [4, 3.5], [8, 6]] } },
   pvp: { rewardedPerDay: 5, winMul: 0.6, lossMul: 0.15, eloK: 50 },
   // боёвка 2.2: навыки, мана, статусы. Множители подобраны так, чтобы нужная сила уровней 1/25/50/100 осталась прежней (±5%)
   combat: { heroSkillMul: 0.7, enemySkillMul: 1, enemyHpMul: 1.02, hpByWaves: { 4: 1.31, 5: 1.24, 6: 1.17 }, modeOut: { pvp: 0.79, roshan: 0.72, survival: 0.77 }, mechHp: { doom: 0.95, void: 1.03, night: 0.9, ancient: 0.95 }, manaStart: 40, manaRegen: 12, manaOnHit: 3, enemySkillCdAdd: 1, stunImmune: 2, bossResist: 2,
@@ -85,9 +95,11 @@ const CONFIG = {
   // 3×3: full — 3 одинаковых на линии, pair — 2 одинаковых слева. 3×5: p5/p4/p3 — 5/4/3 одинаковых подряд слева.
   // Отдача (RTP) как у старых автоматов: 86% / 88% / 76% / 76% плюс выпадающие предметы.
   slotsMaxBet: 1000000,
+  // 2.7.2: бонусные спины — шанс за платную крутку, затем рулетка на 1–10 бесплатных спинов (веса: меньше — чаще, в среднем ≈3.7)
+  slotsBonus: { chance: 0.02, w: [22, 18, 15, 12, 10, 8, 6, 4, 3, 2] },
   slots: {
-    imm3: { minBet: 50, lines: 5, full: { arcana: 300, immortal: 90, mythical: 40, rare: 20, uncommon: 13, common: 8 }, pair: { arcana: 5, immortal: 2.5, mythical: 1.6, rare: 1, uncommon: 0.7, common: 0.5 } },
-    arc5: { minBet: 100, lines: 10, p5: { arcana: 9000, immortal: 2250, mythical: 680, rare: 280, uncommon: 135, common: 80 }, p4: { arcana: 680, immortal: 225, mythical: 90, rare: 45, uncommon: 22, common: 13.5 }, p3: { arcana: 68, immortal: 28, mythical: 13.5, rare: 8, uncommon: 5, common: 3.4 }, boost: 0.3 },
+    imm3: { minBet: 50, lines: 5, full: { arcana: 285, immortal: 85.5, mythical: 38, rare: 19, uncommon: 12.3, common: 7.6 }, pair: { arcana: 4.75, immortal: 2.38, mythical: 1.52, rare: 0.95, uncommon: 0.66, common: 0.47 } },   // 2.7.2: ×0.95 — запас под бонусные спины
+    arc5: { minBet: 100, lines: 10, p5: { arcana: 8550, immortal: 2138, mythical: 646, rare: 266, uncommon: 128, common: 76 }, p4: { arcana: 646, immortal: 214, mythical: 85.5, rare: 42.8, uncommon: 20.9, common: 12.8 }, p3: { arcana: 64.6, immortal: 26.6, mythical: 12.8, rare: 7.6, uncommon: 4.75, common: 3.23 }, boost: 0.3 },   // 2.7.2: ×0.95 — запас под бонусные спины
     cos3: { minBet: 50, lines: 5, full: { arcana: 260, immortal: 78, mythical: 35, rare: 17, uncommon: 11, common: 7 }, pair: { arcana: 4.4, immortal: 2.2, mythical: 1.4, rare: 0.9, uncommon: 0.6, common: 0.44 } },
     cos5: { minBet: 100, lines: 10, p5: { arcana: 7800, immortal: 1950, mythical: 580, rare: 240, uncommon: 117, common: 68 }, p4: { arcana: 580, immortal: 195, mythical: 78, rare: 39, uncommon: 19, common: 11.7 }, p3: { arcana: 58, immortal: 24, mythical: 11.7, rare: 6.8, uncommon: 4.4, common: 2.9 } }
   },

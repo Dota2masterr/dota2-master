@@ -147,9 +147,16 @@ function invPress(k) {
       const t = (Date.now() - invT0) / 1000;
       let extra = '';
       track('invokerRuns');
-      if (invMode !== 'infinite') {
-        const reward = Math.max(50, 400 - invMiss * 40 - Math.floor(t) * 5);
-        addGems(reward); extra = ' · +' + fmt(reward) + ' 🔶';
+      if (invMode === 'infinite') {
+        // 2.6: «Бесконечный» — награда за каждое заклинание (по убывающей за день)
+        const g = gamePay('invoker_inf', invOk * rewardScale() * CONFIG.earn.invInf); if (g) extra = ' · +' + fmt(g) + ' 🔶'; save();
+      } else if (invMode === 'tutorial') {
+        extra = ' · обучение без награды';
+      } else {
+        // 2.6: «Гонка» — чем быстрее и меньше ошибок, тем больше (раньше платила одинаково и без лимита)
+        const q = Math.max(0.25, Math.min(1, 1 - invMiss * 0.08 - Math.max(0, t - 15) * 0.02));
+        const reward = gamePay('invoker_race', rewardScale() * CONFIG.earn.invRace * q);
+        if (reward) extra = ' · +' + fmt(reward) + ' 🔶';
         if (invMode === 'race' && (!S.invBest || t < S.invBest)) { S.invBest = t; extra += ' · НОВЫЙ РЕКОРД!'; hype('НИШТЯК'); }
         save();
       }

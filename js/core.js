@@ -672,6 +672,7 @@ function startGame() {
   const h = (location.hash || '').slice(1);
   switchTab(['home','heroes','slots','collection','upgrade','arena','invoker','quests','chests','games','online'].includes(h) ? h : 'home');
   setTimeout(() => startTutorial(false), 600);
+  setTimeout(() => { if (typeof applyGrants === 'function') applyGrants(); }, 4000);
   if (typeof cloud === 'function' && fbOn() && cloud() && !bootSynced) { bootSynced = true; setTimeout(async () => { try { await syncServerTime(); } catch (e) { } try { await ensureNickClaim(); } catch (e) { } try { await cloudSync(); } catch (e) { } checkGifts(); checkPvpHits(); }, 1200); }
   if (S._wipeBackup) { try { if (USER) localStorage.setItem('d2m_prewipe_' + USER.key, S._wipeBackup); } catch (e) { } delete S._wipeBackup; }
   if (S._wiped) { const w = S._wiped; delete S._wiped; save(); if (typeof schedulePush === 'function') schedulePush();

@@ -68,7 +68,23 @@ const ACH_COLORS = ['#e8c77a', '#ade55c', '#7ad3ff', '#ff8a3a', '#c8a4ff'];
 // Особые титулы по нику (ключ — ник в нижнем регистре). «ГОМО» — титул разработчиков и выданный лично.
 const GOMO = { id: 'gomo', name: 'ГОМО', color: '#ff4ae0', icon: '🛠' };
 const PIRATE = { id: 'pirate', name: 'Серега Пират', color: '#3ad0ff', icon: '🏴‍☠️' };
-const GRANTED_TITLES = { dranik: [GOMO], wowchess: [GOMO], fwaeh: [PIRATE] };
+const VANYA = { id: 'vanya', name: 'Ваня', color: '#7ad35a', icon: '👑' };
+const GRANTED_TITLES = { dranik: [GOMO], wowchess: [GOMO], fwaeh: [PIRATE], vano: [VANYA] };
+// 2.5.3: разовые подарки аккаунтам (по нику). id — чтобы выдать ровно один раз
+const ACCOUNT_GRANTS = { vano: [{ id: 'vano-mmr-600', mmr: 600 }] };
+function applyGrants() {
+  if (!USER || !S || window.SIM_MODE) return;
+  const list = ACCOUNT_GRANTS[USER.key]; if (!list) return;
+  const got = String(S.grants || '').split(',').filter(Boolean);
+  list.forEach(g => {
+    if (got.includes(g.id)) return;
+    if (g.mmr) { if (typeof ensurePvp === 'function') ensurePvp(); else S.pvp = S.pvp || { mmr: 0, w: 0, l: 0 }; S.pvp.mmr = Math.min(CONFIG.bots.mmrMax, (S.pvp.mmr || 0) + g.mmr); S.pvp.peak = Math.max(S.pvp.peak || 0, S.pvp.mmr); }
+    got.push(g.id); S.grants = got.join(',');
+    save(); if (typeof schedulePush === 'function') schedulePush(500);
+    if (typeof toast === 'function') toast('🎁 Подарок', g.mmr ? '+' + g.mmr + ' MMR на твой аккаунт' : 'Подарок получен');
+  });
+}
+setInterval(applyGrants, 20000);
 function grantedTitles() { return (USER && GRANTED_TITLES[USER.key]) || []; }
 function titleOptions() {
   const res = grantedTitles().map(t => ({ id: t.id, name: t.name, color: t.color, special: true }));

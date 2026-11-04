@@ -22,12 +22,20 @@ const BOT_NICKS = ['NightWalker', 'MidOrFeed', 'xX_Pudge_Xx', 'SilentCarry', 'Ga
   // 2.5: ещё 30 ботов
   'ShadowShaman', 'TrueSight', 'GlimmerCape', 'SpiritVessel', 'WardTheRiver', 'DeepDiver', 'PushMid', 'HighGround', 'MegaCreeps', 'ComebackKing',
   'StunLock', 'ManaBurn', 'NoFeedPls', 'LastPick', 'DraftGod', 'Пятёрка', 'ЛиняяЛиния', 'ЭнигмаБХ', 'ШейкерЭхо', 'ДазлГрейв',
-  'КоролевскийДром', 'МагнусРП', 'ВойдХрон', 'ТерорБлейд', 'ЛинаЛагуна', 'КоролевскийСпирит', 'ТрентЛес', 'ЧенПоддержка', 'ОракулФейт', 'ИоТетер'];
+  'КоролевскийДром', 'МагнусРП', 'ВойдХрон', 'ТерорБлейд', 'ЛинаЛагуна', 'КоролевскийСпирит', 'ТрентЛес', 'ЧенПоддержка', 'ОракулФейт', 'ИоТетер',
+  // 2.5.3: ещё 30 ботов — от Legend до максимального MMR
+  'TopRankKing', 'ImmortalDraft', 'ProStack', 'MegaComeback', 'BlackHoleGod', 'ChronoMaster', 'RapierCarry', 'AegisSnatch', 'PerfectBlink', 'GodlikeStreak',
+  'TI_Dreamer', 'RampageMid', 'DivineSupport', 'AncientCore', 'MaxMMR', 'ТопМира', 'Бессмертный', 'ЧемпионЛиги', 'НевероятныйМид', 'Легенда9000',
+  'БогДрафтаПро', 'ИдеальныйСтак', 'ЭлитаСцены', 'ПервыйВТопе', 'НепобедимыйКерри', 'ЦарьГоры', 'ЖелезныйАнсент', 'ДивайнЛорд', 'ИммортВсегда', 'АбсолютныйТоп'];
 const BOT_COUNT = BOT_NICKS.length;
 const BOT_ID_RE = /^b[0-9]{1,3}$/;
 let botCache = null, botAt = 0;
 // стартовый MMR бота: от 0 до ~6000, поровну по рангам
-function botSeedMmr(i) { return Math.min(6400, Math.round((i / BOT_COUNT) * CONFIG.bots.startMax + seeded(i * 97 + 5)() * 300)); }
+function botSeedMmr(i) {
+  // 2.5.3: боты 90+ — высокие ранги от 4000 до максимума (9000), чтобы соперники были на всех рангах
+  if (i >= 90) return Math.min(CONFIG.bots.mmrMax, Math.round(4000 + (i - 90) / 29 * (CONFIG.bots.mmrMax - 4000) + seeded(i * 97 + 5)() * 150));
+  return Math.min(6400, Math.round((i / 90) * CONFIG.bots.startMax + seeded(i * 97 + 5)() * 300));
+}
 function botRow(i, v) {
   v = isObj(v) ? v : {};
   return { id: 'b' + i, i, nick: BOT_NICKS[i] || ('Bot' + i), mmr: Math.round(num(v.mmr, 0, CONFIG.bots.mmrMax, botSeedMmr(i))), w: Math.floor(num(v.w, 0, 1e6, 0)), l: Math.floor(num(v.l, 0, 1e6, 0)), bot: true };
@@ -52,7 +60,7 @@ function botTierIdx(mmr, i) { return CONFIG.botTiers.indexOf(botTier(mmr, i)); }
 function rankIdx(mmr) { return RANKS.indexOf(rankOf(mmr)); }
 // стак бота: герои по номеру бота, сила — около твоей и растёт с уровнем бота и твоим рангом
 function botStack(b) {
-  const r = seeded(b.i * 7919 + Math.floor(b.mmr / 100));
+  const r = seeded(b.i * 7919 + Math.floor(b.mmr / 100) + ((S.pvp && S.pvp.fights) || 0) * 131);   // 2.5.3: состав бота меняется от боя к бою
   const pool = HEROES.map(h => h.id), ids = [];
   const mine = getStack(), C = CONFIG.bots;
   // сильные боты подбирают героев против самой частой роли твоего стака
@@ -78,10 +86,17 @@ async function pickBotOpponent() {
   const list = await loadBots();
   // 2.5: на высоких рангах — только сильные боты (CONFIG.botMinTier по рангу игрока)
   const minT = CONFIG.botMinTier[rankIdx(S.pvp.mmr)] || 0;
-  let pool = list.filter(b => botTierIdx(b.mmr, b.i) >= minT); if (!pool.length) pool = list.slice().sort((a, b) => b.mmr - a.mmr).slice(0, 6);
-  const near = pool.filter(b => Math.abs(b.mmr - S.pvp.mmr) <= CONFIG.bots.window).sort((a, b) => Math.abs(a.mmr - S.pvp.mmr) - Math.abs(b.mmr - S.pvp.mmr));
-  const cand = near.length ? near.slice(0, 6) : pool.slice().sort((a, b) => Math.abs(a.mmr - S.pvp.mmr) - Math.abs(b.mmr - S.pvp.mmr)).slice(0, 1);
-  return botStack(pick(cand));
+  let pool = list.filter(b => botTierIdx(b.mmr, b.i) >= minT); if (pool.length < 6) pool = list.slice().sort((a, b) => b.mmr - a.mmr).slice(0, 12);
+  const dist = b => Math.abs(b.mmr - S.pvp.mmr);
+  // 2.5.3: кандидаты — до 12 ближайших в окне, но не меньше 8 (раньше на высоком MMR оставался один и тот же бот)
+  let cand = pool.filter(b => dist(b) <= CONFIG.bots.window).sort((a, b) => dist(a) - dist(b)).slice(0, 12);
+  if (cand.length < 8) cand = pool.slice().sort((a, b) => dist(a) - dist(b)).slice(0, 8);
+  // недавних соперников (последние 6) не повторяем, пока есть другие
+  const recent = String(S.pvp.recent || '').split(',').filter(Boolean);
+  const fresh = cand.filter(b => !recent.includes(b.id));
+  const b = pick(fresh.length ? fresh : cand);
+  S.pvp.recent = recent.concat(b.id).slice(-6).join(',');
+  return botStack(b);
 }
 // после боя с ботом его MMR меняется в обратную сторону
 async function botAfterFight(botId, delta, botWon) {
