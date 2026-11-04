@@ -183,7 +183,8 @@
   <div class="ug-layout">
     <div class="panel panel-b">
       <h3 class="cinzel" style="color:var(--gold2);letter-spacing:2px;margin-bottom:8px">Основной предмет</h3>
-      <div class="slotbox" id="ug-main"><span>Кликни предмет в инвентаре ниже</span></div>
+      <label class="ug-pick-l">Что хочу улучшить<select id="ug-select" data-change="setUgMain(this.value)"></select></label>
+      <div class="slotbox" id="ug-main"><span>Выбери предмет в списке или кликни его в инвентаре ниже</span></div>
       <h3 class="cinzel" style="color:var(--gold2);letter-spacing:2px;margin:12px 0 4px">Доноры <span class="muted" style="font-size:.75rem">(макс. 4)</span></h3>
       <div class="fuel-row" id="ug-fuel"></div>
       <div class="ug-stats"><div>Шанс<b id="ug-chance">—</b></div><div>Цена<b id="ug-cost">—</b></div><div>Результат<b id="ug-next">—</b></div></div>
@@ -359,6 +360,7 @@
 <script src="js/tower.js"></script>
 <script src="js/tower-live.js"></script>
 <script src="js/tower-meta.js"></script>
+<script src="js/v29.js"></script>
 <script src="js/invoker.js"></script>
 </body>
 </html>

@@ -69,6 +69,17 @@
         }
       }
     },
+    "seasons": {
+      "$sid": {
+        ".read": "auth != null",
+        ".indexOn": [".value"],
+        ".validate": "$sid.matches(/^[0-9]{4}-[0-9]{2}$/)",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && !root.child('banned/' + auth.uid).exists()",
+          ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && newData.val() <= 9000"
+        }
+      }
+    },
     "stacks": {
       ".read": "auth != null",
       ".indexOn": [
