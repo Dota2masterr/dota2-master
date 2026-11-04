@@ -1060,3 +1060,28 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;user-sel
 .rg-bag{display:flex;gap:4px;margin-left:8px;padding-left:8px;border-left:1px dashed rgba(255,255,255,.18)}
 .rg-slot.bag{display:flex;align-items:center;justify-content:center;font-size:.9rem;opacity:.55;cursor:not-allowed}
 .ug-pick-l{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);margin-bottom:8px}.ug-pick-l select{width:100%}
+/* 2.10: игры казино-вкладки (свои версии механик) */
+#slot-subtabs .cas-tab{border-color:rgba(122,211,255,.35)}
+.cas-board{margin:10px auto;max-width:640px}
+.cs-grid{display:grid;gap:5px}
+.cs-cell{aspect-ratio:1/1;background:#0b0f14;border:1px solid rgba(255,255,255,.08);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.cs-cell.hl{border-color:#ffd36a;box-shadow:0 0 10px #ffd36a}
+.cs-sym{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--rc,#555);border-radius:7px;position:relative}
+.cs-sym img{width:86%;height:70%;object-fit:contain}
+.cs-sym small{position:absolute;bottom:2px;font-size:.55rem;font-weight:800;letter-spacing:.5px;color:#fff;text-shadow:0 1px 2px #000}
+.cs-sc{border-color:#ffd36a;background:radial-gradient(circle,#3a2a08,#120c02)}.cs-sc span{font-size:1.7rem}
+.cs-wild{border-color:#ff8a3a;background:radial-gradient(circle,#4a1e08,#140802)}
+.cs-orb{border-color:#7ad3ff;background:radial-gradient(circle,#123a66,#04101e);border-radius:50%}.cs-orb span{font-family:Cinzel,serif;font-weight:800;color:#bfe9ff;font-size:1rem}
+.cas-oly .cs-grid{gap:3px}.cas-oly .cs-sym img{height:78%}
+.cas-info{min-height:22px;font-size:.85rem;margin:4px 0}
+.maze-ladder{display:flex;gap:4px;justify-content:center;align-items:center;margin-bottom:4px;font-family:Cinzel,serif}.maze-ladder span{padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.12);color:#9aa6b2}.maze-ladder span.on{border-color:#ffd36a;color:#ffd36a;box-shadow:0 0 8px rgba(255,211,106,.5)}
+.pay-ic{width:22px;height:22px;object-fit:contain;vertical-align:-6px;margin-right:4px}
+.mines-grid{max-width:360px;margin:0 auto}
+.mn-cell{aspect-ratio:1/1;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(180deg,#1d2733,#0e141b);font-size:1.5rem;cursor:pointer;color:#fff;min-height:0}
+.mn-cell.safe{background:linear-gradient(180deg,#14532d,#0a2a16);border-color:#6cff7a}
+.mn-cell.mine{background:#2a1010;border-color:#a33;opacity:.75}.mn-cell.boom{background:#7a1010;border-color:#ff5a5a}
+.mn-cell:disabled{cursor:default}
+.theme-dog{border:2px solid #e4ae39;background:linear-gradient(180deg,#2a1d0e,#0f0a05)}
+.theme-maze{border:2px solid #c8a4ff;background:linear-gradient(180deg,#1e1530,#0a0712)}
+.theme-oly{border:2px solid #7ad3ff;background:linear-gradient(180deg,#0f2440,#050b16)}
+.theme-mines{border:2px solid #6cff7a;background:linear-gradient(180deg,#0e2416,#050d08)}
