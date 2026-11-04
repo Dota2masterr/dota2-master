@@ -19,6 +19,7 @@ function casState() { S.cas = S.cas || {}; return S.cas; }
 function casPickW(list) { const t = list.reduce((a, x) => a + x[1], 0); let r = Math.random() * t; for (const x of list) { r -= x[1]; if (r < 0) return x[0]; } return list[list.length - 1][0]; }
 function casIcon(sym) {
   if (!sym) return '';
+  if (sym.html) return sym.html;
   if (sym.k === 'sc') return '<div class="cs-sym cs-sc"><span>' + (sym.e || '⭐') + '</span><small>BONUS</small></div>';
   if (sym.k === 'wild') return '<div class="cs-sym cs-wild"><img src="' + sym.img + '" referrerpolicy="no-referrer" alt=""><small>WILD ×' + sym.m + '</small></div>';
   if (sym.k === 'orb') return '<div class="cs-sym cs-orb"><span>×' + sym.m + '</span></div>';
@@ -164,7 +165,8 @@ function casClose() { casCur = null; }
 function casBet(id) { const g = CAS.find(x => x.id === id); return Math.max(g.minBet, Math.min(CONFIG.slotsMaxBet, casBets[id] || g.minBet)); }
 function casSetBet(v) { if (!casCur || busy.slot || casLocked()) return; const g = CAS.find(x => x.id === casCur); v = Math.floor(+v || g.minBet); casBets[casCur] = Math.round(Math.max(g.minBet, Math.min(CONFIG.slotsMaxBet, v, Math.max(g.minBet, S.gems))) / g.minBet) * g.minBet; const i = document.getElementById('cas-bet'); if (i && CAB[casCur]) { i.value = casBets[casCur]; casInfo(); } else casRender(); }
 function casChBet(d) { casSetBet(casBet(casCur) + d); }
-function casLocked() { const st = casState(); return !!((st.dog && st.dog.fs) || (st.maze && st.maze.fs) || (st.oly && st.oly.fs) || (st.mines && st.mines.round)); }
+const CAS_UI = { mines: () => minesUI() }, CAS_PLAY = {}, CAS_LOCK = [];   // 2.12: сюда регистрируются новые игры (casino2.js)
+function casLocked() { const st = casState(); return !!((st.dog && st.dog.fs) || (st.maze && st.maze.fs) || (st.oly && st.oly.fs) || (st.mines && st.mines.round) || CAS_LOCK.some(f => f(st))); }
 
 // 2.11: Псарня, Лабиринт и Небеса — в корпусе «однорукого бандита»: лампы, стекло, рычаг, лоток для выигрыша
 const CAB = { dog: { cols: 5, rows: 3 }, maze: { cols: 5, rows: 3 }, oly: { cols: 6, rows: 5 } };
@@ -181,7 +183,7 @@ function casRender() {
     host.innerHTML = '<div class="slot-machine cas-machine ' + g.theme + '"><div class="sm-title">' + g.title + '</div><div class="sm-sub">' + g.sub + '</div>' +
       '<div id="cas-board" class="cas-board cas-' + g.id + '"></div><div id="cas-info" class="cas-info"></div>' + casBetRow(g, bet) +
       '<div id="cas-ctrl" style="margin-top:10px"></div><div class="last-win" id="cas-last"></div><div class="paytable" id="cas-pay"></div>' + foot + '</div>';
-    return minesUI();
+    return CAS_UI[g.id](g);
   }
   const C = CAB[g.id];
   host.innerHTML = '<div class="slot-machine cas-machine cab-wrap ' + g.theme + '">' +
@@ -202,7 +204,7 @@ function casRender() {
 }
 function casSpin() {
   if (!casCur || busy.slot || modalOpen || document.querySelector('.cbw-ov,.cfs-ov')) return;
-  ({ dog: dogPlay, maze: mazePlay, oly: olyPlay, mines: () => { } })[casCur]();
+  (CAS_PLAY[casCur] || { dog: dogPlay, maze: mazePlay, oly: olyPlay }[casCur] || (() => { }))();
 }
 function casGrid(cols, rows, get, hl) {
   let h = '<div class="cs-grid" style="grid-template-columns:repeat(' + cols + ',1fr)">';

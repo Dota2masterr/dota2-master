@@ -109,7 +109,7 @@ const CONFIG = {
   },
   // 2.10: 4 игры в стиле популярных слотов (js/casino.js): pay — общий множитель выплат, fs — число фриспинов, edge — отдача Мин
   // 2.11: minWin — любой выигрыш в основной игре не меньше ×1.5 ставки: выигрывают ~45% круток, но общая отдача ~95%
-  casino: { minWin: 1.5, dog: { pay: 3.25 }, maze: { pay: 0.22, fs: 10 }, oly: { pay: 0.56, fs: 15 }, mines: { edge: 0.97 } },
+  casino: { minWin: 1.5, dog: { pay: 3.25 }, maze: { pay: 0.22, fs: 10 }, oly: { pay: 0.56, fs: 15 }, mines: { edge: 0.97 }, mine: { pay: 0.65 }, crash: { edge: 0.97 } },
   slots: {
     imm3: { minBet: 50, lines: 5, full: { arcana: 294, immortal: 88.1, mythical: 39.1, rare: 19.6, uncommon: 12.7, common: 7.83 }, pair: { arcana: 4.89, immortal: 2.45, mythical: 1.57, rare: 0.98, uncommon: 0.68, common: 0.48 } },   // 2.7.2: ×0.95 — запас под бонусные спины 2.8: +3%
     arc5: { minBet: 100, lines: 10, p5: { arcana: 8806, immortal: 2202, mythical: 665, rare: 274, uncommon: 132, common: 78.3 }, p4: { arcana: 665, immortal: 220, mythical: 88.1, rare: 44.1, uncommon: 21.5, common: 13.2 }, p3: { arcana: 66.5, immortal: 27.4, mythical: 13.2, rare: 7.83, uncommon: 4.89, common: 3.33 }, boost: 0.3 },   // 2.7.2: ×0.95 — запас под бонусные спины 2.8: +3%

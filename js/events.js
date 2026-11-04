@@ -119,16 +119,49 @@ function collectionCount(id) { const s = collectionMap()[id]; return s ? s.size 
 function collectionMul(id) { return collectionCount(id) >= 6 ? 1 + CONFIG.social.collectionBonus : 1; }
 
 // ---------- прозрачные шансы ----------
-function slotOddsHTML(m) {
-  const tot = Object.values(SLOT_W).reduce((a, b) => a + b, 0);
-  const ev = Object.keys(SLOT_W).reduce((e, r) => { const p = SLOT_W[r] / tot; return e + (m.reels === 3 ? p * p * p * m.full[r] + p * p * (1 - p) * m.pair[r] : Math.pow(p, 5) * m.p5[r] + Math.pow(p, 4) * (1 - p) * m.p4[r] + Math.pow(p, 3) * (1 - p) * m.p3[r]); }, 0);
-  return '<div style="text-align:left;font-size:.85rem"><p class="muted">Каждая клетка сетки 3×' + m.reels + ' выбирает редкость независимо. Ставка делится на ' + m.lines + ' линий, совпадения считаются слева направо.</p><table class="board">' +
-    '<tr><th>Редкость</th><th>Шанс символа</th><th>' + (m.reels === 3 ? '3 в линию' : '5 в линию') + '</th><th>Выплата линии</th></tr>' +
-    Object.keys(SLOT_W).reverse().map(r => { const p = SLOT_W[r] / tot; return '<tr><td style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + '</td><td>' + (p * 100).toFixed(1) + '%</td><td>' + (Math.pow(p, m.reels) * 100).toFixed(m.reels > 3 ? 4 : 2) + '%</td><td>×' + (m.reels === 3 ? m.full[r] : m.p5[r]) + '</td></tr>'; }).join('') + '</table>' +
-    '<p style="margin-top:6px">Средний возврат кристаллами: ' + Math.round(ev * 100) + '% ставки' + (m.boost ? '; шанс повысить редкость выигрышного скина ' + Math.round(m.boost * 100) + '%' : '') + '. Плюс предметы за полные линии.</p>' +
-    '<p class="muted">Слоты — развлечение, а не заработок. Всё только на игровую валюту.</p></div>';
+// 2.12: окно шансов считает по настоящей игре — шанс каждого символа и отдачу берёт из прогона тех же функций, что крутят автомат
+const ODDS_CACHE = {};
+function oddsPct(v, d) { return (v * 100).toFixed(d == null ? 1 : d) + '%'; }
+function oddsEvery(n) { return n ? '≈ 1 раз за ' + fmt(Math.round(n)) + ' круток' : '—'; }
+function slotOddsData(m) {
+  if (ODDS_CACHE[m.id]) return ODDS_CACHE[m.id];
+  const N = 40000, cnt = {}; for (let i = 0; i < N; i++) { const s = pickSlotSym(m.kind, m, false); const k = s.sp || s.rarity; cnt[k] = (cnt[k] || 0) + 1; }
+  const r = simSlotRTP(m.id, 60000); let hit = 0; const H = 20000; for (let i = 0; i < H; i++) if (slotSpinResult(m, rollGrid(m, false), false).x > 0) hit++;
+  return (ODDS_CACHE[m.id] = { cnt, N, r, hit: hit / H });
 }
-function openSlotOdds() { showModal('🎰', 'Шансы и выплаты · ' + curMachine.name, slotOddsHTML(curMachine), '', { html: true }); }
+function slotOddsHTML(m) {
+  const D = slotOddsData(m), per = (m.fx && m.fx.pay || 1) / m.lines, five = m.reels === 5;
+  const SPN = { sc: '⭐ BONUS (фриспины)', pk: '🎯 ВЫБОР (бонус-игра)', mx: '⚡ Молния ×2…×10' };
+  const rows = Object.keys(SLOT_W).reverse().map(r => '<tr><td style="color:' + RARITY_COLOR[r] + '">' + RARITY_NAMES[r] + '</td><td>' + oddsPct((D.cnt[r] || 0) / D.N) + '</td><td>' + (five ? '×' + +(m.p3[r] * per).toFixed(2) + ' / ×' + +(m.p4[r] * per).toFixed(2) + ' / ×' + +(m.p5[r] * per).toFixed(1) : '×' + +(m.pair[r] * per).toFixed(2) + ' / ×' + +(m.full[r] * per).toFixed(1)) + '</td></tr>').join('') +
+    ['sc', 'pk', 'mx'].filter(k => D.cnt[k]).map(k => '<tr><td>' + SPN[k] + '</td><td>' + oddsPct(D.cnt[k] / D.N) + '</td><td class="muted">особый символ</td></tr>').join('');
+  return '<div class="odds-wrap" style="text-align:left;font-size:.85rem"><p class="muted">Каждая клетка сетки 3×' + m.reels + ' выбирается независимо. Ставка делится на ' + m.lines + ' линий, совпадения считаются слева направо. Числа ниже — прогон самой игры (' + fmt(60000) + ' круток).</p><table class="board">' +
+    '<tr><th>Символ</th><th>Шанс в клетке</th><th>Линия, × ставка (' + (five ? '3 / 4 / 5' : '2 / 3') + ')</th></tr>' + rows + '</table>' +
+    '<table class="board" style="margin-top:8px"><tr><td>Выигрышная крутка</td><td><b>' + oddsPct(D.hit, 0) + '</b></td></tr><tr><td>Фриспины</td><td>' + oddsEvery(D.r.fsEvery) + '</td></tr><tr><td>Бонус-игра</td><td>' + oddsEvery(D.r.pickEvery) + '</td></tr>' +
+    '<tr><td>Средняя отдача</td><td><b>' + oddsPct(D.r.rtp, 0) + '</b> ставки <span class="muted">(линии ' + oddsPct(D.r.base, 0) + ' + фриспины ' + oddsPct(D.r.fs, 0) + ' + бонус-игра ' + oddsPct(D.r.pick, 0) + ')</span></td></tr></table>' +
+    '<p class="muted" style="margin-top:6px">Предметы из слотов не выпадают — только кристаллы. Слоты — развлечение, а не заработок; на длинной дистанции отдача меньше 100%.</p></div>';
+}
+function casOddsData(id) {
+  if (ODDS_CACHE['cas:' + id]) return ODDS_CACHE['cas:' + id];
+  const N = 30000, cnt = {}, sym = { dog: () => dogSym(2), maze: () => mazeSym(), oly: () => olySym(false) }[id];
+  for (let i = 0; i < N; i++) { const s = sym(); const k = s.k === 'n' ? s.id : s.k; cnt[k] = (cnt[k] || 0) + 1; }
+  return (ODDS_CACHE['cas:' + id] = { cnt, N, r: casSim(id, 80000) });
+}
+function casOddsHTML(id) {
+  if (id === 'mines') return '<div class="odds-wrap" style="text-align:left;font-size:.85rem"><p>Поле 5×5. Каждая следующая клетка — мина с шансом «осталось мин / осталось закрытых клеток». Множитель честный, с отдачей ' + Math.round(CONFIG.casino.mines.edge * 100) + '%.</p><table class="board"><tr><th>Мин</th><th>1 клетка</th><th>3 клетки</th><th>5 клеток</th></tr>' + [1, 3, 5, 10, 20].map(m => '<tr><td>' + m + '</td>' + [1, 3, 5].map(k => '<td>' + (25 - m >= k ? '×' + minesMul(m, k) : '—') + '</td>').join('') + '</tr>').join('') + '</table></div>';
+  const D = casOddsData(id), NM = { sc: '⭐ BONUS', wild: '🐺 Вайлд ×2/×3', orb: '⚡ Сфера ×2…×50' };
+  const list = id === 'dog' ? DOG.syms.map(s => [s[0], s[1]]) : id === 'oly' ? OLY.syms.map(s => [s[0], s[1]]) : MAZE.syms.map(s => [s[0], () => heroIcon(s[1])]);
+  const rows = list.map(([k, img]) => '<tr><td><img class="pay-ic" src="' + img() + '" referrerpolicy="no-referrer" alt=""> ' + (id === 'maze' ? RARITY_NAMES[k] : '') + '</td><td>' + oddsPct((D.cnt[k] || 0) / D.N) + '</td></tr>').join('') +
+    ['wild', 'orb', 'sc'].filter(k => D.cnt[k]).map(k => '<tr><td>' + NM[k] + '</td><td>' + oddsPct(D.cnt[k] / D.N, 2) + '</td></tr>').join('');
+  return '<div class="odds-wrap" style="text-align:left;font-size:.85rem"><p class="muted">Шанс символа в клетке' + (id === 'dog' ? ' (средний барабан; BONUS бывает только на 1, 3 и 5-м, вайлд — на 2–4-м)' : '') + '. Числа — прогон самой игры.</p><table class="board"><tr><th>Символ</th><th>Шанс</th></tr>' + rows + '</table>' +
+    '<table class="board" style="margin-top:8px"><tr><td>Выигрышная крутка</td><td><b>' + oddsPct(D.r.hit, 0) + '</b> (любой выигрыш ≥ ×' + CONFIG.casino.minWin + ' ставки)</td></tr><tr><td>Фриспины</td><td>' + oddsEvery(D.r.fsEvery) + '</td></tr><tr><td>Средняя отдача</td><td><b>' + oddsPct(D.r.rtp, 0) + '</b> ставки</td></tr></table>' +
+    '<p class="muted" style="margin-top:6px">Только кристаллы. На длинной дистанции отдача меньше 100%.</p></div>';
+}
+function openSlotOdds() {
+  const cas = typeof casCur !== 'undefined' && casCur && !fsActive() && !pickActive() ? CAS.find(x => x.id === casCur) : null;
+  const title = 'Шансы и выплаты · ' + (cas ? cas.title : curMachine.name);
+  showModal('🎰', title, '<div class="muted">Считаю по настоящей игре…</div>', '', { html: true });
+  setTimeout(() => { const html = cas ? casOddsHTML(cas.id) : slotOddsHTML(curMachine); showModal('🎰', title, html, '', { html: true }); }, 30);
+}
 function openWheelOdds() {
   const t = SEGMENTS.reduce((a, s) => a + s.weight, 0);
   showModal('🎯', 'Шансы рулетки героя', '<table class="board" style="text-align:left">' + SEGMENTS.map(s => '<tr><td>' + esc(s.label) + (s.sub ? ' <span class="muted">' + esc(s.sub) + '</span>' : '') + '</td><td>' + (s.weight / t * 100).toFixed(0) + '%</td></tr>').join('') + '</table><p class="muted" style="font-size:.8rem;margin-top:6px">Предметы с рулетки не выпадают — только из сундуков героев.</p>', '', { html: true });
