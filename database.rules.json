@@ -603,7 +603,7 @@
         ".write": "auth != null && !root.child('banned/' + auth.uid).exists()",
         ".validate": "$id.matches(/^b[0-9]{1,3}$/) && newData.hasChildren(['mmr','w','l','at'])",
         "mmr": {
-          ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && newData.val() <= 9000 && (!data.exists() ? newData.val() <= 6500 : (newData.val() <= data.val() + 60 && newData.val() >= data.val() - 60))"
+          ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && newData.val() <= 9000 && (!data.exists() ? newData.val() <= 9000 : (newData.val() <= data.val() + 60 && newData.val() >= data.val() - 60))"
         },
         "w": {
           ".validate": "newData.isNumber() && newData.val() % 1 === 0 && (!data.exists() ? newData.val() === 0 : (newData.val() >= data.val() && newData.val() <= data.val() + 1))"

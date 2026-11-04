@@ -952,3 +952,25 @@ body[data-tab="games"][data-game="tower"]{--tab-bg:url('../assets/tower/bg-menu.
 .hero-visual .skin-lbl{position:absolute;left:6px;right:6px;bottom:6px;font-size:.72rem;text-align:center;background:rgba(0,0,0,.6);padding:3px 6px;border-radius:3px;text-shadow:0 1px 2px #000}
 .hero-visual{position:relative}
 .lo-model{width:150px;height:190px;object-fit:contain;border:1px solid var(--gold3);background:radial-gradient(ellipse at 50% 70%,#2a3038,#0d1015);border-radius:3px}
+
+/* ===== 2.6: экспедиции ===== */
+.exp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:14px}
+.exp-slot{display:flex;flex-direction:column;gap:8px}
+.exp-h{display:flex;gap:10px;align-items:center}.exp-h img{width:72px;height:40px;object-fit:cover;border:1px solid var(--gold3);border-radius:3px}
+.exp-opts{display:flex;gap:6px;flex-wrap:wrap}
+.exp-slot select{width:100%}
+
+/* ===== 2.7: файты в арене ===== */
+.loc-sep{grid-column:1/-1;width:100%;flex-basis:100%;font-family:Cinzel;font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold2);margin:8px 0 2px}
+.loc-tab.fight-tab{background-size:cover}
+/* 2.7.2: бонусные спины в слотах */
+.fs-row{margin-top:8px;padding:6px 10px;border-radius:8px;background:rgba(228,174,57,.14);border:1px solid rgba(228,174,57,.5);color:#ffe2a0;font-size:.85rem}
+.fs-ov{position:fixed;inset:0;z-index:9000;background:rgba(5,8,14,.82);display:flex;align-items:center;justify-content:center;padding:14px}
+.fs-box{width:min(560px,100%);background:linear-gradient(180deg,#1f2330,#12151d);border:2px solid #e4ae39;border-radius:14px;padding:18px;text-align:center;box-shadow:0 0 40px rgba(228,174,57,.35)}
+.fs-title{font-family:Cinzel,serif;font-size:1.5rem;color:#ffd36a;margin-bottom:4px;text-shadow:0 0 12px rgba(255,211,106,.6)}
+.fs-wheel{position:relative;overflow:hidden;margin:14px 0 8px;height:84px;border-radius:10px;background:#0b0d13;border:1px solid #333a4a}
+.fs-mark{position:absolute;left:50%;top:0;bottom:0;width:3px;margin-left:-1.5px;background:#ffd36a;z-index:2;box-shadow:0 0 10px #ffd36a}
+.fs-strip{display:flex;height:100%;align-items:center;will-change:transform}
+.fs-cell{flex:0 0 66px;height:66px;margin:0 4px;border:2px solid;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:800;background:rgba(255,255,255,.04)}
+.fs-cell.hit{background:rgba(255,211,106,.22);transform:scale(1.08);transition:transform .25s}
+.fs-res{font-size:1.05rem;margin:6px 0 12px;min-height:1.4em}

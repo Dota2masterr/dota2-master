@@ -20,9 +20,12 @@ function simTrackGems(book) {
 }
 function simSlotEV(machineId, spins) {
   const m = MACHINES.find(x => x.id === machineId); let gems = 0, items = 0;
+  const one = () => slotLineWins(m, rollGrid(m)).reduce((a, w) => a + w.mult, 0);
   for (let k = 0; k < spins; k++) {
     const wins = slotLineWins(m, rollGrid(m));
     gems += wins.reduce((a, w) => a + w.mult, 0);
+    // 2.7.2: бонусные спины — бесплатные крутки по той же ставке
+    if (CONFIG.slotsBonus && typeof rollFsCount === 'function' && Math.random() < CONFIG.slotsBonus.chance) { const n = rollFsCount(); for (let j = 0; j < n; j++) gems += one(); }
     wins.filter(w => w.drop).slice(0, 2).forEach(w => { items += (m.kind === 'eq' && w.n === 5 ? 2 : 1) * CONFIG.sell[w.rarity] * (m.kind === 'eq' ? CONFIG.sellEqMul : 1); });
   }
   return { gemsPerBet: gems / spins, itemValuePerBet: items / spins };

@@ -28,6 +28,7 @@ function run(w) {
   T('2.4.9: сокровищницы Dota: ≥15 штук, у каждой есть предметы и бонусы', () => E.CHESTS.length >= 15 && E.CHESTS.every(c => c.tr.items.length >= 3 && E.trBonus(c.tr).length >= 3));
   T('2.4.9: свои шмотки есть у 115+ героев', () => [...E.COS_HEROES].filter(h => E.CS_ITEMS.some(x => x.hero === h && x.real)).length >= 115);
   T('2.4.9: редкий бонус гарантирован на последнем открытии', () => { const t = E.CHESTS[0].tr; const st = E.trState(t.id); st.miss = E.TR_TIER[t.tier].guar - 1; const ok = E.trBonusChance(t) === 100; st.miss = 0; return ok; });
+  T('2.7.2: бонусные спины — от 1 до 10, в среднем 3–4', () => { const c = {}; let sum = 0; for (let i = 0; i < 1000; i++) { const r = (i + 0.5) / 1000, n = w.rollFsCount(r); c[n] = 1; sum += n; } const keys = Object.keys(c).map(Number); return (Math.min(...keys) === 1 && Math.max(...keys) === 10 && keys.length === 10 && sum / 1000 > 3 && sum / 1000 < 4.2) || JSON.stringify([keys, sum / 1000]); });
   T('слоты: возврат самоцветами < 100% ставки (без предметов)', () => { const ev = ['imm3', 'arc5', 'cos3', 'cos5'].map(id => w.simSlotEV(id, 40000).gemsPerBet); return ev.every(x => x > 0.4 && x < 1) || ev.join(', '); });
   T('weightedRarity выдаёт только известные редкости', () => { for (let i = 0; i < 500; i++) if (!E.RARITIES.includes(w.weightedRarity())) return false; return true; });
   // миграции и проверка сейва
