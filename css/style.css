@@ -1085,3 +1085,111 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;user-sel
 .theme-maze{border:2px solid #c8a4ff;background:linear-gradient(180deg,#1e1530,#0a0712)}
 .theme-oly{border:2px solid #7ad3ff;background:linear-gradient(180deg,#0f2440,#050b16)}
 .theme-mines{border:2px solid #6cff7a;background:linear-gradient(180deg,#0e2416,#050d08)}
+/* ---- 2.11: скины героя ---- */
+.hcard .skinb{position:absolute;right:2px;bottom:18px;font-size:.72rem;filter:drop-shadow(0 0 3px #000);pointer-events:none}
+/* ---- 2.11: казино-автоматы «однорукий бандит» ---- */
+.cab-wrap{padding-top:14px}
+.cab{--cc:#e4ae39;--cc2:#7a5410;position:relative;margin:0 auto;max-width:700px;padding:0 52px 0 14px;border-radius:26px 26px 14px 14px;background:linear-gradient(180deg,#3a2a14 0%,#1a120a 40%,#0d0905 100%);border:3px solid var(--cc);box-shadow:0 0 0 4px #0b0704,0 0 0 7px var(--cc2),0 18px 40px rgba(0,0,0,.6),inset 0 2px 0 rgba(255,255,255,.12)}
+.cab-maze{--cc:#c8a4ff;--cc2:#4b2a85;background:linear-gradient(180deg,#2c1d48,#130b22 45%,#08050f)}
+.cab-oly{--cc:#7ad3ff;--cc2:#1f5b6e;background:linear-gradient(180deg,#14335a,#081a30 45%,#030a14)}
+.cab-top{position:relative;margin:0 -38px 0 0;padding:16px 10px 8px;text-align:center}
+.cab-bulbs{position:absolute;left:8px;right:8px;top:5px;display:flex;justify-content:space-between;pointer-events:none}
+.cab-bulbs i{width:7px;height:7px;border-radius:50%;background:var(--cc);box-shadow:0 0 8px var(--cc);animation:cabchase 1.4s linear infinite}
+.cab-bulbs i:nth-child(3n+1){animation-delay:-.47s}.cab-bulbs i:nth-child(3n+2){animation-delay:-.93s}
+@keyframes cabchase{0%,60%{opacity:.25}70%,90%{opacity:1}}
+.cab.win .cab-bulbs i,.cab.flash .cab-bulbs i{animation-duration:.35s}
+.cab-title{font-family:Cinzel,serif;font-weight:900;font-size:1.55rem;letter-spacing:4px;text-transform:uppercase;color:#fff;text-shadow:0 0 10px var(--cc),0 0 24px var(--cc),0 2px 0 #000}
+.cab-sub{font-size:.72rem;color:#cfc3ae;opacity:.8;margin-top:2px}
+.cab-fs{min-height:0;font-family:Cinzel,serif;font-weight:900;color:#ffd36a;letter-spacing:2px;text-shadow:0 0 10px #ffb300}
+.cab-fs:not(:empty){margin-top:4px;animation:pulse .8s ease-in-out infinite alternate}
+.cab.fs-mode{--cc:#ffd36a;animation:fsglow 1.6s ease-in-out infinite}
+@keyframes fsglow{50%{box-shadow:0 0 0 4px #0b0704,0 0 0 7px #b8860b,0 0 50px rgba(255,211,106,.55),inset 0 2px 0 rgba(255,255,255,.12)}}
+.cab-body{position:relative}
+.cab-glass{position:relative;padding:8px;border-radius:12px;background:#020304;box-shadow:inset 0 0 0 2px rgba(0,0,0,.9),inset 0 0 26px #000,0 0 0 3px var(--cc2)}
+.cab-glass::after{content:'';position:absolute;inset:8px;border-radius:8px;pointer-events:none;background:linear-gradient(165deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 35%);z-index:4}
+.cab .cas-board{margin:0;max-width:none}
+.cab-reels{position:relative;display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:5px}
+.cab-reel{position:relative;overflow:hidden;aspect-ratio:1/var(--rows);border-radius:7px;background:linear-gradient(180deg,#05070a,#121820 50%,#05070a);box-shadow:inset 0 0 14px rgba(0,0,0,.95);transition:box-shadow .2s}
+.cab-reel::before,.cab-reel::after{content:'';position:absolute;left:0;right:0;height:18%;z-index:2;pointer-events:none;max-height:40px}
+.cab-reel::before{top:0;background:linear-gradient(180deg,rgba(0,0,0,.8),transparent)}
+.cab-reel::after{bottom:0;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent)}
+.cab-strip{position:absolute;left:0;right:0;top:0;height:100%;will-change:transform}
+.cab-strip>.cs-cell{height:calc(100% / var(--rows));aspect-ratio:auto;border-radius:0;border:0;background:none;padding:3px;box-sizing:border-box}
+.cab-strip.spin{filter:blur(1.6px) brightness(1.1)}
+.cab-reel.stop{animation:reelstop .25s ease-out}
+@keyframes reelstop{40%{transform:translateY(3px)}}
+.cab-reel.tease{box-shadow:inset 0 0 14px rgba(0,0,0,.95),0 0 0 2px #ffd36a,0 0 22px #ffb300;animation:tease .3s ease-in-out infinite alternate}
+@keyframes tease{to{box-shadow:inset 0 0 14px rgba(0,0,0,.95),0 0 0 3px #fff3a0,0 0 34px #ffd36a}}
+.cab-strip>.cs-cell.hl{border-radius:8px;box-shadow:inset 0 0 0 2px #ffd36a,0 0 14px #ffd36a;animation:cellwin .6s ease-in-out infinite alternate;z-index:3;position:relative}
+@keyframes cellwin{to{transform:scale(1.07);filter:brightness(1.35)}}
+.cs-cell.pop{animation:cellpop .28s ease-in forwards!important}
+@keyframes cellpop{to{transform:scale(1.5);opacity:0;filter:brightness(3)}}
+.cs-cell.drop{animation:celldrop .38s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes celldrop{from{transform:translateY(-260%);opacity:.3}}
+.cs-cell.sticky .cs-wild{box-shadow:0 0 0 2px #ff8a3a,0 0 16px #ff8a3a;animation:stickyglow 1s ease-in-out infinite alternate}
+@keyframes stickyglow{to{box-shadow:0 0 0 2px #ffd36a,0 0 26px #ff5a00}}
+.cs-cell.sc-land .cs-sc{animation:scland .5s ease-out}
+@keyframes scland{0%{transform:scale(.6)}60%{transform:scale(1.2);box-shadow:0 0 26px #ffd36a}100%{transform:none}}
+.cs-cell.sc-hit .cs-sc{animation:schit .45s ease-in-out infinite alternate;box-shadow:0 0 0 3px #fff3a0,0 0 30px #ffd36a}
+@keyframes schit{to{transform:scale(1.15) rotate(-4deg);filter:brightness(1.5)}}
+.cs-cell.orb-hit .cs-orb{animation:orbhit .5s ease-in-out infinite alternate}
+@keyframes orbhit{to{transform:scale(1.25);box-shadow:0 0 30px #7ad3ff,0 0 60px #fff}}
+.cab-lines{position:absolute;left:0;top:0;pointer-events:none;z-index:5;overflow:visible}
+.cab-line{fill:none;stroke-width:4;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 4px currentColor);stroke-dasharray:2000;stroke-dashoffset:2000;animation:linedraw .5s ease-out forwards}
+@keyframes linedraw{to{stroke-dashoffset:0}}
+.cab-float{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);z-index:6;pointer-events:none;font-family:Cinzel,serif;font-weight:900;font-size:2.4rem;color:#fff;text-shadow:0 0 12px #ffd36a,0 0 30px #ff8a3a,0 3px 0 #000;animation:floatup 1.4s ease-out forwards;white-space:nowrap}
+.cab-float.big{font-size:3.4rem;color:#bfe9ff;text-shadow:0 0 14px #7ad3ff,0 0 40px #2e8bff,0 3px 0 #000}
+.cab-float.fs{font-size:1.8rem;color:#ffd36a}
+@keyframes floatup{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}20%{transform:translate(-50%,-50%) scale(1.15);opacity:1}70%{opacity:1}100%{transform:translate(-50%,-120%) scale(1);opacity:0}}
+.cab-mul{display:none}
+/* рычаг */
+.cab-lever{position:absolute;right:-48px;top:6%;width:40px;height:72%;padding:0;border:0;background:none;cursor:pointer;min-height:0}
+.cab-lever:disabled{cursor:default}
+.cab-base{position:absolute;left:4px;bottom:0;width:32px;height:44px;border-radius:8px;background:linear-gradient(90deg,#3a3f46,#9aa3ad 45%,#2a2e33);box-shadow:0 3px 8px #000}
+.cab-rod{position:absolute;left:16px;bottom:30px;width:8px;height:calc(100% - 30px);border-radius:4px;background:linear-gradient(90deg,#6b7179,#e8edf2 45%,#4a4f56);transform-origin:50% 100%;transition:transform .2s}
+.cab-knob{position:absolute;left:50%;top:-14px;width:30px;height:30px;margin-left:-15px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff9c9c,#e01818 45%,#6a0000);box-shadow:0 0 12px rgba(255,40,40,.6),0 3px 6px #000}
+.cab-lever:not(:disabled):hover .cab-knob{box-shadow:0 0 22px rgba(255,80,80,.9),0 3px 6px #000}
+.cab-lever.pull .cab-rod{animation:leverpull .6s cubic-bezier(.3,0,.4,1)}
+@keyframes leverpull{35%{transform:scaleY(-.55)}55%{transform:scaleY(-.5)}100%{transform:none}}
+/* лоток выигрыша */
+.cab-tray{margin:10px 18% 12px;padding:6px 10px;border-radius:0 0 18px 18px;background:linear-gradient(180deg,#000,#1a1206);box-shadow:inset 0 6px 12px #000,0 0 0 2px var(--cc2)}
+.cab-tray .last-win{margin:0;min-height:24px}
+.cab-tray .tray-win{color:#ffd36a;text-shadow:0 0 10px #ff9a2a}
+.cab.win .cab-tray{animation:traywin .5s ease-in-out 3}
+@keyframes traywin{50%{box-shadow:inset 0 6px 12px #000,0 0 0 2px #ffd36a,0 0 24px #ffb300}}
+.cab.win2 .cab-glass,.cab.win3 .cab-glass{animation:glasswin .4s ease-in-out 6}
+@keyframes glasswin{50%{box-shadow:inset 0 0 0 2px #ffd36a,inset 0 0 40px rgba(255,211,106,.5),0 0 0 3px #ffd36a,0 0 40px #ff9a2a}}
+.cab.flash{animation:cabflash .9s ease-out}
+@keyframes cabflash{0%,30%,60%{filter:brightness(2.2) saturate(1.5)}15%,45%,100%{filter:none}}
+.cab .cas-info{margin:8px 0 0}
+.maze-ladder em{font-style:normal;color:#666}
+.maze-ladder span.past{color:#c8a4ff;border-color:rgba(200,164,255,.4)}
+.maze-ladder span.bump{animation:ladbump .5s ease-out}
+@keyframes ladbump{40%{transform:scale(1.5);box-shadow:0 0 20px #ffd36a}}
+.oly-acc{color:#7ad3ff;text-shadow:0 0 8px #2e8bff}
+/* крупный выигрыш */
+.cbw-ov,.cfs-ov{position:fixed;inset:0;z-index:900;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(30,18,0,.75),rgba(0,0,0,.92));overflow:hidden;cursor:pointer;animation:fade .25s}
+.cbw-ov.out,.cfs-ov.out{transition:opacity .22s;opacity:0}
+.cbw-rays,.cfs-burst{position:absolute;left:50%;top:50%;width:160vmax;height:160vmax;margin:-80vmax 0 0 -80vmax;background:repeating-conic-gradient(from 0deg,rgba(255,211,106,.16) 0 9deg,transparent 9deg 18deg);animation:spinslow 14s linear infinite;pointer-events:none}
+.cbw-t2 .cbw-rays{background:repeating-conic-gradient(rgba(255,138,58,.2) 0 8deg,transparent 8deg 16deg);animation-duration:9s}
+.cbw-t3 .cbw-rays{background:repeating-conic-gradient(rgba(255,90,216,.22) 0 7deg,rgba(122,211,255,.1) 7deg 14deg,transparent 14deg 21deg);animation-duration:6s}
+.cbw-box,.cfs-box{position:relative;text-align:center;animation:cbwin .6s cubic-bezier(.2,1.6,.4,1)}
+@keyframes cbwin{from{transform:scale(.2) rotate(-8deg);opacity:0}}
+.cbw-title{font-family:Cinzel,serif;font-weight:900;font-size:clamp(1.6rem,6vw,3.6rem);letter-spacing:3px;background:linear-gradient(180deg,#fff7d0,var(--tc) 55%,#8a4a00);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 18px var(--tc)) drop-shadow(0 4px 0 #000);animation:pulse .7s ease-in-out infinite alternate}
+.cbw-sum{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;font-family:Cinzel,serif;font-weight:900;font-size:clamp(2rem,8vw,4.6rem);color:#fff;text-shadow:0 0 20px var(--tc),0 4px 0 #000}
+.cbw-sum img{width:.9em;height:.9em}
+.cbw-ov.full .cbw-sum{animation:sumdone .4s ease-out}
+@keyframes sumdone{50%{transform:scale(1.15)}}
+.cbw-sub{margin-top:8px;color:#e8dcc0;font-size:1rem}
+.cbw-hint{margin-top:18px;font-size:.75rem;color:#9a8f7a;opacity:.8}
+.cbw-coin{position:absolute;top:-60px;pointer-events:none;animation:coinfall linear forwards}
+@keyframes coinfall{to{transform:translateY(115vh) rotate(var(--rot))}}
+.cfs-emoji{font-size:4rem;filter:drop-shadow(0 0 20px #ffd36a)}
+.cfs-num{font-family:Cinzel,serif;font-weight:900;font-size:clamp(4rem,16vw,8rem);line-height:1;color:#ffd36a;text-shadow:0 0 30px #ffb300,0 6px 0 #5a3000}
+.cfs-num.bump{animation:numbump .18s ease-out}
+@keyframes numbump{50%{transform:scale(1.25)}}
+.cfs-title{font-family:Cinzel,serif;font-weight:900;font-size:clamp(1.6rem,6vw,3rem);letter-spacing:4px;color:#fff;text-shadow:0 0 18px #ffd36a}
+.cfs-sub{margin:10px auto 18px;max-width:420px;color:#e8dcc0}
+.cfs-ov{cursor:default}
+@media (max-width:560px){.cab{padding:0 34px 0 8px}.cab-top{margin-right:-26px}.cab-lever{right:-32px;width:28px}.cab-knob{width:22px;height:22px;margin-left:-11px;top:-10px}.cab-rod{left:11px;width:6px}.cab-base{width:24px;left:2px}.cab-title{font-size:1.1rem;letter-spacing:2px}.cab-reels{gap:3px}.cab-tray{margin:8px 8% 10px}}
+body.noanim .cbw-rays,body.noanim .cfs-burst,body.noanim .cab-bulbs i{animation:none!important}
